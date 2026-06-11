@@ -6,8 +6,34 @@ description: "Telegram chat UI: inline buttons, URL buttons, selects, polls, for
 
 Use this skill whenever sending interactive controls, rich formatting, polls, or media on Telegram through OpenClaw.
 
-For cross-platform orchestration of multi-step flows, also use `skills/interactive-sessions/SKILL.md`.
-House style (emoji density, bullets, spacing, reactions): `knowledge/procedures/telegram-formatting.md`.
+This skill is the self-contained Telegram UI command foundation. It should tell an agent which Telegram response controls are available, which OpenClaw fields to use, and which limitations to avoid without requiring another skill or procedure for core behavior.
+
+---
+
+## Available UI Commands
+
+Use these working paths first:
+
+| Need | Use |
+|---|---|
+| Normal message | `message` with `action: "send"` |
+| Inline buttons | `message` with `action: "send"` and `presentation.blocks[].type: "buttons"` |
+| Select-style choice | `message` with `presentation.blocks[].type: "select"`; Telegram renders it as buttons |
+| Poll or vote | `message` with `action: "poll"` |
+| Edit an existing bot message | `message` with `action: "edit"` and `messageId` |
+| Reply to a specific message | `message` with `action: "send"` and `replyTo` |
+| React without clutter | `message` with `action: "react"` |
+| Send image, GIF, video, or file | `message` with `action: "send"` and `media` |
+| Pin an important message | `message` with `action: "send"` and `delivery.pin: true` |
+| Plugin-owned command menu | plugin response `channelData.telegram.buttons` |
+
+Avoid these as primary paths:
+
+- raw `buttons` parameter on `message` for Telegram
+- CLI `--buttons`
+- URL buttons through OpenClaw's presentation renderer
+- Telegram MarkdownV2
+- raw HTML outside the renderer whitelist in the Formatting section
 
 ---
 
@@ -380,7 +406,7 @@ Supported blocks on Telegram:
 `title` → prepended to message text.
 `tone` → no visual effect on Telegram (matters for Slack/Teams).
 
-**Important:** keep presentation text plain/portable. Do not use raw HTML tags in presentation blocks — they will be escaped and leak as literal text.
+**Important:** keep presentation text simple. Markdown-ish emphasis is the safest default in presentation text. Use raw HTML only when you need a whitelist-only feature from the Formatting section and have verified that exact send path.
 
 ---
 

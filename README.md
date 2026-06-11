@@ -2,6 +2,12 @@
 
 A growing catalog of reusable OpenClaw skills.
 
+## Vision
+
+See `VISION.md` for the repo direction. Short version: skills should be useful
+at response time, self-contained enough to copy, and grounded in verified command
+shapes instead of pointer chains.
+
 ## Included skills
 
 - `bottom-feeder` - Knowledge crawling and note synthesis for durable topic/research files.
