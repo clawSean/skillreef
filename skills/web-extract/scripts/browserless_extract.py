@@ -2,11 +2,11 @@
 """Fetch a page through Browserless and return normalized extraction JSON.
 
 Examples:
-  BROWSERLESS_TOKEN="$(op read 'op://Sean/Browserless API Key/credential')" \
+  BROWSERLESS_TOKEN="$(op read 'op://<vault>/Browserless API Key/credential')" \
     python3 scripts/browserless_extract.py \
     https://camelcamelcamel.com/product/B07XJ8C8F7
 
-  BROWSERLESS_TOKEN="$(op read 'op://Sean/Browserless API Key/credential')" \
+  BROWSERLESS_TOKEN="$(op read 'op://<vault>/Browserless API Key/credential')" \
     python3 scripts/browserless_extract.py \
     https://camelcamelcamel.com/product/B07XJ8C8F7 \
     --mode unblock

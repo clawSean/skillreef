@@ -2,7 +2,7 @@
 """Create a TinyFish browser session, drive it over CDP, and return extraction JSON.
 
 Examples:
-  TINYFISH_API_KEY="$(op read 'op://Sean/TinyFish API Key/credential')" \
+  TINYFISH_API_KEY="$(op read 'op://<vault>/TinyFish API Key/credential')" \
     python3 scripts/tinyfish_browser_extract.py \
     https://camelcamelcamel.com/product/B07XJ8C8F7
 """

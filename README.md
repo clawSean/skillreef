@@ -22,6 +22,7 @@ shapes instead of pointer chains.
 - `plugin-creator` - Create, design, review, and troubleshoot OpenClaw plugins, slash commands, message presentation buttons, and interactive handlers.
 - `ralph-wiggum` - Bounded iteration loop for small projects and prototypes with verification after each slice.
 - `shell-swap` - Mass-switch OpenClaw model settings with codex/gpt/claude lane aliases.
+- `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-extract` for product/price data.
 - `shrimp` - Internal pass-through helper for `/shrimp` sub-agent dispatch.
 - `telegram-ui` - Telegram rich chat UI patterns: inline buttons, polls, edits, replies, reactions, media, and pins via OpenClaw.
 
