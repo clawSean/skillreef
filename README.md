@@ -10,6 +10,7 @@ shapes instead of pointer chains.
 
 ## Included skills
 
+- `asana-formatting` - Asana rich-text HTML, task title/body style, comments, mentions, and provenance footers.
 - `bottom-feeder` - Knowledge crawling and note synthesis for durable topic/research files.
 - `brain-swap` - Fleet-wide OpenClaw model switching across config, sessions, and cron jobs.
 - `browser-control` - Decision layer for choosing the right browser-control mode.
