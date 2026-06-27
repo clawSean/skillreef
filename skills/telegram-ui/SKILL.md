@@ -6,34 +6,35 @@ description: "Telegram chat UI: inline buttons, URL buttons, selects, polls, for
 
 Use this skill whenever sending interactive controls, rich formatting, polls, or media on Telegram through OpenClaw.
 
-This skill is the self-contained Telegram UI command foundation. It should tell an agent which Telegram response controls are available, which OpenClaw fields to use, and which limitations to avoid without requiring another skill or procedure for core behavior.
+For cross-platform orchestration of multi-step flows, also use `skills/interactive-sessions/SKILL.md`.
+House style (emoji density, bullets, spacing, reactions): `knowledge/procedures/telegram-formatting.md`.
 
 ---
 
-## Available UI Commands
+## ⛔ Rich by Default — MANDATORY (HARD RULES, NOT TIPS)
 
-Use these working paths first:
+These are binding requirements for every Telegram interaction — not "bias toward" suggestions. A plain, low-effort message where one of these applies is a defect: fix it on the spot (see Repair Flow).
 
-| Need | Use |
-|---|---|
-| Normal message | `message` with `action: "send"` |
-| Inline buttons | `message` with `action: "send"` and `presentation.blocks[].type: "buttons"` |
-| Select-style choice | `message` with `presentation.blocks[].type: "select"`; Telegram renders it as buttons |
-| Poll or vote | `message` with `action: "poll"` |
-| Edit an existing bot message | `message` with `action: "edit"` and `messageId` |
-| Reply to a specific message | `message` with `action: "send"` and `replyTo` |
-| React without clutter | `message` with `action: "react"` |
-| Send image, GIF, video, or file | `message` with `action: "send"` and `media` |
-| Pin an important message | `message` with `action: "send"` and `delivery.pin: true` |
-| Plugin-owned command menu | plugin response `channelData.telegram.buttons` |
+**You MUST default to rich UI:**
+- **Inline buttons are REQUIRED** for any Y/N or A/B/C prompt. A plain-text "would you like me to proceed?" is FORBIDDEN — send tappable options instead. 2–6 discrete options ⇒ buttons, always.
+- **Reactions are REQUIRED** to acknowledge — don't burn a whole message on "got it".
+- **Replies (`replyTo`) are REQUIRED** when answering a specific earlier message, so context threads.
+- **Polls are REQUIRED** for group votes or multi-option decisions — never collect votes in prose.
+- **Pins are REQUIRED** for announcements that must stay findable.
+- **Edits are REQUIRED** for status updates — edit the original in place; don't spam follow-ups.
+- **Stickers** when the vibe calls for it.
 
-Avoid these as primary paths:
+**Quick rules — apply on every send, no exceptions:**
+- 2–6 options? → **buttons** (never a plain-text menu)
+- Acknowledging? → **reaction**
+- Replying to a specific message? → **`replyTo`**
+- Vote / multi-option decision? → **poll**
+- Important / must stay findable? → **pin**
+- Status update on a prior message? → **edit the original**
 
-- raw `buttons` parameter on `message` for Telegram
-- CLI `--buttons`
-- URL buttons through OpenClaw's presentation renderer
-- Telegram MarkdownV2
-- raw HTML outside the renderer whitelist in the Formatting section
+**Emoji density — NON-NEGOTIABLE:** Use emojis heavily. Every message carries medium-to-high emoji density, every button label gets an emoji, and reactions are used freely. A flat, emoji-less Telegram message is wrong. (This mirrors the hard emoji mandate in `AGENTS.md`.)
+
+**House-style formatting — MANDATORY:** Follow `knowledge/procedures/telegram-formatting.md` exactly — extra blank lines after paragraphs and lists, Unicode bullets (`•`) not dashes, medium-to-high emoji density. These are requirements, not preferences. (Markdown/HTML rendering mechanics live in the `## Formatting` section below — a separate concern.)
 
 ---
 
@@ -101,6 +102,44 @@ Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as
 - `<blockquote expandable>` → attribute not whitelisted, gets escaped (plain `<blockquote>` or `>` works)
 - Markdown tables → not supported, use bullets or plain text
 - Headings (`#`) → stripped to plain text (headingStyle: none)
+
+---
+
+## User Mentions / Tagging
+
+When referencing a specific Telegram user in a group, default to a real Telegram mention tag instead of writing only their plain name.
+
+Preferred order:
+- **Reply context first:** if responding to a specific message from that person, use `replyTo` so Telegram creates the native reply link.
+- **User ID mention:** when you know the numeric Telegram user ID, write an HTML mention link: `<a href="tg://user?id=<telegram_user_id>">Display Name</a>`.
+- **Username mention:** when you know their public username and do not have the numeric ID, use `@username`.
+- **Plain name fallback:** only use a plain name when no user ID or username is available. Do not invent IDs or usernames.
+
+Examples:
+```json
+{
+  "action": "send",
+  "channel": "telegram",
+  "target": "telegram:123456789",
+  "message": "<a href=\"tg://user?id=123456789\">Display Name</a> this one is yours."
+}
+```
+
+```json
+{
+  "action": "send",
+  "channel": "telegram",
+  "target": "telegram:123456789",
+  "message": "Looping <a href=\"tg://user?id=123456789\">Display Name</a> in here."
+}
+```
+
+Notes:
+- `tg://user?id=<id>` mention links work through OpenClaw because raw `<a href="...">` is preserved by the Telegram HTML renderer.
+- Escape or simplify display names before putting them inside the `<a>` tag; avoid raw `<`, `>`, or `&` in the visible label.
+- In group chats, use mention tags whenever the message asks for, assigns, credits, or redirects attention to a person.
+- Do not tag users gratuitously in every sentence. Tag once where it helps notification/routing, then use normal prose.
+- If the user ID comes from trusted runtime metadata or contact/group memory, it is safe to use. If the identity is uncertain, say so or use the plain-name fallback.
 
 ---
 
@@ -406,7 +445,7 @@ Supported blocks on Telegram:
 `title` → prepended to message text.
 `tone` → no visual effect on Telegram (matters for Slack/Teams).
 
-**Important:** keep presentation text simple. Markdown-ish emphasis is the safest default in presentation text. Use raw HTML only when you need a whitelist-only feature from the Formatting section and have verified that exact send path.
+**Important:** keep presentation text plain/portable. Do not use raw HTML tags in presentation blocks — they will be escaped and leak as literal text.
 
 ---
 
@@ -476,3 +515,12 @@ return {
 ```
 
 Use this for plugin-owned command menus only. For ordinary assistant sends with the `message` tool, keep using `presentation.blocks` buttons as documented above. Mirror the options in message text either way.
+
+
+## Group Admin / Control Actions
+
+Most Telegram work in this skill is message UI: formatting, buttons, polls, replies, media, reactions, edits, pins, and stickers.
+
+For rare group-level control actions such as changing a group profile photo, checking bot admin permissions, or using Telegram Bot API methods not exposed by the `message` tool, use `references/telegram-admin-control.md`.
+
+Do this only when the user explicitly asks or the operation is clearly part of the requested Telegram group workflow. These actions can mutate group state, so verify permissions and report the exact result.
