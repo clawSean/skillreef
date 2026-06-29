@@ -7,7 +7,12 @@ description: "Telegram chat UI: inline buttons, URL buttons, selects, polls, for
 Use this skill whenever sending interactive controls, rich formatting, polls, or media on Telegram through OpenClaw.
 
 For cross-platform orchestration of multi-step flows, also use `skills/interactive-sessions/SKILL.md`.
-House style (emoji density, bullets, spacing, reactions): `knowledge/procedures/telegram-formatting.md`.
+
+**House style (binding rules):**
+- Medium-to-high emoji density on every message
+- Extra blank lines after paragraphs and lists
+- Unicode bullets (`•`) not dashes for reliable rendering
+- After lists: blank line → separator (`—`) → blank line
 
 ---
 
@@ -34,7 +39,7 @@ These are binding requirements for every Telegram interaction — not "bias towa
 
 **Emoji density — NON-NEGOTIABLE:** Use emojis heavily. Every message carries medium-to-high emoji density, every button label gets an emoji, and reactions are used freely. A flat, emoji-less Telegram message is wrong. (This mirrors the hard emoji mandate in `AGENTS.md`.)
 
-**House-style formatting — MANDATORY:** Follow `knowledge/procedures/telegram-formatting.md` exactly — extra blank lines after paragraphs and lists, Unicode bullets (`•`) not dashes, medium-to-high emoji density. These are requirements, not preferences. (Markdown/HTML rendering mechanics live in the `## Formatting` section below — a separate concern.)
+**House-style formatting — MANDATORY:** Extra blank lines after paragraphs and lists, Unicode bullets (`•`) not dashes, medium-to-high emoji density. These are requirements, not preferences. (Markdown/HTML rendering mechanics live in the `## Formatting` section below — a separate concern.)
 
 ---
 
@@ -368,6 +373,23 @@ React to a message with an emoji:
 ```
 
 Remove with `"remove": true`. Only unicode emoji supported (no custom emoji through this path).
+
+**Supported reaction emoji:** 👍 ❤️ 🔥 🎉 🤩 😱 😁 😢 💩 🤮 🤯 😴 🤬 🤡 😇 🤝 ✍️ 👀 🫡
+
+**Rules:**
+- One reaction per message max — multiple feels spammy
+- 🦞 does NOT work in the default reaction set (tested & failed 2026-02-13)
+- Use reactions to acknowledge without burning a whole message
+
+---
+
+## Voice / Audio Messages
+
+Telegram does not pass audio files through to the agent — only metadata/stubs arrive.
+
+**Rule:** When a voice message arrives, respond immediately: "Can't hear audio messages — Telegram doesn't pass the file through to me. What'd you say?" Don't attempt to process. Prompt a text resend.
+
+*(Learned 2026-03-23 — Ingest group incident)*
 
 ---
 
