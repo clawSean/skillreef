@@ -377,9 +377,9 @@ Remove with `"remove": true`. Only unicode emoji supported (no custom emoji thro
 **Supported reaction emoji:** 👍 ❤️ 🔥 🎉 🤩 😱 😁 😢 💩 🤮 🤯 😴 🤬 🤡 😇 🤝 ✍️ 👀 🫡
 
 **Rules:**
-- One reaction per message max — multiple feels spammy
+- React generously — stack multiple reactions on a message when it fits the vibe
 - 🦞 does NOT work in the default reaction set (tested & failed 2026-02-13)
-- Use reactions to acknowledge without burning a whole message
+- Reactions are free acknowledgment; use them liberally instead of burning a whole message
 
 ---
 
