@@ -72,7 +72,7 @@ session:
 - 2FA
 - CAPTCHA/manual solve
 - visual confirmation
-- final shopping steps
+- user-confirmed account actions
 
 ## Protected Page Escalation
 
@@ -87,6 +87,7 @@ When doing repeatable operational work, prefer the bundled helpers before
 rewriting one-off curl/CDP glue:
 
 - `../scripts/browserless_extract.py`
+- `../scripts/browserless_media_requests.py`
 - `../scripts/browserless_session.py`
 - `../scripts/tinyfish_browser_extract.py`
 

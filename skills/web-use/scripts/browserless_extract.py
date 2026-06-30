@@ -2,12 +2,12 @@
 """Fetch a page through Browserless and return normalized extraction JSON.
 
 Examples:
-  BROWSERLESS_TOKEN="<your token>" \
-    python3 skills/web-use/scripts/browserless_extract.py \
+  BROWSERLESS_TOKEN="<set-at-runtime>" \
+    python3 scripts/browserless_extract.py \
     https://example.com/protected-page
 
-  BROWSERLESS_TOKEN="<your token>" \
-    python3 skills/web-use/scripts/browserless_extract.py \
+  BROWSERLESS_TOKEN="<set-at-runtime>" \
+    python3 scripts/browserless_extract.py \
     https://example.com/protected-page \
     --mode unblock
 """
@@ -21,12 +21,39 @@ import re
 import sys
 from html import unescape
 from typing import Any
-
-import requests
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 DEFAULT_HOST = "https://production-sfo.browserless.io"
 DEFAULT_TIMEOUT = 120
 DEFAULT_SNIPPET_CHARS = 3000
+
+
+class BrowserlessRequestError(RuntimeError):
+    """Raised when Browserless returns a non-2xx response."""
+
+
+def post_browserless(url: str, payload: dict[str, Any], timeout: int) -> tuple[int, str]:
+    body = json.dumps(payload).encode("utf-8")
+    request = Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            return response.status, response.read().decode("utf-8", errors="replace")
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise BrowserlessRequestError(f"HTTP {exc.code}: {error_body[:1000]}") from exc
+    except URLError as exc:
+        raise BrowserlessRequestError(str(exc.reason)) from exc
+
+
+def browserless_url(host: str, path: str, token: str) -> str:
+    return f"{host}{path}?{urlencode({'token': token})}"
 
 
 def clean_text(text: str) -> str:
@@ -77,21 +104,18 @@ def sanitize_error(error: Exception, token: str | None) -> str:
 
 
 def request_content(token: str, url: str, host: str, timeout: int) -> dict[str, Any]:
-    response = requests.post(
-        f"{host}/content",
-        params={"token": token},
-        json={"url": url},
-        timeout=timeout,
+    status, html = post_browserless(
+        browserless_url(host, "/content", token),
+        {"url": url},
+        timeout,
     )
-    response.raise_for_status()
-    html = response.text
     title = extract_title_from_html(html)
     body = strip_html(html)
     return {
         "provider": "browserless",
         "mode": "content",
         "url": url,
-        "status_code": response.status_code,
+        "status_code": status,
         "title": title,
         "body": body,
         **signals(title, body),
@@ -99,14 +123,12 @@ def request_content(token: str, url: str, host: str, timeout: int) -> dict[str, 
 
 
 def request_unblock(token: str, url: str, host: str, timeout: int) -> dict[str, Any]:
-    response = requests.post(
-        f"{host}/unblock",
-        params={"token": token},
-        json={"url": url, "browserWSEndpoint": False},
-        timeout=timeout,
+    status, response_text = post_browserless(
+        browserless_url(host, "/unblock", token),
+        {"url": url, "browserWSEndpoint": False},
+        timeout,
     )
-    response.raise_for_status()
-    payload = response.json()
+    payload = json.loads(response_text)
     html = payload.get("content") or ""
     title = extract_title_from_html(html)
     body = strip_html(html)
@@ -114,7 +136,7 @@ def request_unblock(token: str, url: str, host: str, timeout: int) -> dict[str, 
         "provider": "browserless",
         "mode": "unblock",
         "url": url,
-        "status_code": response.status_code,
+        "status_code": status,
         "title": title,
         "body": body,
         "browser_ws_endpoint": payload.get("browserWSEndpoint"),
@@ -132,14 +154,12 @@ def request_stealth_bql(token: str, url: str, host: str, timeout: int, solve: bo
         'body: text(selector: "body") { text } '
         "}"
     )
-    response = requests.post(
-        f"{host}/stealth/bql",
-        params={"token": token},
-        json={"query": query, "variables": {"url": url}},
-        timeout=timeout,
+    _, response_text = post_browserless(
+        browserless_url(host, "/stealth/bql", token),
+        {"query": query, "variables": {"url": url}},
+        timeout,
     )
-    response.raise_for_status()
-    payload = response.json()
+    payload = json.loads(response_text)
     if payload.get("errors"):
         raise RuntimeError(json.dumps(payload["errors"], indent=2))
     data = payload.get("data") or {}
@@ -158,10 +178,7 @@ def request_stealth_bql(token: str, url: str, host: str, timeout: int, solve: bo
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("url", help="Target URL")
     parser.add_argument(
         "--mode",
@@ -170,7 +187,11 @@ def parse_args() -> argparse.Namespace:
         help="Browserless surface to use",
     )
     parser.add_argument("--host", default=DEFAULT_HOST, help="Browserless host")
-    parser.add_argument("--token", default=os.environ.get("BROWSERLESS_TOKEN"), help="Browserless API token")
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("BROWSERLESS_TOKEN") or os.environ.get("BROWSERLESS_API_KEY"),
+        help="Browserless API token",
+    )
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="Request timeout in seconds")
     parser.add_argument(
         "--snippet-chars",

@@ -16,14 +16,39 @@ import os
 import re
 import sys
 from typing import Any
-
-import requests
-import websockets
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 CREATE_SESSION_URL = "https://api.browser.tinyfish.ai/"
 DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_WAIT_SECONDS = 12
 DEFAULT_SNIPPET_CHARS = 3000
+
+
+class TinyFishRequestError(RuntimeError):
+    """Raised when TinyFish returns a failed HTTP response."""
+
+
+def post_json(url: str, payload: dict[str, Any], headers: dict[str, str], timeout: int) -> tuple[int, Any]:
+    body = json.dumps(payload).encode("utf-8")
+    request = Request(
+        url,
+        data=body,
+        headers={**headers, "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            text = response.read().decode("utf-8", errors="replace")
+            try:
+                return response.status, json.loads(text) if text else {}
+            except json.JSONDecodeError:
+                return response.status, {"raw": text}
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise TinyFishRequestError(f"HTTP {exc.code}: {error_body[:1000]}") from exc
+    except URLError as exc:
+        raise TinyFishRequestError(str(exc.reason)) from exc
 
 
 def sanitize_error(error: Exception, api_key: str | None, session: dict[str, Any] | None = None) -> str:
@@ -62,6 +87,13 @@ def signals(title: str, body: str) -> dict[str, bool]:
 
 
 async def evaluate_via_cdp(cdp_url: str, target_url: str, wait_seconds: int, snippet_chars: int) -> dict[str, Any]:
+    try:
+        import websockets
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "TinyFish CDP extraction requires the optional Python package `websockets`."
+        ) from exc
+
     async with websockets.connect(cdp_url, max_size=20_000_000) as ws:
         next_id = 0
 
@@ -157,14 +189,16 @@ def main() -> int:
 
     session: dict[str, Any] | None = None
     try:
-        response = requests.post(
+        status_code, session = post_json(
             CREATE_SESSION_URL,
-            headers={"X-API-Key": args.api_key, "Content-Type": "application/json"},
-            json={"url": args.url, "timeout_seconds": args.session_timeout_seconds},
-            timeout=60,
+            {"url": args.url, "timeout_seconds": args.session_timeout_seconds},
+            {"X-API-Key": args.api_key},
+            60,
         )
-        response.raise_for_status()
-        session = response.json()
+        if not (200 <= status_code < 300):
+            raise TinyFishRequestError(f"HTTP {status_code}: {session}")
+        if not isinstance(session, dict):
+            raise TinyFishRequestError("TinyFish response was not a JSON object")
         cdp_url = session.get("cdp_url")
         if not cdp_url:
             raise RuntimeError("TinyFish response missing cdp_url")
