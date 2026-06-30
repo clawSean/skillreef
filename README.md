@@ -13,7 +13,7 @@ shapes instead of pointer chains.
 - `asana-formatting` - Asana rich-text HTML, task title/body style, comments, mentions, and provenance footers.
 - `bottom-feeder` - Knowledge crawling and note synthesis for durable topic/research files.
 - `brain-swap` - Fleet-wide OpenClaw model switching across config, sessions, and cron jobs.
-- `browser-control` - Decision layer for choosing the right browser-control mode.
+- `browser-control` - Compatibility alias for browser-context routing; canonical web routing lives in `web-use`.
 - `claude-foreman` - Dispatch heavy coding work to Claude CLI while OpenClaw orchestrates.
 - `interactive-sessions` - Design and operate button-driven Telegram/Slack chat sessions, games, wizards, polls, and guided workflows.
 - `knowledge-search` - Local semantic knowledge-base search with ChromaDB + Ollama.
@@ -23,10 +23,11 @@ shapes instead of pointer chains.
 - `plugin-creator` - Create, design, review, and troubleshoot OpenClaw plugins, slash commands, message presentation buttons, and interactive handlers.
 - `ralph-wiggum` - Bounded iteration loop for small projects and prototypes with verification after each slice.
 - `shell-swap` - Mass-switch OpenClaw model settings with codex/gpt/claude lane aliases.
-- `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-extract` for product/price data.
+- `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-use` for product/price data and browser context.
 - `shrimp` - Internal pass-through helper for `/shrimp` sub-agent dispatch.
 - `telegram-ui` - Telegram rich chat UI patterns: inline buttons, polls, edits, replies, reactions, media, and pins via OpenClaw.
-- `web-extract` - Generic extraction backend routing for lightweight retrieval, Browserless, TinyFish, structured APIs, and interactive browser fallback.
+- `web-extract` - Compatibility alias for extraction-backend routing; canonical web routing lives in `web-use`.
+- `web-use` - Front-door routing for web search, fetch, extraction, protected backends, and real browser context.
 
 ## Companion kits
 

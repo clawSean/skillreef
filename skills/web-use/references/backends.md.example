@@ -1,4 +1,4 @@
-# Web Extract Backends — Configuration Template
+# Web Use Backends - Configuration Template
 
 Copy this file to `backends.md` and fill in the env var names or 1Password references for your environment.
 
@@ -8,7 +8,7 @@ Copy this file to `backends.md` and fill in the env var names or 1Password refer
 
 | Backend | Canonical role | Default? | Notes |
 |---|---|---|---|
-| Lightweight retrieval (`web_search`, simple `browser`) | discovery, quick reads, easy public pages | Yes | always prefer when enough |
+| Lightweight retrieval (`web_search`, `web_fetch`, simple `browser`) | discovery, quick reads, easy public pages | Yes | always prefer when enough |
 | Browserless (`/stealth/bql`, `/unblock`) | protected extraction plus programmable browser control | Yes, for hard server-side extraction | strongest path for Cloudflare/bot-gated reads |
 | Browserless (`/session`) | opt-in persistent protected extraction session | No | use sparingly only when cookies/localStorage/sessionStorage/cache must persist across repeated same-site BQL/CDP calls |
 | TinyFish Browser API (CDP session) | remote stealth browser primitive for brittle or multi-step flows | Secondary / situational | works on protected pages when used as a browser session |
@@ -64,7 +64,7 @@ Use a structured API when the relevant domain skill says the clean fields and co
 
 ```bash
 BROWSERLESS_TOKEN="<your token>" \
-  python3 skills/web-extract/scripts/browserless_extract.py \
+  python3 skills/web-use/scripts/browserless_extract.py \
   <URL> \
   --mode stealth-bql
 ```
@@ -80,16 +80,16 @@ Use sparingly. This is not the default extraction path.
 
 ```bash
 BROWSERLESS_TOKEN="<your token>" \
-  python3 skills/web-extract/scripts/browserless_session.py create \
+  python3 skills/web-use/scripts/browserless_session.py create \
   --session-file /tmp/bl-session.json \
   --ttl-ms 1800000
 
-python3 skills/web-extract/scripts/browserless_session.py query \
+python3 skills/web-use/scripts/browserless_session.py query \
   --session-file /tmp/bl-session.json \
   --query 'mutation Go($url: String!) { goto(url: $url, waitUntil: domContentLoaded) { status } body: text(selector: "body") { text } }' \
   --variables-json '{"url":"<URL>"}'
 
-python3 skills/web-extract/scripts/browserless_session.py stop \
+python3 skills/web-use/scripts/browserless_session.py stop \
   --session-file /tmp/bl-session.json \
   --delete-file
 ```
@@ -100,7 +100,7 @@ Do not paste the session file contents, `browserQL`, `connect`, or `stop` URLs i
 
 ```bash
 TINYFISH_API_KEY="<your key>" \
-  python3 skills/web-extract/scripts/tinyfish_browser_extract.py \
+  python3 skills/web-use/scripts/tinyfish_browser_extract.py \
   <URL>
 ```
 
@@ -123,7 +123,7 @@ Creates a TinyFish browser session over CDP, navigates, waits, and returns norma
 
 ## Escalation order
 
-1. Lightweight: `web_search` / simple `browser`
+1. Lightweight: `web_search` / `web_fetch` / simple `browser`
 2. Browserless `/stealth/bql` or `/unblock`
 3. TinyFish Browser API / CDP session
 4. Site-specific structured API if the domain skill says it is worth it
