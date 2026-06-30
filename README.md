@@ -26,6 +26,7 @@ shapes instead of pointer chains.
 - `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-extract` for product/price data.
 - `shrimp` - Internal pass-through helper for `/shrimp` sub-agent dispatch.
 - `telegram-ui` - Telegram rich chat UI patterns: inline buttons, polls, edits, replies, reactions, media, and pins via OpenClaw.
+- `web-extract` - Generic extraction backend routing for lightweight retrieval, Browserless, TinyFish, structured APIs, and interactive browser fallback.
 
 ## Companion kits
 

@@ -10,8 +10,9 @@ Copy this file to `backends.md` and fill in the env var names or 1Password refer
 |---|---|---|---|
 | Lightweight retrieval (`web_search`, simple `browser`) | discovery, quick reads, easy public pages | Yes | always prefer when enough |
 | Browserless (`/stealth/bql`, `/unblock`) | protected extraction plus programmable browser control | Yes, for hard server-side extraction | strongest path for Cloudflare/bot-gated reads |
+| Browserless (`/session`) | opt-in persistent protected extraction session | No | use sparingly only when cookies/localStorage/sessionStorage/cache must persist across repeated same-site BQL/CDP calls |
 | TinyFish Browser API (CDP session) | remote stealth browser primitive for brittle or multi-step flows | Secondary / situational | works on protected pages when used as a browser session |
-| Rainforest API | Amazon structured data | No | opt-in / suggested use only, credit-sensitive |
+| Site-specific structured data API | clean structured fields for one site | No | domain skill owns credential, cost policy, and when it is worth a call |
 | OpenClaw browser | interactive human-visible browsing | No | use for login, 2FA, manual review, checkout |
 
 ---
@@ -24,14 +25,12 @@ Recommended pattern — 1Password:
 ```bash
 op read "op://YOUR_VAULT/TinyFish API Key/credential"
 op read "op://YOUR_VAULT/Browserless API Key/credential"
-op read "op://YOUR_VAULT/Rainforest API Key/password"
 ```
 
 Or via environment variables:
 ```bash
 export BROWSERLESS_TOKEN="..."
 export TINYFISH_API_KEY="..."
-export RAINFOREST_API_KEY="..."
 ```
 
 ---
@@ -41,8 +40,10 @@ export RAINFOREST_API_KEY="..."
 ### Browserless first for protected extraction
 Prefer Browserless when the core problem is **getting through protection and extracting page data server-side**:
 - Cloudflare or bot-gated pages
-- protected price/history pages (e.g. CamelCamelCamel)
+- protected pages that a normal fetch/headless browser cannot read
 - structured extraction from a protected page
+
+Default to stateless Browserless calls for one-off reads. Use Browserless `/session` only when repeated same-site work genuinely benefits from persisted cookies, localStorage, sessionStorage, or cache. Session responses include token-bearing `connect`, `browserQL`, and `stop` URLs; do not paste them into chat/logs, store local session files with 0600 permissions, and call the `stop` URL when done.
 
 ### TinyFish for browser-session control on hard pages
 Prefer TinyFish when the core problem is **needing a remote stealth browser you can control**:
@@ -52,15 +53,8 @@ Prefer TinyFish when the core problem is **needing a remote stealth browser you 
 
 **Important:** TinyFish's **Agent API** is not the default for Cloudflare-protected extraction. The confirmed working path is its **Browser API / CDP session**.
 
-### Rainforest only when worth a credit
-Use when:
-- user explicitly asks for it
-- structured Amazon data materially improves the result
-
-Avoid when:
-- casual browsing
-- historical price data (Rainforest doesn't solve that)
-- credit-constrained situations
+### Site-specific structured APIs stay domain-owned
+Use a structured API when the relevant domain skill says the clean fields and cost tradeoff are worth it. Keep API-specific credentials and policy in that domain skill, not here.
 
 ---
 
@@ -79,6 +73,28 @@ Modes:
 - `stealth-bql` — best default for protected extraction
 - `unblock` — good for page HTML/content
 - `content` — basic headless fetch
+
+### Browserless session helper
+
+Use sparingly. This is not the default extraction path.
+
+```bash
+BROWSERLESS_TOKEN="<your token>" \
+  python3 skills/web-extract/scripts/browserless_session.py create \
+  --session-file /tmp/bl-session.json \
+  --ttl-ms 1800000
+
+python3 skills/web-extract/scripts/browserless_session.py query \
+  --session-file /tmp/bl-session.json \
+  --query 'mutation Go($url: String!) { goto(url: $url, waitUntil: domContentLoaded) { status } body: text(selector: "body") { text } }' \
+  --variables-json '{"url":"<URL>"}'
+
+python3 skills/web-extract/scripts/browserless_session.py stop \
+  --session-file /tmp/bl-session.json \
+  --delete-file
+```
+
+Do not paste the session file contents, `browserQL`, `connect`, or `stop` URLs into chat or logs. They include the Browserless token and should be treated as bearer credentials.
 
 ### TinyFish helper
 
@@ -99,8 +115,9 @@ Creates a TinyFish browser session over CDP, navigates, waits, and returns norma
 | Browserless `/content` | `https://production-sfo.browserless.io/content?token=<TOKEN>` |
 | Browserless `/unblock` | `https://production-sfo.browserless.io/unblock?token=<TOKEN>` |
 | Browserless `/stealth/bql` | `https://production-sfo.browserless.io/stealth/bql?token=<TOKEN>` |
+| Browserless `/session` | `https://production-sfo.browserless.io/session?token=<TOKEN>` |
 | TinyFish Browser API | `https://api.browser.tinyfish.ai/` (X-API-Key header) |
-| Rainforest API | See Rainforest documentation |
+| Site-specific structured API | See the relevant domain skill |
 
 ---
 
@@ -109,8 +126,9 @@ Creates a TinyFish browser session over CDP, navigates, waits, and returns norma
 1. Lightweight: `web_search` / simple `browser`
 2. Browserless `/stealth/bql` or `/unblock`
 3. TinyFish Browser API / CDP session
-4. Interactive browser (human-present)
-5. Report blockage clearly
+4. Site-specific structured API if the domain skill says it is worth it
+5. Interactive browser (human-present)
+6. Report blockage clearly
 
 ---
 

@@ -2,9 +2,9 @@
 """Create a TinyFish browser session, drive it over CDP, and return extraction JSON.
 
 Examples:
-  TINYFISH_API_KEY="$(op read 'op://<vault>/TinyFish API Key/credential')" \
+  TINYFISH_API_KEY="<your key>" \
     python3 scripts/tinyfish_browser_extract.py \
-    https://camelcamelcamel.com/product/B07XJ8C8F7
+    https://example.com/protected-page
 """
 
 from __future__ import annotations
@@ -26,6 +26,20 @@ DEFAULT_WAIT_SECONDS = 12
 DEFAULT_SNIPPET_CHARS = 3000
 
 
+def sanitize_error(error: Exception, api_key: str | None, session: dict[str, Any] | None = None) -> str:
+    message = str(error)
+    secrets = [api_key]
+    if session:
+        secrets.extend(
+            value
+            for key in ("cdp_url", "base_url")
+            if isinstance((value := session.get(key)), str)
+        )
+    for secret in sorted((item for item in secrets if item), key=len, reverse=True):
+        message = message.replace(secret, "<redacted>")
+    return message
+
+
 def signals(title: str, body: str) -> dict[str, bool]:
     combined = f"{title}\n{body}"
     return {
@@ -36,8 +50,14 @@ def signals(title: str, body: str) -> dict[str, bool]:
                 re.I,
             )
         ),
-        "has_price_history": bool(re.search(r"amazon price history|price history", combined, re.I)),
-        "has_product_details": bool(re.search(r"product details", combined, re.I)),
+        "has_security_challenge": bool(
+            re.search(
+                r"captcha|verify you are human|security check|access denied",
+                combined,
+                re.I,
+            )
+        ),
+        "has_meaningful_text": len(body.strip()) >= 200,
     }
 
 
@@ -87,9 +107,8 @@ async def evaluate_via_cdp(cdp_url: str, target_url: str, wait_seconds: int, sni
           href: location.href,
           readyState: document.readyState,
           body: document.body ? document.body.innerText.slice(0, {snippet_chars}) : "",
-          hasPriceHistory: /Amazon Price History|Price History/i.test(document.body ? document.body.innerText : ""),
-          hasProductDetails: /Product Details/i.test(document.body ? document.body.innerText : ""),
-          hasCloudflare: /Performing security verification|Just a moment|Cloudflare/i.test(document.body ? document.body.innerText : document.title)
+          hasCloudflare: /Performing security verification|Just a moment|Cloudflare/i.test(document.body ? document.body.innerText : document.title),
+          hasSecurityChallenge: /captcha|verify you are human|security check|access denied/i.test(document.body ? document.body.innerText : document.title)
         }})'''
         evaluated = await send(
             "Runtime.evaluate",
@@ -133,6 +152,7 @@ def main() -> int:
         print("Missing TinyFish API key. Pass --api-key or set TINYFISH_API_KEY.", file=sys.stderr)
         return 2
 
+    session: dict[str, Any] | None = None
     try:
         response = requests.post(
             CREATE_SESSION_URL,
@@ -144,7 +164,7 @@ def main() -> int:
         session = response.json()
         cdp_url = session.get("cdp_url")
         if not cdp_url:
-            raise RuntimeError(f"TinyFish response missing cdp_url: {session}")
+            raise RuntimeError("TinyFish response missing cdp_url")
         page_data = asyncio.run(evaluate_via_cdp(cdp_url, args.url, args.wait_seconds, args.snippet_chars))
     except Exception as exc:  # noqa: BLE001
         print(
@@ -154,7 +174,7 @@ def main() -> int:
                     "provider": "tinyfish",
                     "mode": "browser-cdp",
                     "url": args.url,
-                    "error": str(exc),
+                    "error": sanitize_error(exc, args.api_key, session),
                 },
                 indent=2,
             )
@@ -169,16 +189,16 @@ def main() -> int:
         "mode": "browser-cdp",
         "url": args.url,
         "session_id": session.get("session_id"),
-        "cdp_url": session.get("cdp_url"),
-        "base_url": session.get("base_url"),
+        "has_cdp_url": bool(session.get("cdp_url")),
+        "has_base_url": bool(session.get("base_url")),
         "title": title,
         "href": page_data.get("href"),
         "ready_state": page_data.get("readyState"),
         "body_excerpt": body_excerpt,
         "body_length": len(body_excerpt),
-        "has_price_history": bool(page_data.get("hasPriceHistory")),
-        "has_product_details": bool(page_data.get("hasProductDetails")),
         "has_cloudflare": bool(page_data.get("hasCloudflare")),
+        "has_security_challenge": bool(page_data.get("hasSecurityChallenge")),
+        "has_meaningful_text": len(body_excerpt.strip()) >= 200,
     }
     result.update(signals(title, body_excerpt))
     print(json.dumps(result, indent=2))

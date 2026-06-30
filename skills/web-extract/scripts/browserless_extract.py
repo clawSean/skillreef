@@ -2,13 +2,13 @@
 """Fetch a page through Browserless and return normalized extraction JSON.
 
 Examples:
-  BROWSERLESS_TOKEN="$(op read 'op://<vault>/Browserless API Key/credential')" \
+  BROWSERLESS_TOKEN="<your token>" \
     python3 scripts/browserless_extract.py \
-    https://camelcamelcamel.com/product/B07XJ8C8F7
+    https://example.com/protected-page
 
-  BROWSERLESS_TOKEN="$(op read 'op://<vault>/Browserless API Key/credential')" \
+  BROWSERLESS_TOKEN="<your token>" \
     python3 scripts/browserless_extract.py \
-    https://camelcamelcamel.com/product/B07XJ8C8F7 \
+    https://example.com/protected-page \
     --mode unblock
 """
 
@@ -57,9 +57,23 @@ def signals(title: str, body: str) -> dict[str, bool]:
                 re.I,
             )
         ),
-        "has_price_history": bool(re.search(r"amazon price history|price history", combined, re.I)),
-        "has_product_details": bool(re.search(r"product details", combined, re.I)),
+        "has_security_challenge": bool(
+            re.search(
+                r"captcha|verify you are human|security check|access denied",
+                combined,
+                re.I,
+            )
+        ),
+        "has_meaningful_text": len(clean_text(body)) >= 200,
     }
+
+
+def sanitize_error(error: Exception, token: str | None) -> str:
+    message = str(error)
+    if token:
+        message = message.replace(token, "<redacted>")
+    message = re.sub(r"([?&]token=)[^&\s]+", r"\1<redacted>", message)
+    return message
 
 
 def request_content(token: str, url: str, host: str, timeout: int) -> dict[str, Any]:
@@ -183,7 +197,18 @@ def main() -> int:
         else:
             result = request_stealth_bql(args.token, args.url, args.host, args.timeout, args.solve)
     except Exception as exc:  # noqa: BLE001
-        print(json.dumps({"ok": False, "error": str(exc), "provider": "browserless", "mode": args.mode, "url": args.url}, indent=2))
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": sanitize_error(exc, args.token),
+                    "provider": "browserless",
+                    "mode": args.mode,
+                    "url": args.url,
+                },
+                indent=2,
+            )
+        )
         return 1
 
     body = result.get("body") or ""
