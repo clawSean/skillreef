@@ -1,6 +1,6 @@
 ---
 name: web-use
-description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Domain skills keep site-specific policy."
+description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, or account state. Domain skills keep site-specific policy."
 ---
 
 # Web Use
@@ -23,7 +23,7 @@ Keep those questions separate even when one workflow needs both.
 | Read a simple public URL | `web_fetch` |
 | Inspect a JS-rendered page visually | OpenClaw `browser` |
 | Extract protected or bot-gated data | `references/extraction-backends.md` |
-| Use a current tab, login, 2FA, CAPTCHA, extension, cart, or checkout | `references/context-device.md` |
+| Use a current tab, login, 2FA, CAPTCHA, extension, or account state | `references/context-device.md` |
 | Site-specific paid API or domain policy | Relevant domain skill |
 
 Do not use a browser when search or fetch is enough. Do not use Browserless,
@@ -87,7 +87,7 @@ Use browser context routing when the task needs one of these:
 - preserving or using an existing logged-in tab/session
 - a visible browser on the user's device
 - a browser extension lane
-- CAPTCHA, 2FA, manual review, cart, checkout, or account state
+- CAPTCHA, 2FA, manual review, or account state
 - user-facing UX/design for browser intents
 
 Plain-English labels:
@@ -130,9 +130,10 @@ and phrasing guide.
 
 Use these from this skill directory when repeatable execution helps:
 
-- `scripts/browserless_extract.py` - Browserless `content`, `unblock`, or `stealth-bql`
+- `scripts/browserless_extract.py` - Browserless `content`, `unblock`, or `stealth-bql` using stdlib HTTP; reads `BROWSERLESS_TOKEN` or legacy `BROWSERLESS_API_KEY`
+- `scripts/browserless_media_requests.py` - Browserless `/function` network media discovery for rendered pages where media URLs appear only after playback/rendering
 - `scripts/browserless_session.py` - opt-in persistent Browserless session helper with redacted output and 0600 session files
-- `scripts/tinyfish_browser_extract.py` - TinyFish Browser API / CDP extraction helper
+- `scripts/tinyfish_browser_extract.py` - optional TinyFish Browser API / CDP extraction helper
 
 See `references/backends.md.example` for credential and command templates.
 
@@ -141,3 +142,7 @@ See `references/backends.md.example` for credential and command templates.
 - `references/context-device.md` - browser context/device/session matrix
 - `references/extraction-backends.md` - backend ladder and safety notes
 - `references/backends.md.example` - public-safe credential and command template
+
+## Baseline Checks
+
+Run `bash scripts/test.sh` after editing this skill.
