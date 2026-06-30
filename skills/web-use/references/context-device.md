@@ -1,4 +1,4 @@
-# Browser control modes
+# Browser Context Modes
 
 ## 2 x 2 model
 
@@ -39,4 +39,4 @@ Before selecting a browser mode, ask:
 2. Could web search, direct HTTP retrieval, or a lighter automation path solve it?
 3. Is the requested browser mode even available in this environment?
 
-If a lighter path works, skip full browser-control framing. If the desired browser mode is unavailable, explain the constraint and choose the closest acceptable fallback.
+If a lighter path works, skip full browser-context framing. If the desired browser mode is unavailable, explain the constraint and choose the closest acceptable fallback.

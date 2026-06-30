@@ -9,7 +9,7 @@ Copy this file to `backends.md` and fill in the env var names or 1Password refer
 | Backend | Canonical role | Default? | Notes |
 |---|---|---|---|
 | Lightweight retrieval (`web_search`, `web_fetch`, simple `browser`) | discovery, quick reads, easy public pages | Yes | always prefer when enough |
-| Browserless (`/stealth/bql`, `/unblock`) | protected extraction plus programmable browser control | Yes, for hard server-side extraction | strongest path for Cloudflare/bot-gated reads |
+| Browserless (`/stealth/bql`, `/unblock`) | protected extraction plus programmable browser automation | Yes, for hard server-side extraction | strongest path for Cloudflare/bot-gated reads |
 | Browserless (`/session`) | opt-in persistent protected extraction session | No | use sparingly only when cookies/localStorage/sessionStorage/cache must persist across repeated same-site BQL/CDP calls |
 | TinyFish Browser API (CDP session) | remote stealth browser primitive for brittle or multi-step flows | Secondary / situational | works on protected pages when used as a browser session |
 | Site-specific structured data API | clean structured fields for one site | No | domain skill owns credential, cost policy, and when it is worth a call |

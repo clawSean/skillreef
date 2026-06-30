@@ -70,15 +70,15 @@ Rainforest does **not** provide the real historical price view we want.
 
 For true history:
 - try CamelCamelCamel or similar sources
-- if protected, route through `web-extract` protected-site logic
-- if the fallback needs login, CAPTCHA/2FA, a visible browser, or an extension-capable browser, hand browser context to `browser-control`
+- if protected, route through `web-use` protected-site logic
+- if the fallback needs login, CAPTCHA/2FA, a visible browser, or an extension-capable browser, use `web-use` browser-context routing
 - current canonical VPS order: **Browserless first** (`/stealth/bql` or `/unblock`), then **TinyFish Browser API / CDP session** if needed
 - do **not** assume TinyFish Agent API is the right path for CCC-style history pages
 - if still blocked, say so plainly and offer manual/browser-assisted checking
 
-If reusable execution helps, `web-extract` now ships bundled helpers for both working VPS-side lanes:
-- `skills/web-extract/scripts/browserless_extract.py`
-- `skills/web-extract/scripts/tinyfish_browser_extract.py`
+If reusable execution helps, `web-use` ships bundled helpers for both working VPS-side lanes:
+- `skills/web-use/scripts/browserless_extract.py`
+- `skills/web-use/scripts/tinyfish_browser_extract.py`
 
 ## Credit note
 

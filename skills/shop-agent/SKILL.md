@@ -1,6 +1,6 @@
 ---
 name: shop-agent
-description: "Shop or reorder from Amazon/retailers: compare products, check prices, add to cart, and prepare checkout. Use browser automation/web-extract as needed; always stop before purchase."
+description: "Shop or reorder from Amazon/retailers: compare products, check prices, add to cart, and prepare checkout. Use web-use as needed; always stop before purchase."
 ---
 
 # Shop Agent
@@ -10,28 +10,27 @@ Browser-driven shopping assistant. Searches for products, adds to cart, and walk
 ## Prerequisites
 
 - **VPS headless browser (primary)**: Playwright 1.59.1 + Chromium on the VPS. Available for search, comparison, price checks, and cart-building on sites that don't require login.
-- The `web-extract` skill for product/pricing/site-data research when a backend choice matters: lightweight retrieval, protected extraction, structured APIs, or remote extraction sessions.
-- The `browser-control` skill for browser context and mode routing when cart, checkout, order history, Prime/login state, CAPTCHA/2FA, or the user's device/session matters.
+- The `web-use` skill for product/pricing/site-data research and browser context routing: lightweight retrieval, protected extraction, structured APIs, remote extraction sessions, cart, checkout, order history, Prime/login state, CAPTCHA/2FA, or the user's device/session.
 - For full functionality (saved addresses, payment methods, Prime): an attached logged-in browser session on your own machine (requires an OpenClaw browser node connected and `gateway.nodes.browser.mode: "auto"`)
 
 ## Dependency routing
 
 Shop Agent owns the shopping workflow. Do not make the user or future agent choose
-between browser-control and web-extract. Use both when the shopping task spans
-research plus cart/checkout.
+a generic web lane. Use `web-use` when the shopping task spans research plus
+cart/checkout.
 
 | Shopping need | Route |
 |---|---|
-| Product discovery, option comparison, reviews, candidate URLs | `web-extract` first; stay lightweight unless blocked |
+| Product discovery, option comparison, reviews, candidate URLs | `web-use`; stay lightweight unless blocked |
 | Current price, stock, seller, Prime, coupon, selected variant | Live retailer page is ground truth; use browser/data path that can see the live offer |
-| Protected product/history/review data with no human-visible browser need | `web-extract` |
+| Protected product/history/review data with no human-visible browser need | `web-use` protected extraction |
 | Structured fresh Amazon product data / ASIN fields | Site-specific API only when this skill says the credit tradeoff is worth it |
-| Add to cart, checkout review, order history, saved address/payment, Prime/login state | `browser-control` |
-| Keepa/extension-backed Amazon history | `browser-control` decides the extension-capable browser lane; this skill decides whether the history is worth using |
-| CAPTCHA, 2FA, manual visual confirmation, final purchase gate | `browser-control` / interactive browser, then stop for user approval |
+| Add to cart, checkout review, order history, saved address/payment, Prime/login state | `web-use` browser context |
+| Keepa/extension-backed Amazon history | `web-use` selects the extension-capable browser lane; this skill decides whether the history is worth using |
+| CAPTCHA, 2FA, manual visual confirmation, final purchase gate | `web-use` interactive browser, then stop for user approval |
 
-Common Amazon flow: use `web-extract` or lightweight browsing to research and
-select candidates, then use `browser-control` for the logged-in Amazon cart and
+Common Amazon flow: use `web-use` to research and select candidates with the
+lightest viable data path, then use its browser-context lane for the logged-in Amazon cart and
 checkout context.
 
 ## Core safety rule
@@ -63,7 +62,7 @@ Classify what the user wants:
 
 ### Step 2: Select data path
 
-Use the `web-extract` skill when data retrieval matters:
+Use `web-use` when data retrieval matters:
 
 - **Casual browsing/research** → prefer free/manual/lightweight paths first
 - **Amazon research for a cart** → collect candidates/ASINs/prices first, then hand the chosen item to the browser/cart step
@@ -72,7 +71,7 @@ Use the `web-extract` skill when data retrieval matters:
 
 ### Step 3: Select browser mode
 
-Use `browser-control` for browser context and cart/checkout routing:
+Use `web-use` for browser context and cart/checkout routing:
 
 - **Just browsing/comparing/price-checking** → **VPS headless browser (default)**. Always available, no user intervention needed.
 - **Logged-in session needed** (checkout, order history, Prime pricing) → attached user browser if Mac node is available. If not, tell user what's needed.

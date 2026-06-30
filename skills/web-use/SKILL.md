@@ -1,6 +1,6 @@
 ---
 name: web-use
-description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Prefer this front door before browser-control or web-extract; domain skills keep site-specific policy."
+description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Domain skills keep site-specific policy."
 ---
 
 # Web Use
@@ -113,7 +113,7 @@ and phrasing guide.
 1. Try Browserless `/stealth/bql` or `/unblock`.
 2. Use Browserless `/session` only for repeated same-site work that benefits
    from persisted remote state.
-3. Use TinyFish Browser API / CDP when deeper remote browser control is needed.
+3. Use TinyFish Browser API / CDP when deeper remote browser automation is needed.
 4. Use a site-specific API only when the domain skill approves the tradeoff.
 5. Switch to interactive browser work when login, CAPTCHA/2FA, visible review,
    or extension state matters.

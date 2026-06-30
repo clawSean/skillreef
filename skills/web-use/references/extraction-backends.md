@@ -77,7 +77,7 @@ session:
 ## Protected Page Escalation
 
 1. Try Browserless first, especially `/stealth/bql` or `/unblock`.
-2. If you need deeper remote browser control, try TinyFish Browser API / CDP
+2. If you need deeper remote browser automation, try TinyFish Browser API / CDP
    session.
 3. If both fail and the user has a real browser path available, switch to
    interactive browser work.
@@ -103,5 +103,5 @@ and `stop` URLs. Treat them like bearer credentials:
 - redact normal output
 - stop the remote session when finished
 
-TinyFish `cdp_url` and `base_url` can also be live browser-control handles. Do
+TinyFish `cdp_url` and `base_url` can also be live browser handles. Do
 not print raw values in ordinary chat output.
