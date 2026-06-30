@@ -1,6 +1,6 @@
 ---
 name: moltmaster
-description: Use for OpenClaw OAuth / auth-profile refresh operations, Auth Molt, Moltmaster, Codex OAuth refresh, Claude/Anthropic OAuth profile refresh planning, or any task involving refreshing, inspecting, or pruning OpenClaw auth-profile credentials without running openclaw doctor. Triggers on Auth Molt, Moltmaster, Codex OAuth refresh, auth-profile refresh, force-expired-for-refresh, openclaw credential rotation.
+description: Moltmaster workflow for refreshing OpenClaw provider profiles safely.
 ---
 
 # Moltmaster
