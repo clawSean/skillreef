@@ -24,6 +24,14 @@ Prefer a lighter tool when the task is really:
 
 If the task does not need tabs, rendering, sessions, cookies, or UI interaction, do **not** route it through full browser-control language.
 
+### Hand off to web-extract for server-side data extraction
+If the task is really about pulling data from a site, especially protected or
+bot-gated pages, structured extraction, Browserless, TinyFish, persistent
+extraction sessions, or site-specific data APIs, use `web-extract`.
+
+Browser-control decides **whose browser/context/device/session**. Web-extract
+decides **which extraction backend**.
+
 ### Use browser-control when the task needs one of these
 - deciding between fresh browser vs current browser
 - deciding between user device vs agent device

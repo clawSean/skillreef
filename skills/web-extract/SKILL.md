@@ -14,6 +14,16 @@ Route web-data tasks to the lightest dependable backend. Keep domain policy, sit
 3. Treat paid/API-credit backends as deliberate choices, not defaults.
 4. Keep interactive human-visible browsing separate from server-side extraction.
 
+## Hand off to browser-control for browser context
+
+If the task needs a human-present or user-logged-in browser session, such as
+login, 2FA, CAPTCHA, final cart/checkout, "my current tab", a visible Mac
+browser, or a browser extension lane, hand the browser-context decision to
+`browser-control`.
+
+Web-extract decides **which extraction backend**. Browser-control decides
+**whose browser/context/device/session**.
+
 ## Backend selection order
 
 ### 1) Lightweight retrieval
