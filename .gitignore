@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .DS_Store
 skills/**/references/backends.md
+
+# Local agent guidance — never publish (see workspace as source of truth)
+/AGENTS.md
+/PROJECT_PROGRESS.md
