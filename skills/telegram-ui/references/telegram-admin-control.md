@@ -24,7 +24,7 @@ Telegram Bot API method: `setChatPhoto`.
 
 ```bash
 CHAT='<telegram_chat_id>'
-TOKEN='<telegram_bot_token>'
+TOKEN=$(jq -r '.channels.telegram.accounts.<account>.botToken' ~/.openclaw/openclaw.json)
 BOT_ID=$(curl -fsS "https://api.telegram.org/bot${TOKEN}/getMe" | jq -r '.result.id')
 
 curl -fsS --get "https://api.telegram.org/bot${TOKEN}/getChatMember" \
@@ -40,7 +40,7 @@ Proceed only if Telegram returns `status: "administrator"` or equivalent owner/a
 ```bash
 CHAT='<telegram_chat_id>'
 PHOTO='/absolute/path/to/avatar.png'
-TOKEN='<telegram_bot_token>'
+TOKEN=$(jq -r '.channels.telegram.accounts.<account>.botToken' ~/.openclaw/openclaw.json)
 
 curl -fsS -X POST "https://api.telegram.org/bot${TOKEN}/setChatPhoto" \
   -F "chat_id=${CHAT}" \

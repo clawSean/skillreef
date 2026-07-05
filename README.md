@@ -24,8 +24,27 @@ shapes instead of pointer chains.
 - `shell-swap` - Mass-switch OpenClaw model settings with codex/gpt/claude lane aliases.
 - `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-use` for product/price data and browser context.
 - `shrimp` - Internal pass-through helper for `/shrimp` sub-agent dispatch.
-- `telegram-ui` - Telegram rich chat UI patterns: inline buttons, polls, edits, replies, reactions, media, and pins via OpenClaw.
+- `telegram-ui` - Telegram rich chat UI patterns: inline buttons, polls, edits, replies, reactions, media, and pins via OpenClaw. Includes live-verified authoring rules for OpenClaw's experimental `richMessages` mode (see below).
 - `web-use` - Front-door routing for web search, fetch, extraction, protected backends, and real browser context.
+
+## ⚡ Heads-up: OpenClaw `richMessages` changes Telegram rendering semantics
+
+OpenClaw ships with Telegram `richMessages` **off** by default. Turning it on
+unlocks tables, collapsible `<details>` blocks, math, checkbox lists, and inline
+media — but it also **breaks every newline-based formatting habit**:
+
+- Plain newlines, blank lines, `•` bullets, and markdown `-`/`1.` lists all
+  collapse into run-on text. The rich renderer treats whitespace like a browser.
+- Structure must come from explicit HTML blocks: `<p>` per paragraph,
+  `<ul>/<ol>` + `<li>` for lists, `<br>` for forced breaks (never `<br/>` —
+  the self-closing form gets escaped to literal text).
+- Empty `<p></p>` spacers are collapsed too. To get a real blank line between
+  paragraphs, use a paragraph holding a non-breaking space: `<p>&#160;</p>`.
+
+All of this is live-verified on iOS (2026-07-05) and documented with the full
+rendering matrix and house authoring rules in `skills/telegram-ui/SKILL.md`.
+If your agent's Telegram messages suddenly render as one giant run-on wall
+after enabling rich mode, this is why.
 
 ## Companion kits
 
