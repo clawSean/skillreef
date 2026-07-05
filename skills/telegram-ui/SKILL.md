@@ -39,9 +39,13 @@ This sweep is BINDING, not advisory: every send gets a deliberate pick from this
 - ✅ `<video src="https://…"/>` inline playable video · `<audio src="https://…"/>` audio player with duration (both verified 2026-07-05)
 - ❌ `<blockquote expandable>` — renders as a normal OPEN blockquote on iOS, no collapse (verified 2026-07-05). For collapsible content use `<details><summary>` instead.
 - ❌ `<tg-time>` — fully dead on iOS (all forms verified 2026-07-05): `unix=` with empty content renders nothing; `unix=` with inner fallback text shows only the plain fallback (tag stripped, no viewer-local rendering); `datetime=` LEAKS RAW MARKUP into the message. Never use it — write times as plain text with an explicit timezone.
-- ❌ Markdown footnotes `[^1]` — leak as literal text; don't use until a working syntax is found (untested candidate: `<tg-reference name="…">` from the converter's supported-tag list)
-
-**Still-unverified tags (from converter source — promote with a date once JPop confirms):** `<tg-emoji emoji-id="…">` custom emoji · `<a name="…">` anchors + in-message `href="#…"` links · `valign`/`rowspan` table attrs · `<ol reversed>` · `figure tg-spoiler` attr
+- ✅ `<tg-emoji emoji-id="…">` custom emoji — renders as custom sticker (or falls back to the Unicode emoji if the id is unrecognized; verified 2026-07-05)
+- ✅ `<a name="…">` named anchors + in-message `href="#…"` jump links — anchor set and tap-to-jump both work (verified 2026-07-05)
+- ✅ `valign`/`rowspan` table attrs — merge and align render natively (verified 2026-07-05)
+- ✅ `<ol reversed>` — countdown ordering renders correctly (verified 2026-07-05)
+- ❌ `figure tg-spoiler` attr — does NOT blur the image; has no effect (verified 2026-07-05). For image spoilers use `<tg-spoiler>` wrapping (or `||…||` spoiler syntax for text); don't rely on a `tg-spoiler` attr on `<figure>`.
+- ❌ `<tg-reference name="…" type="footnote">` — leaks as raw markup (tag not on whitelist; verified 2026-07-05). Don't use it. Markdown footnotes `[^1]` also leak. No working footnote syntax found yet.
+- ❌ Markdown footnotes `[^1]` — leak as literal text.
 - 🚨 **LINE BREAKS COLLAPSE (root-caused 2026-07-05):** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both still render run-on. **The only reliable structure in rich mode is explicit HTML blocks:** `<p>…</p>` paragraphs, `<ul><li>`/`<ol><li>` lists, `<br>` breaks (⚠️ must be `<br>`, NOT `<br/>` — the self-closing form gets escaped by the sanitizer). Headings/tables/details/math are block elements and are safe. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
 
 **Verified gotchas with richMessages ON (2026-07-04):**
@@ -138,7 +142,7 @@ OpenClaw converts markdown-ish text to Telegram HTML (`parse_mode: "HTML"`).
 **Nesting & edits (verified live 2026-06-10):**
 - Nesting works: bold/links inside spoilers, strike/spoilers inside blockquotes, bold+strike combos all render correctly
 - `action=edit` preserves all formatting — edited messages re-render markdown-ish the same as sends
-- ⚠️ **Spoiler link leak:** a `[link](url)` inside `||spoiler||` blurs the text but still generates a link preview card below the message, revealing the URL's destination. Don't put links in spoilers if the destination is the surprise.
+- ✅ **Spoiler link bleed re-tested 2026-07-05 (rich mode):** `||spoiler text including a link||` — no link preview card appeared below the message. The destination stayed hidden. (Prior note from 2026-06-10 said a preview card DID appear; that was in normal/non-rich mode. Rich mode appears to suppress the preview card. In normal mode, treat spoiler links as leaky and add explicit `<meta name="twitter:card" ...>` or just avoid linking the sensitive URL directly.)
 
 **Raw HTML passthrough (whitelist only):**
 
