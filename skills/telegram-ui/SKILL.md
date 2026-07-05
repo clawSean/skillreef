@@ -12,7 +12,7 @@ For cross-platform orchestration of multi-step flows, also use `skills/interacti
 
 This skill exists partly to keep the WHOLE toolbox in working memory — the natural failure mode is falling back to plain text and forgetting 80% of these exist. Before composing any Telegram reply, mentally sweep the full list and pick deliberately:
 
-**callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · mentions · spoilers · blockquotes · rich messages (Bot API 10.1 body rendering)**
+**callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · mentions · spoilers · blockquotes · rich messages (Bot API 10.1 body rendering: tables · collapsibles · headings · checkbox lists · math · maps · collages · slideshows · dividers · timestamps · highlights)**
 
 If your last several messages were all plain text, that's a signal you've stopped scanning — course-correct.
 
@@ -28,9 +28,20 @@ If your last several messages were all plain text, that's a signal you've stoppe
 - ✅ `<mark>` highlight (yellow), `<sup>`/`<sub>`
 - ✅ Headings (`##` → large styled heading)
 - ✅ Task lists: `<ul><li><input type="checkbox" checked/> item</li></ul>` → native checked/unchecked boxes
-- ✅ Formulas: `<tg-math>E = mc^2</tg-math>` → real typeset math
+- ✅ Formulas: `<tg-math>E = mc^2</tg-math>` inline; `<tg-math-block>…</tg-math-block>` display math (beautifully typeset, verified 2026-07-05)
 - ✅ Standalone image blocks: `<img src="https://..."/>`
-- ❌ Markdown footnotes `[^1]` — leak as literal text; don't use until a working syntax is found
+- ✅ `<hr>` divider · `<blockquote>` with `<cite>` (citation renders gray under the quote) · `<aside>` pull quote (bordered callout) · `<footer>` (small gray line) — all verified 2026-07-05
+- ✅ Table extras (verified 2026-07-05): `<caption>`, `bordered`/`striped`, `colspan`, `align` — all render natively
+- ✅ `<ol start="5">` numbered-list offset (verified 2026-07-05)
+- ✅ `<figure><img …/><figcaption>…</figcaption></figure>` — image with gray caption (verified 2026-07-05)
+- ✅ `<tg-collage>` of `<img>` blocks — native grid (1 big + rest tiled); `<tg-slideshow>` — swipeable gallery with dot indicator (both verified 2026-07-05)
+- ✅ `<tg-map lat="…" long="…" zoom="…"/>` — real inline map tile with pin (verified 2026-07-05)
+- ✅ `<video src="https://…"/>` inline playable video · `<audio src="https://…"/>` audio player with duration (both verified 2026-07-05)
+- ❌ `<blockquote expandable>` — renders as a normal OPEN blockquote on iOS, no collapse (verified 2026-07-05). For collapsible content use `<details><summary>` instead.
+- ❌ `<tg-time unix="…">` with empty content — renders NOTHING on iOS (verified 2026-07-05). Write times as plain text until a working form is found (untested: inner fallback text, `datetime=` attr).
+- ❌ Markdown footnotes `[^1]` — leak as literal text; don't use until a working syntax is found (untested candidate: `<tg-reference name="…">` from the converter's supported-tag list)
+
+**Still-unverified tags (from converter source — promote with a date once JPop confirms):** `<tg-emoji emoji-id="…">` custom emoji · `<a name="…">` anchors + in-message `href="#…"` links · `valign`/`rowspan` table attrs · `<ol reversed>` · `figure tg-spoiler` attr
 - 🚨 **LINE BREAKS COLLAPSE (root-caused 2026-07-05):** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both still render run-on. **The only reliable structure in rich mode is explicit HTML blocks:** `<p>…</p>` paragraphs, `<ul><li>`/`<ol><li>` lists, `<br>` breaks (⚠️ must be `<br>`, NOT `<br/>` — the self-closing form gets escaped by the sanitizer). Headings/tables/details/math are block elements and are safe. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
 
 **Verified gotchas with richMessages ON (2026-07-04):**
@@ -152,7 +163,7 @@ When referencing a specific Telegram user in a group, default to a real Telegram
 
 Preferred order:
 - **Reply context first:** if responding to a specific message from that person, use `replyTo` so Telegram creates the native reply link.
-- **User ID mention:** when you know the numeric Telegram user ID, write an HTML mention link: `<a href="tg://user?id=8681554364">Nick</a>`.
+- **User ID mention:** when you know the numeric Telegram user ID, write an HTML mention link: `<a href="tg://user?id=<user_id>">Nick</a>`.
 - **Username mention:** when you know their public username and do not have the numeric ID, use `@username`.
 - **Plain name fallback:** only use a plain name when no user ID or username is available. Do not invent IDs or usernames.
 
@@ -162,7 +173,7 @@ Examples:
   "action": "send",
   "channel": "telegram",
   "target": "telegram:<group_chat_id>",
-  "message": "<a href=\"tg://user?id=8681554364\">Nick</a> this one is yours."
+  "message": "<a href=\"tg://user?id=<user_id>\">Nick</a> this one is yours."
 }
 ```
 
@@ -171,7 +182,7 @@ Examples:
   "action": "send",
   "channel": "telegram",
   "target": "telegram:<group_chat_id>",
-  "message": "Looping <a href=\"tg://user?id=123456789\">JPop</a> in here."
+  "message": "Looping <a href=\"tg://user?id=<user_id>\">JPop</a> in here."
 }
 ```
 
