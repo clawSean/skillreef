@@ -98,8 +98,8 @@ exec scripts/switch.sh grok-4.3           # -> openrouter/x-ai/grok-4.3
 # Full id, agnostic passthrough
 exec scripts/switch.sh anthropic/claude-opus-4-8
 
-# Only the example-agent agent
-exec scripts/switch.sh sonnet --agent example-agent
+# Only the <your-agent> agent
+exec scripts/switch.sh sonnet --agent <your-agent>
 
 # Preview without writing
 exec scripts/switch.sh opus --dry-run

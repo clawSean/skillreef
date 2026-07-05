@@ -1,6 +1,6 @@
 ---
-name: web-use
-description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Domain skills keep site-specific policy."
+name: "web-use"
+description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live"
 ---
 
 # Web Use
@@ -29,6 +29,20 @@ Keep those questions separate even when one workflow needs both.
 Do not use a browser when search or fetch is enough. Do not use Browserless,
 TinyFish, or paid APIs when a simple tool can finish the task.
 
+## Logged-in sessions are NOT user-device-only (read this)
+
+A logged-in browser session can live on the **agent side**, not just the user's
+machine. The VPS managed `openclaw` browser (`profile="openclaw"`, `target="host"`,
+CDP `:18800`, persistent `userDataDir`) can hold durable logins — e.g. it is
+signed into Amazon as Jared — and is frequently the **primary** lane for
+cart/checkout/order-history/account tasks. The user's own device browser
+(Mac node) is often a **fallback** and may be logged into nothing.
+
+So when a task needs a logged-in session: check the agent-side managed browser
+FIRST, verify login state on the live page, and only fall back to the user
+device when the agent session is logged out or the user wants to co-interact.
+Do not assume "logged in" ⇒ "the user's current browser."
+
 ## Routing Rules
 
 1. Start with the lightest viable path.
@@ -36,6 +50,7 @@ TinyFish, or paid APIs when a simple tool can finish the task.
 3. Treat paid/API-credit backends as deliberate choices, not defaults.
 4. Keep interactive human-visible browsing separate from server-side extraction.
 5. Keep site-specific policy in the relevant domain skill.
+6. A logged-in session may be agent-side; verify login state rather than routing by device assumption.
 
 ## Data Path Decision
 
@@ -97,6 +112,10 @@ Plain-English labels:
 - On your device
 - On my side
 
+Note: "On my side" (agent device) can be a **logged-in** session, not just a
+fresh one. For account/cart/checkout work, prefer the agent-side logged-in
+managed browser first when it holds the needed login.
+
 Read `references/context-device.md` for the compact 2 x 2 browser-mode matrix
 and phrasing guide.
 
@@ -121,9 +140,12 @@ and phrasing guide.
 
 ### Current Tab Or Logged-In Browser
 
-1. Confirm that the task needs the user's live browser/session.
-2. Use the available browser profile/node path for the target device.
-3. If the requested mode is unavailable, say which capability is missing and
+1. Confirm that the task needs a live browser/session.
+2. Check the agent-side managed browser first — it may already hold the login
+   (e.g. Amazon). Verify login state on the live page.
+3. Use the appropriate browser profile/node path for the target device; the
+   user's device browser is a fallback when the agent session is unavailable.
+4. If the requested mode is unavailable, say which capability is missing and
    choose the closest acceptable fallback.
 
 ## Bundled Helper Scripts

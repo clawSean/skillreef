@@ -1,0 +1,5 @@
+flowchart TD
+    Start([Start]) --> Check{Can render?}
+    Check -->|Yes| Done([Done])
+    Check -->|No| Retry[Inspect config]
+    Retry --> Check

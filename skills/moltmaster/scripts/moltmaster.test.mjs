@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Auth Molt v0.1 lightweight tests — no external deps
 // Tests arg validation, profile validation, and dry-run using AUTH_MOLT_STORE_PATH env override.
-// Force-refresh success and rollback-failure scenarios are manual-only
+// Force-refresh success (claw3-style) and failure with rollback (claw4-style) are manual-only
 // because they require the live OpenClaw runtime and credential store.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -13,25 +13,28 @@ const SCRIPT = new URL('./moltmaster.mjs', import.meta.url).pathname;
 
 const VALID_STORE = {
   profiles: {
-    'openai-codex:valid@example.com': {
-      provider: 'openai-codex', type: 'oauth', email: 'valid@example.com', expires: 9999999999999,
+    'openai-codex:valid@edge.app': {
+      provider: 'openai-codex', type: 'oauth', email: 'valid@edge.app', expires: 9999999999999,
+    },
+    'openai-codex:you@example.com': {
+      provider: 'openai-codex', type: 'oauth', email: 'you@example.com', expires: 9999999999999,
     },
   },
 };
 
 const MIXED_STORE = {
   profiles: {
-    'openai-codex:valid@example.com': {
-      provider: 'openai-codex', type: 'oauth', email: 'valid@example.com', expires: 9999999999999,
+    'openai-codex:valid@edge.app': {
+      provider: 'openai-codex', type: 'oauth', email: 'valid@edge.app', expires: 9999999999999,
     },
-    'openai-codex:badprovider@example.com': {
-      provider: 'anthropic', type: 'oauth', email: 'badprovider@example.com', expires: 9999999999999,
+    'openai-codex:badprovider@edge.app': {
+      provider: 'anthropic', type: 'oauth', email: 'badprovider@edge.app', expires: 9999999999999,
     },
-    'openai-codex:badtype@example.com': {
-      provider: 'openai-codex', type: 'apikey', email: 'badtype@example.com', expires: 9999999999999,
+    'openai-codex:badtype@edge.app': {
+      provider: 'openai-codex', type: 'apikey', email: 'badtype@edge.app', expires: 9999999999999,
     },
-    'openai-codex:bademail@example.com': {
-      provider: 'openai-codex', type: 'oauth', email: 'bademail@notexample.com', expires: 9999999999999,
+    'openai-codex:bademail@edge.app': {
+      provider: 'openai-codex', type: 'oauth', email: 'bademail@notedge.com', expires: 9999999999999,
     },
   },
 };
@@ -42,7 +45,7 @@ let passed = 0;
 let failed = 0;
 
 function run(label, args, { storePath, backupDir, stateFile, expectExit = 0, expectStdout = [], expectStderr = [] } = {}) {
-  const env = { ...process.env, AUTH_MOLT_ALLOWED_EMAIL_DOMAIN: 'example.com' };
+  const env = { ...process.env };
   if (storePath) env.AUTH_MOLT_STORE_PATH = storePath;
   if (backupDir) env.AUTH_MOLT_BACKUP_DIR = backupDir;
   if (stateFile) env.AUTH_MOLT_STATE_FILE = stateFile;
@@ -102,7 +105,7 @@ run('dry-run lists profile and exits 0', ['--dry-run'], {
   storePath: validStorePath,
   ...testEnv(),
   expectExit: 0,
-  expectStdout: ['dry-run', 'valid@example.com', 'Dry-run: no files changed'],
+  expectStdout: ['dry-run', 'valid@edge.app', 'Dry-run: no files changed'],
 });
 run('no-flag defaults to dry-run', [], {
   storePath: validStorePath,
@@ -110,11 +113,17 @@ run('no-flag defaults to dry-run', [], {
   expectExit: 0,
   expectStdout: ['dry-run', 'Dry-run: no files changed'],
 });
-run('dry-run with --profile filters to target', ['--dry-run', '--profile', 'openai-codex:valid@example.com'], {
+run('dry-run with --profile filters to target', ['--dry-run', '--profile', 'openai-codex:valid@edge.app'], {
   storePath: validStorePath,
   ...testEnv(),
   expectExit: 0,
-  expectStdout: ['valid@example.com'],
+  expectStdout: ['valid@edge.app'],
+});
+run('dry-run allows approved Pearson Codex profile', ['--dry-run', '--profile', 'openai-codex:you@example.com'], {
+  storePath: validStorePath,
+  ...testEnv(),
+  expectExit: 0,
+  expectStdout: ['you@example.com'],
 });
 
 // --- Flag refusals ---
@@ -125,13 +134,13 @@ run('--execute + --dry-run refused', ['--execute', '--dry-run'], {
   expectExit: 1,
   expectStderr: ['ambiguous mode'],
 });
-run('--execute + --all + --profile refused', ['--execute', '--all', '--profile', 'openai-codex:valid@example.com'], {
+run('--execute + --all + --profile refused', ['--execute', '--all', '--profile', 'openai-codex:valid@edge.app'], {
   storePath: validStorePath,
   ...testEnv(),
   expectExit: 1,
   expectStderr: ['ambiguous target'],
 });
-run('--force-expired-for-refresh without --execute refused', ['--force-expired-for-refresh', '--profile', 'openai-codex:valid@example.com'], {
+run('--force-expired-for-refresh without --execute refused', ['--force-expired-for-refresh', '--profile', 'openai-codex:valid@edge.app'], {
   storePath: validStorePath,
   ...testEnv(),
   expectExit: 1,
@@ -151,8 +160,8 @@ run('--force-expired-for-refresh without --profile refused', ['--execute', '--fo
 });
 run('--force-expired-for-refresh with two --profile refused', [
   '--execute', '--force-expired-for-refresh',
-  '--profile', 'openai-codex:valid@example.com',
-  '--profile', 'openai-codex:valid@example.com',
+  '--profile', 'openai-codex:valid@edge.app',
+  '--profile', 'openai-codex:valid@edge.app',
 ], {
   storePath: validStorePath,
   ...testEnv(),
@@ -174,23 +183,23 @@ run('bare --execute without --profile or --all refused', ['--execute'], {
 
 // --- Profile validation ---
 console.log('\nProfile validation:');
-run('non-Codex provider rejected', ['--dry-run', '--profile', 'openai-codex:badprovider@example.com'], {
+run('non-Codex provider rejected', ['--dry-run', '--profile', 'openai-codex:badprovider@edge.app'], {
   storePath: mixedStorePath,
   ...testEnv(),
   expectExit: 1,
   expectStderr: ['non-Codex provider'],
 });
-run('non-OAuth type rejected', ['--dry-run', '--profile', 'openai-codex:badtype@example.com'], {
+run('non-OAuth type rejected', ['--dry-run', '--profile', 'openai-codex:badtype@edge.app'], {
   storePath: mixedStorePath,
   ...testEnv(),
   expectExit: 1,
   expectStderr: ['non-OAuth profile'],
 });
-run('disallowed email domain rejected', ['--dry-run', '--profile', 'openai-codex:bademail@example.com'], {
+run('non-edge.app email rejected', ['--dry-run', '--profile', 'openai-codex:bademail@edge.app'], {
   storePath: mixedStorePath,
   ...testEnv(),
   expectExit: 1,
-  expectStderr: ['unexpected email domain'],
+  expectStderr: ['unexpected email'],
 });
 run('non-allowlisted profile ID rejected', ['--dry-run', '--profile', 'anthropic:badid'], {
   storePath: mixedStorePath,

@@ -1,9 +1,10 @@
 # claude-foreman
 
-**Distribution mirror:** canonical source lives at `clawSean/claude-foreman`.
+**Canonical source:** this standalone repo, `clawSean/claude-foreman`.
 
-This SkillReef copy is mirrored for collection-based installation. Make changes
-in the standalone repo first, then sync them here.
+The SkillReef collection may carry a mirrored distribution copy at
+`clawSean/skillreef/skills/claude-foreman`, but changes should originate here
+first and then be synced outward.
 
 OpenClaw skill for dispatching bounded planning, review, and implementation jobs to Claude CLI while keeping OpenClaw (a multi-channel agent gateway/orchestrator) in charge.
 
@@ -22,7 +23,7 @@ This is not a replacement model route. It is a repeatable dispatch harness: perm
 ## What it includes
 - `SKILL.md` usage + dispatch policy
 - `profiles/` for `plan`, `implement`, `review`, `wide-open`, `claws-out` (legacy alias: `unsafe`)
-- `scripts/dispatch.sh` with budget guardrails and structured logging
+- `scripts/dispatch.sh` with budget guardrails, structured logging, permission-denial diagnostics, and auto-appended final-output guardrail
 - `NOTES.md` for runtime learnings
 
 ## Quickstart
@@ -32,7 +33,14 @@ scripts/dispatch.sh review /path/to/repo \
   "Review the current diff. Focus on correctness, risk, and missing tests."
 ```
 
-Expected result: Foreman prints the selected profile/model, runs Claude CLI, logs cost/turn metadata, and returns Claude's final summary. For write-profile runs, review the git diff before merging or copying changes forward.
+Expected result: Foreman prints the selected profile/model, the raw stream path,
+compact live progress lines, cost/turn metadata, and Claude's final summary. For
+write-profile runs, review the git diff before merging or copying changes
+forward.
+
+Raw Claude `stream-json` events are saved under `artifacts/streams/` for
+auditing and liveness checks. Foreman only prints compact filtered progress to
+the parent process; it does not dump raw JSON into chat/context.
 
 ## Install
 Copy this folder into your OpenClaw workspace:
@@ -58,6 +66,147 @@ Profiles:
 Default model is **Opus** across profiles. Use `--model sonnet` as an explicit lighter-cost escape hatch.
 
 Compatibility: `unsafe` is still accepted as a legacy alias for `claws-out`. `root-wide` and `claws-wide` are accepted as aliases for `wide-open`.
+
+## Optional Claude Account Profiles
+
+Foreman normally inherits the caller's ambient Claude CLI auth. That keeps the
+standalone skill portable: users who only have one `claude` login can keep using
+the normal dispatch command with no profile setup.
+
+On machines with multiple Claude setup-token accounts, Foreman can pin an auth
+profile for a run:
+
+```bash
+scripts/dispatch.sh plan /path/to/repo \
+  "Reply exactly: FOREMAN_PROFILE_OK" \
+  --model sonnet \
+  --profile work
+```
+
+When `--profile <name>` or `--provider claude-cli|claude-work` is supplied,
+Foreman resolves auth through a profiles JSON file:
+
+```json
+{
+  "active": "personal",
+  "profiles": {
+    "personal": {
+      "label": "JPop Personal",
+      "env_var": "ANTHROPIC_OAUTH_TOKEN1"
+    },
+    "work": {
+      "label": "Edge Company",
+      "env_var": "ANTHROPIC_OAUTH_TOKEN2"
+    }
+  }
+}
+```
+
+Default path: `~/.openclaw/claude-profiles.json`
+
+Override path for portable installs:
+
+```bash
+FOREMAN_CLAUDE_PROFILES_FILE=/path/to/claude-profiles.json \
+  scripts/dispatch.sh plan /path/to/repo "..." --profile work
+```
+
+Rules:
+- Tokens live only in the environment. The profiles file stores env var names,
+  not token values.
+- Env var names must be shell-safe: `[A-Za-z_][A-Za-z0-9_]*`.
+- `claude-auth-active` is only a local default-profile switch for the
+  `claude-cli` lane. It is not automatic failover.
+- `claude-work` is treated as the `work` profile for Sean's local OpenClaw
+  setup; regular Foreman users do not need that provider wrapper.
+
+To add another account/profile:
+
+1. Export a new Claude setup token in the runtime env, for example
+   `ANTHROPIC_OAUTH_TOKEN3`.
+2. Add a profile entry:
+
+```json
+"backup": {
+  "label": "Backup Claude Seat",
+  "env_var": "ANTHROPIC_OAUTH_TOKEN3",
+  "cooldown_until": 0
+}
+```
+
+3. Smoke test the profile:
+
+```bash
+scripts/smoke-claude-profile.sh --profile backup --model sonnet
+```
+
+## Mac Node Claude Auth Router
+
+For <YourMacNode>/Mac-hosted Claude work, use:
+
+```bash
+scripts/mac-node-claude-foreman-auth-router.sh
+```
+
+Canonical source lives in this skill. On the Mac, sync the skill to:
+
+```bash
+/Users/clawPop/.openclaw/skills/claude-foreman
+```
+
+The convenience command should be a symlink to the script inside that skill:
+
+```bash
+/Users/clawPop/.openclaw/bin/mac-node-claude-foreman-auth-router.sh
+```
+
+It sources the Mac-local env file:
+
+```bash
+/Users/clawPop/.openclaw/.env
+```
+
+The env file must be mode `600`. The default token name is
+`ANTHROPIC_OAUTH_TOKEN`; optional profile setups can still use
+`ANTHROPIC_OAUTH_TOKEN1`, `ANTHROPIC_OAUTH_TOKEN2`, etc.
+
+Direct Claude smoke:
+
+```bash
+/Users/clawPop/.openclaw/bin/mac-node-claude-foreman-auth-router.sh \
+  -p "Reply exactly: MAC_ROUTER_OK"
+```
+
+Foreman wrapper form:
+
+```bash
+/Users/clawPop/.openclaw/bin/mac-node-claude-foreman-auth-router.sh -- \
+  /Users/clawPop/.openclaw/skills/claude-foreman/scripts/dispatch.sh plan /path/to/repo \
+  "Review this and summarize findings."
+```
+
+4. If the account should appear as an OpenClaw `/models` selectable provider,
+   add or update the OpenClaw CLI backend/model config separately and validate it
+   with:
+
+```bash
+scripts/smoke-openclaw-model.sh --model claude-work/claude-sonnet-4-6
+```
+
+That OpenClaw provider step is intentionally separate from Foreman. Foreman only
+needs profile auth when the caller explicitly asks it to pin an account.
+
+## Live Smoke Tests
+
+The reusable smoke tests save artifacts under `artifacts/smokes/`.
+
+```bash
+# Direct Claude CLI account/profile proof. Prints parsed response text.
+scripts/smoke-claude-profile.sh --profile work --model sonnet
+
+# OpenClaw selectable provider proof through the agent pipeline. Prints parsed response text.
+scripts/smoke-openclaw-model.sh --model claude-work/claude-sonnet-4-6
+```
 
 ## Notes
 This skill is intended for heavier or higher-stakes work where native tool-call editing would be inefficient, context-expensive, or better handled by a separated reviewer/implementer.

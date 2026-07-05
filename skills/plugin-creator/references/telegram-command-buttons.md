@@ -240,14 +240,14 @@ Practical rule: **try `/think` style if the SDK exposes it; otherwise use presen
 
 ## Pattern D — Telegram `channelData` Buttons That Reinvoke Plugin Slash Args
 
-WatchCatfish validated a simpler no-LLM branch pattern for plugin commands where a Telegram button can map directly to an ordinary slash command invocation. Instead of maintaining callback state, the menu returns Telegram-specific `channelData.telegram.buttons` and each button's `callback_data` is the exact command branch:
+WatchCatfish originally used a simpler no-LLM branch pattern for plugin commands where a Telegram button maps directly to an ordinary slash command invocation. Instead of maintaining callback state, the menu returns Telegram-specific `channelData.telegram.buttons` and each button's `callback_data` is the exact command branch:
 
 ```ts
 { text: "🖥️ Hardware", callback_data: "/health hardware", style: "primary" }
 { text: "🧰 Services", callback_data: "/health services", style: "success" }
 ```
 
-Telegram callback dispatch presents that callback as synthetic text, so the command path receives `/health hardware` or `/health services` and the normal plugin `ctx.args` branch logic runs. This keeps the implementation reproducible and token-free: no LLM turn, no plugin interactive handler, and no long-lived button state.
+This depended on Telegram callback dispatch presenting unknown callback data as synthetic text, so the command path received `/health hardware` or `/health services` and the normal plugin `ctx.args` branch logic ran. Treat this as a compatibility shortcut, not the canonical plugin button pattern: it is more sensitive to dispatcher, auth, and callback-routing changes than a namespaced plugin interactive handler.
 
 Use this pattern when all of these are true:
 
@@ -255,8 +255,9 @@ Use this pattern when all of these are true:
 - branch names are short and safe to show as commands;
 - no pagination/back/edit-in-place state is needed;
 - non-Telegram users can use the same explicit text commands.
+- the current OpenClaw Telegram callback dispatcher has been verified to reinject unknown slash-shaped callback data as synthetic command text.
 
-Do **not** use it for opaque callback payloads, destructive actions needing confirmation state, or flows where buttons should edit the original message. For those, use `presentation.buttons` plus `api.registerInteractiveHandler(...)`.
+Prefer an explicit namespaced callback plus `api.registerInteractiveHandler(...)` for new plugins. For Telegram-first command menus, `channelData.telegram.buttons` with short namespaced `callback_data` values like `watchcatfish:hardware` is a known-good visible button path; register a matching namespace and have the handler call the same branch function used by `/health hardware`. Use `presentation.buttons` when channel-agnostic rendering is verified for the target delivery path. Do **not** use raw slash-shaped callbacks for opaque callback payloads, destructive actions needing confirmation state, or flows where buttons should edit the original message.
 
 WatchCatfish also added aliases so human text and callback values converge:
 
@@ -264,4 +265,4 @@ WatchCatfish also added aliases so human text and callback values converge:
 - `/health basic` → `core` probe
 - `/health services` → services probe
 
-This is currently the easiest reproducible pattern for “buttons steer a plugin but the plugin still owns the whole no-LLM execution path.”
+This remains a useful fallback pattern, but the most reproducible pattern for “buttons steer a plugin while the plugin owns the whole no-LLM execution path” is now visible buttons with namespaced callback data plus an explicit interactive handler.

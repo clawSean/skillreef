@@ -1,0 +1,105 @@
+# Bottom Feeder — External Signal Sources (Example / Template)
+#
+# Copy to config/signals.yaml in your workspace and edit.
+# Then set `enable_external_signals: true` in defaults.yaml (or in run-policy).
+#
+# This file declares external task/issue/ticket systems that should influence
+# topic selection. The agent will read these during the topic-selection stage
+# and surface operational pressure as topic candidates.
+#
+# See references/topic-selection/external-signals.md for full semantics.
+
+version: 1
+
+# Global controls
+weight_external_signals: 0.5        # 0.0–1.0 — how strongly signals steer topic scoring
+max_signal_topics: 3                # cap on signal-derived candidates per run
+age_window_days: 30                 # ignore signals older than this
+
+# Sources — enable and configure the ones you use.
+sources:
+
+  # --- Asana ----------------------------------------------------------------
+  asana:
+    enabled: false
+    # The agent fetches the token at runtime. Do NOT put secrets in this file.
+    # Provide a runtime reference (examples: op:// for 1Password, env:VAR for env var).
+    auth_ref: "op://YOUR-VAULT/Asana PAT/password"
+    workspace_id: ""
+    filter:
+      assignee: "me"
+      completed: false
+    # Projects/sections to emphasize (optional)
+    focus_projects: []
+    focus_sections: []
+
+  # --- Jira / Jira Cloud ----------------------------------------------------
+  jira:
+    enabled: false
+    base_url: "https://example.atlassian.net"
+    auth_ref: "env:JIRA_API_TOKEN"
+    email_ref: "env:JIRA_EMAIL"
+    jql: "assignee = currentUser() AND resolution = Unresolved ORDER BY updated DESC"
+
+  # --- Linear ---------------------------------------------------------------
+  linear:
+    enabled: false
+    auth_ref: "op://YOUR-VAULT/Linear API Key/password"
+    team_ids: []
+    filter:
+      state: ["Todo", "In Progress"]
+      assignee: "me"
+
+  # --- GitHub issues + PRs --------------------------------------------------
+  github:
+    enabled: false
+    auth_ref: "env:GH_TOKEN"
+    # Repos to pull from
+    repos:
+      - "owner/repo"
+    include_issues: true
+    include_prs: true
+    filter:
+      state: "open"
+      assignee: "me"
+      labels: []
+
+  # --- Notion databases -----------------------------------------------------
+  notion:
+    enabled: false
+    auth_ref: "op://YOUR-VAULT/Notion Integration Token/password"
+    database_ids: []
+    filter:
+      status: ["To Do", "In Progress"]
+
+  # --- Generic webhook / JSON endpoint --------------------------------------
+  # For any task system not in the built-in list — point at a JSON endpoint
+  # that returns an array of items with at least { title, status, updated_at }.
+  generic:
+    enabled: false
+    url: "https://example.com/my-tasks.json"
+    auth_ref: ""
+    # Field names to map from your payload
+    map:
+      title: "title"
+      status: "status"
+      updated_at: "updated_at"
+      tags: "labels"
+      url: "url"
+
+# Scoring — how to convert raw items into topic candidates
+scoring:
+  # Keyword weight bumps (higher = more likely to become a topic candidate)
+  boost_terms:
+    - release
+    - outage
+    - incident
+    - security
+    - migration
+  # Terms that should NOT become topics (too noisy or too specific)
+  ignore_terms:
+    - "Jared Verification"
+    - "test"
+    - "It's time to update your goal"
+  # Minimum number of related items before a theme becomes a topic candidate
+  min_cluster_size: 3

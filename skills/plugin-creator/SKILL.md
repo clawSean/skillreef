@@ -1,9 +1,9 @@
 ---
-name: plugin-creator
-description: Create, design, review, or troubleshoot OpenClaw plugins/extensions, especially plugins that register chat slash commands, use message presentation buttons, or wire interactive handlers. Use when building a new OpenClaw extension, adding an api.registerCommand slash command, creating a one-shot plugin prompt, choosing between raw args vs buttons, or checking plugin SDK docs/source.
+name: plugin-creator-openclaw
+description: Build, review, or troubleshoot OpenClaw plugins: slash commands, message buttons, interactive handlers, manifests, SDK docs, and real command-path verification.
 ---
 
-# Plugin Creator
+# OpenClaw Plugin Creator
 
 Use this skill when creating or improving an OpenClaw plugin/extension.
 
@@ -19,10 +19,38 @@ For Telegram or button branching, read `references/telegram-command-buttons.md` 
 2. **Start boring:** make a working slash command before adding buttons, state, or channel-specific UI.
 3. **Use the smallest interaction pattern that works:**
    - raw slash args for simple command branches
-   - `presentation.buttons` + `api.registerInteractiveHandler(...)` for plugin-owned button choices; in Telegram callbacks prefer `ctx.respond.editMessage(...)` or `ctx.respond.clearButtons()` over leaving stale buttons behind
+   - `channelData.telegram.buttons` with namespaced `callback_data` + `api.registerInteractiveHandler(...)` for Telegram-first command menus that must visibly render inline buttons
+   - `presentation.buttons` + `api.registerInteractiveHandler(...)` when channel-agnostic rendering is verified for the target delivery path
    - custom channel-specific callback logic only for stateful pickers/wizards
 4. **Verify through the real command path:** plugin loads, command appears/runs, handler returns a valid reply, and button taps route correctly if used.
 5. **Document install + usage:** include command examples like `/example plan` and any required config.
+
+## Baseline Plugin Audit Workflow
+
+Use this when giving custom plugins the same lightweight coverage treatment as skills. Keep the audit per-plugin, scoped, and boring.
+
+1. **Inventory from the runtime first:** use `openclaw plugins list --json` to identify current plugin roots/status, then select custom plugin roots (usually `~/.openclaw/extensions`, `~/projects/clawSean`, or workspace project plugins). Do not audit bundled `/usr/lib/node_modules/openclaw/dist/extensions/*` unless explicitly asked.
+2. **One worker per plugin is fine, but cap blast radius:** each worker may edit only its plugin root. Avoid Gateway restarts, config writes, live channel sends, and live provider/API calls unless explicitly requested.
+3. **Baseline coverage checklist:**
+   - manifest/package sanity: `id`, `name`, `description`, activation fields, entry/runtime paths, config schema when used
+   - TypeScript build path: `npm test`/`npm run build`/`npx tsc` as applicable; compiled runtime output exists when required
+   - SDK compatibility: no invented command fields; imports match installed plugin SDK/types
+   - offline behavior: mocked or fixture-based tests for command handlers, formatting, config validation, error paths, and callback namespace parsing
+   - OpenClaw load check: `openclaw plugins inspect <id>` or `openclaw plugins doctor` when cheap and non-destructive
+   - interactive plugins: verify namespaced `callback_data` + registered handler shape; real Telegram tap testing is separate and should be called out if not performed
+4. **Patch only obvious gaps:** add the smallest local test/smoke script or fixture test that proves the plugin can build/load/handle its core path offline. Do not broad-refactor plugin architecture during a baseline audit.
+5. **Write `BASELINE_PLUGIN_AUDIT.md` in the plugin root** with: baseline now present, commands run, pass/fail, and remaining gaps. Prefer this over burying results in chat logs.
+6. **Final local verification:** after workers finish, run each detected test/build command once from the parent session and summarize pass/fail. Treat “no live API/integration test” as an explicit remaining gap, not a failure.
+
+Pasteable ACPX worker prompt shape:
+
+```text
+You are Claude Code running via ACPX using Opus. Scope: exactly this OpenClaw plugin directory: <PLUGIN_DIR>.
+
+Task: ensure this plugin has lightweight baseline functional/test coverage. Not exhaustive.
+
+Rules: edit only <PLUGIN_DIR>; do not restart Gateway, change global config, send messages, or make live external API calls. Read package/manifest/source, add/fix the smallest useful offline test/build/load check, run the smallest verification command, and write <PLUGIN_DIR>/BASELINE_PLUGIN_AUDIT.md with coverage, commands, result, and gaps.
+```
 
 ## Manifest Best Practices (`openclaw.plugin.json`)
 
@@ -38,8 +66,10 @@ OpenClaw is moving away from implicit startup loading. Every plugin should decla
 }
 ```
 
-- `false` — plugin is lazy-loaded on demand (slash commands, tools, hooks). **Use this for most plugins.**
-- `true` — plugin must import during Gateway startup (channel adapters, startup HTTP routes, gateway methods needed before listen).
+- `false` — plugin is lazy-loaded on demand (CLI commands, provider/channel triggers). **Use this for plugins that don't register chat slash commands.**
+- `true` — plugin must import during Gateway startup. **Required for any plugin that registers a chat slash command** (via `api.registerCommand`), plus channel adapters, startup HTTP routes, and gateway methods needed before listen.
+
+**Chat slash commands require `onStartup: true`.** The Gateway's chat command dispatcher only knows about commands registered by plugins loaded at startup. `activation.onCommands` is a CLI planner hint — it helps `openclaw <command>` from the terminal find the right plugin, but it does **not** trigger on-demand loading when someone types `/mycommand` in Telegram or any other chat surface. If a plugin sets `onStartup: false` and only declares `onCommands`, its chat slash command will silently do nothing. The Telegram native `/` menu also won't include it since that menu is built at startup via `setMyCommands`.
 
 Without this field, the plugin falls back to the deprecated implicit startup sidecar, which loads eagerly and adds unnecessary startup/per-turn overhead. `openclaw doctor` will flag plugins missing this field.
 
@@ -104,6 +134,49 @@ For **channel plugins** that register HTTP routes or gateway methods at startup,
 
 `setupEntry` loads instead of the full entry during startup/setup. Only enable deferred loading when `setupEntry` covers all pre-listen capabilities. Not needed for simple command plugins.
 
+## TypeScript Build Requirements
+
+OpenClaw plugins with TypeScript entry points (`src/index.ts`) require compiled JavaScript output. Without it, `openclaw plugins doctor` and config reload warn about missing compiled runtime output. This applies to **all** installed plugins — local, npm, and ClawHub — not just published packages.
+
+### Required files
+
+1. **`tsconfig.json`** at the plugin root:
+   ```json
+   {
+     "compilerOptions": {
+       "target": "ES2022",
+       "module": "Node16",
+       "moduleResolution": "Node16",
+       "outDir": "./dist",
+       "rootDir": "./src",
+       "declaration": true,
+       "esModuleInterop": true,
+       "skipLibCheck": true,
+       "allowJs": true,
+       "strict": false
+     },
+     "include": ["src"]
+   }
+   ```
+   Adjust `rootDir` if the entry is at `./index.ts` instead of `./src/index.ts`.
+
+2. **`package.json`** must declare both source and compiled paths:
+   ```json
+   {
+     "openclaw": {
+       "extensions": ["./src/index.ts"],
+       "runtimeExtensions": ["./dist/index.js"]
+     },
+     "scripts": {
+       "build": "tsc"
+     }
+   }
+   ```
+
+3. **Compile before testing**: run `npx tsc` to produce `dist/index.js`. The compiled output must exist before the plugin loads without warnings.
+
+4. **Verify**: `openclaw plugins doctor` should show the plugin loading without a "compiled runtime output" warning.
+
 ## Key Caveats
 
 Built-in OpenClaw native commands like `/think` can use typed command definitions with `argsMenu: "auto"`. Current public plugin command types may not expose that same `argsMenu` field. Do **not** invent unsupported fields; verify `OpenClawPluginCommandDefinition` in the installed SDK. As of the inspected SDK, plugin commands expose metadata such as `name`, `nativeNames`, `nativeProgressMessages`, `description`, `agentPromptGuidance`, `acceptsArgs`, `requireAuth`, `requiredScopes`, `ownership`, and `handler`, but not core-only `args` / `choices` / `argsMenu`.
@@ -144,13 +217,13 @@ Where `{OPENCLAW_ROOT}` is the first that exists of `/usr/lib/node_modules/openc
 
 ## WatchCatfish Pattern: Button-Steered Slash Command, No LLM
 
-For simple plugin command steering like `/health` → Hardware/Services, prefer the **button-steered slash-args pattern** before building a full interactive state machine:
+For simple Telegram plugin command steering like `/health` → Hardware/Services, use visible Telegram buttons with a tiny namespaced callback plus `api.registerInteractiveHandler(...)`. Keep the branch implementation token-free/no-LLM by having both the slash command and callback handler call the same local branch function.
 
 1. Register one command with `acceptsArgs: true`.
 2. With no args, return a small menu.
-3. On Telegram, return `channelData.telegram.buttons` rows with `callback_data` set to the exact slash command branch, e.g. `/health hardware`.
-4. Implement the branch as ordinary slash-arg handling (`hardware` → `core`, `services` → `services`).
-5. Keep the branch implementation token-free/no-LLM by doing all work inside the plugin handler/probe.
+3. Return Telegram buttons with short namespaced `callback_data`, e.g. `watchcatfish:hardware`.
+4. Register `api.registerInteractiveHandler({ channel: "telegram", namespace: "watchcatfish", ... })`.
+5. Implement the branch as ordinary slash-arg handling (`hardware` → `core`, `services` → `services`) and call that same function from the interactive handler.
 6. For non-Telegram fallback, include plain text commands: `Run /health hardware or /health services.`
 
 Minimal Telegram menu shape from WatchCatfish:
@@ -166,12 +239,20 @@ return {
   channelData: {
     telegram: {
       buttons: [[
-        { text: "🖥️ Hardware", callback_data: "/health hardware", style: "primary" },
-        { text: "🧰 Services", callback_data: "/health services", style: "success" }
+        { text: "🖥️ Hardware", callback_data: "watchcatfish:hardware", style: "primary" },
+        { text: "🧰 Services", callback_data: "watchcatfish:services", style: "success" }
       ]]
     }
   }
 };
 ```
 
-Use this when a button can safely rerun the same command with a short argument. Use `presentation.buttons` + `api.registerInteractiveHandler(...)` when the plugin owns custom callback state, needs edit-in-place behavior, or the callback value is not itself a command. Use a `/models`-style custom picker only for pagination/back/stateful menus.
+Use `presentation.buttons` when channel-agnostic rendering is verified for the target command delivery path. For Telegram-first command menus, `channelData.telegram.buttons` plus namespaced callbacks is the known-good rendering path. Avoid slash-shaped `callback_data` such as `/health services` unless you have verified the current Telegram callback dispatcher still reinjects unknown callbacks as synthetic text. Use a `/models`-style custom picker only for pagination/back/stateful menus.
+
+### WatchCatFish Regression Lessons
+
+- Keep the no-args button menu fast and deterministic. Do **not** replace a known-good static menu path with a long probe/dashboard path unless callbacks are separately verified; Telegram buttons should not depend on slow health checks succeeding.
+- If adding probe flags, land the script and TypeScript caller together. After rollback, retest commands against current source; transient flags like `--skip-native-health` can become stale immediately.
+- Verify buttons through the real channel path: command loads, menu returns visible Telegram buttons, each namespaced callback reaches `api.registerInteractiveHandler(...)`, and callback logs show no spinner/error/no-op.
+- `openclaw plugins registry --refresh` rebuilds discovery metadata; it is not sufficient proof of live runtime reload.
+- To reload plugin code without a full Gateway restart, trigger OpenClaw's hot config reload on a `plugins.*` path, e.g. make a tiny reversible plugin config change such as `plugins.entries.<id>.config.timeoutMs` `30000 → 30001 → 30000`. Confirm logs include `config hot reload applied (...)` and `[plugin] Loaded: ...`, then restore the config value.

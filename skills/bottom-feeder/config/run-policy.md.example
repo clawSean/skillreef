@@ -1,0 +1,132 @@
+# Bottom Feeder Run Policy (Example / Template)
+
+> Copy to `config/run-policy.md` in your workspace and edit.
+> When present, the agent treats this file as **mandatory** for the active run.
+
+This file declares **hard constraints** for a single run: which provider(s),
+how long, how to execute, and when to stop. It is intentionally separate from
+`defaults.yaml` so you can override defaults without editing them.
+
+```yaml
+policy_id: example-burn-2026-04-04
+mode: burn                       # routine | burn
+duration_target_hours: 2
+
+# ------------------------------------------------------------------
+# Execution
+# ------------------------------------------------------------------
+execution_mode: batched          # single | batched | supervised
+batch_size: 3                    # max concurrent subagents
+subagent_timeout_seconds: 900    # per-subagent lifetime
+checkpoint_interval_minutes: 30  # only used when execution_mode=supervised
+
+# ------------------------------------------------------------------
+# Provider chain
+# ------------------------------------------------------------------
+# Strict lock (stop on failure). Leave empty to allow fallback.
+provider_lock: ""                # e.g. "anthropic" or ""
+
+# Ordered fallback chain. First provider is primary; agent rotates
+# through the list when qualified failures trigger fallback.
+provider_fallback:
+  - anthropic
+  - openai
+  # - google
+  # - venice
+
+# Optional: constrain which models may be used for synthesis/writing.
+# Research tools (Brave, Perplexity, etc.) are not constrained.
+allowed_models:
+  - sonnet
+  - opus
+  - gpt-5
+  - 5.3-codex
+
+# Fallback triggers
+fallback_after_consecutive_failures: 2
+fallback_cooldown_minutes: 10
+
+# ------------------------------------------------------------------
+# Topic scope
+# ------------------------------------------------------------------
+topics: []                       # optional explicit queue (skips selection)
+topic_tiers:                     # optional guidance for selection module
+  must_hit: []
+  high_value: []
+  extended: []
+
+# ------------------------------------------------------------------
+# Stop conditions (any match ends the run)
+# ------------------------------------------------------------------
+stop_conditions:
+  - run_duration_reached
+  - all_topics_complete
+  - all_providers_exhausted
+  - balance_below_reserve
+  - explicit_user_stop
+
+# ------------------------------------------------------------------
+# Reporting / delivery
+# ------------------------------------------------------------------
+progress_update_interval_minutes: 60   # used in supervised runs
+announce_completion: true
+```
+
+## Enforcement Notes
+
+- **`provider_lock` beats `provider_fallback`.** If `provider_lock` is non-empty,
+  the fallback chain is ignored and the run stops on primary failure.
+- **`execution_mode: batched`** is the safest burn default for >3 topics —
+  never spawn all topics at once.
+- **`subagent_timeout_seconds`** should be large enough for 1 topic
+  (research + synthesis + write) but small enough that a stuck worker
+  doesn't block the whole run. 600–1200 seconds is a good range.
+- Research source tools (Brave, Perplexity, Twitter, CoinGecko, browser, etc.)
+  are **not** constrained by `provider_lock` — only generation/synthesis is.
+- Log every provider rotation and every subagent death in the run-progress file.
+
+## Minimal example (single-agent routine)
+
+```yaml
+policy_id: quick-routine
+mode: routine
+execution_mode: single
+provider_fallback: [anthropic, openai]
+stop_conditions: [all_topics_complete]
+```
+
+## Minimal example (batched burn with fallback)
+
+```yaml
+policy_id: tonight-burn
+mode: burn
+duration_target_hours: 3
+execution_mode: batched
+batch_size: 3
+subagent_timeout_seconds: 900
+provider_fallback: [anthropic, openai, google]
+fallback_after_consecutive_failures: 2
+fallback_cooldown_minutes: 10
+stop_conditions:
+  - run_duration_reached
+  - all_topics_complete
+  - all_providers_exhausted
+```
+
+## Minimal example (supervised long run)
+
+```yaml
+policy_id: overnight-burn
+mode: burn
+duration_target_hours: 5
+execution_mode: supervised
+batch_size: 3
+subagent_timeout_seconds: 1200
+checkpoint_interval_minutes: 30
+progress_update_interval_minutes: 60
+provider_fallback: [anthropic, openai]
+stop_conditions:
+  - run_duration_reached
+  - all_topics_complete
+  - all_providers_exhausted
+```

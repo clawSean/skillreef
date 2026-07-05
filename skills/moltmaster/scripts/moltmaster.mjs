@@ -7,14 +7,26 @@ import path from 'node:path';
 import process from 'node:process';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const SDK_PATH = process.env.AUTH_MOLT_SDK_PATH ?? '/usr/local/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js';
+const SDK_CANDIDATE_PATHS = [
+  '/usr/local/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
+  '/usr/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
+];
+const SDK_PATH = process.env.AUTH_MOLT_SDK_PATH
+  ?? SDK_CANDIDATE_PATHS.find((candidate) => fs.existsSync(candidate))
+  ?? SDK_CANDIDATE_PATHS[0];
 const DEFAULT_STORE_PATH = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'agent', 'auth-profiles.json');
 const STORE_PATH = process.env.AUTH_MOLT_STORE_PATH ?? DEFAULT_STORE_PATH;
 const SKILL_DIR = path.resolve(__dirname, '..');
 const BACKUP_DIR = process.env.AUTH_MOLT_BACKUP_DIR ?? path.join(SKILL_DIR, 'backups');
 const STATE_FILE = process.env.AUTH_MOLT_STATE_FILE ?? path.join(SKILL_DIR, '.refresh-state.json');
-const ALLOWED_EMAIL_DOMAIN = String(process.env.AUTH_MOLT_ALLOWED_EMAIL_DOMAIN ?? '').trim().replace(/^@/, '');
-const CODEX_RE = /^openai-codex:[^/\s]+@[^/\s]+$/;
+const CODEX_PROFILE_ALLOWLIST = [
+  /^openai-codex:[^/\s]+@edge\.app$/,
+  /^openai-codex:pearson\.jaredb@gmail\.com$/,
+];
+const CODEX_EMAIL_ALLOWLIST = [
+  /@edge\.app$/,
+  /^pearson\.jaredb@gmail\.com$/,
+];
 const WARN_WITHIN_MS = 14 * 24 * 60 * 60 * 1000;
 const COOLDOWN_MS = 60_000;
 
@@ -26,7 +38,7 @@ Auth Molt v0.1 — Codex OAuth refresh utility (OpenClaw-adjacent CLI)
 
 Usage:
   node scripts/moltmaster.mjs --dry-run [--profile <id>]
-  AUTH_MOLT_ALLOWED_EMAIL_DOMAIN=example.com node scripts/moltmaster.mjs --execute --profile <id>
+  node scripts/moltmaster.mjs --execute --profile <id>
   node scripts/moltmaster.mjs --execute --all
   node scripts/moltmaster.mjs --execute --force-expired-for-refresh --profile <id>
   node scripts/moltmaster.mjs --prune-backups --older-than <days>
@@ -44,7 +56,7 @@ Flags:
 Safety:
   - Dry-run unless --execute is present
   - --force-expired-for-refresh requires --execute + exactly one --profile; refuses --all
-  - Codex-only, OAuth-only allowlist; optional email-domain guard via AUTH_MOLT_ALLOWED_EMAIL_DOMAIN
+  - Codex-only, explicit-profile, OAuth-only allowlist
   - Timestamped backup before any mutation; backup dir 700, files 0600
   - Rollback from pre-force backup if force-refresh fails or verification fails
   - Cooldown: refuses force-refresh if profile was refreshed < 60s ago (skipped if no state)
@@ -54,9 +66,7 @@ Safety:
 Environment:
   AUTH_MOLT_STORE_PATH           Override auth store path (testing only)
   AUTH_MOLT_BACKUP_DIR           Override backup dir (testing only)
-  AUTH_MOLT_STATE_FILE           Override cooldown state file
-  AUTH_MOLT_ALLOWED_EMAIL_DOMAIN Optional email-domain allowlist, e.g. example.com
-  AUTH_MOLT_SDK_PATH             Override OpenClaw agent-runtime SDK import path (testing only)
+  AUTH_MOLT_STATE_FILE           Override cooldown state file (testing only)
 `.trim());
 }
 
@@ -93,6 +103,14 @@ function profileFingerprints(profile) {
   };
 }
 
+function allowlistedProfileId(profileId) {
+  return CODEX_PROFILE_ALLOWLIST.some((re) => re.test(String(profileId).toLowerCase()));
+}
+
+function allowlistedEmail(email) {
+  return CODEX_EMAIL_ALLOWLIST.some((re) => re.test(String(email).toLowerCase()));
+}
+
 function summarize(profileId, profile) {
   return {
     profileId,
@@ -106,17 +124,10 @@ function summarize(profileId, profile) {
 }
 
 function validateTarget(profileId, profile) {
-  if (!CODEX_RE.test(profileId)) throw new Error(`Refusing non-allowlisted profile id: ${profileId}`);
+  if (!allowlistedProfileId(profileId)) throw new Error(`Refusing non-allowlisted profile id: ${profileId}`);
   if (!profile || profile.provider !== 'openai-codex') throw new Error(`Refusing non-Codex provider for ${profileId}`);
   if (profile.type !== 'oauth') throw new Error(`Refusing non-OAuth profile for ${profileId}: ${profile.type}`);
-  if (ALLOWED_EMAIL_DOMAIN) {
-    const expectedSuffix = `@${ALLOWED_EMAIL_DOMAIN}`;
-    const email = typeof profile.email === 'string' ? profile.email : '';
-    const idEmail = profileId.slice('openai-codex:'.length);
-    if ((email && !email.endsWith(expectedSuffix)) || !idEmail.endsWith(expectedSuffix)) {
-      throw new Error(`Refusing unexpected email domain for ${profileId}; expected ${expectedSuffix}`);
-    }
-  }
+  if (profile.email && !allowlistedEmail(profile.email)) throw new Error(`Refusing unexpected email for ${profileId}`);
 }
 
 function ensureBackupDir() {
@@ -350,7 +361,7 @@ const targetIds = profileArgs.length > 0
 if (targetIds.length === 0) throw new Error('No Codex OAuth profiles found.');
 if (targetIds.length > 10) throw new Error(`Refusing unusually large target set: ${targetIds.length}`);
 if (execute && !all && !forceExpiredForRefresh && profileArgs.length !== 1) {
-  throw new Error('Execute mode requires exactly one --profile unless --all is explicitly passed. Try: --execute --profile openai-codex:you@example.com');
+  throw new Error('Execute mode requires exactly one --profile unless --all is explicitly passed. Try: --execute --profile openai-codex:claw4@edge.app');
 }
 
 for (const id of targetIds) validateTarget(id, profiles[id]);

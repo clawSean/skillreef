@@ -1,17 +1,23 @@
 ---
-name: shop-agent
-description: "Shop or reorder from Amazon/retailers: compare products, check prices, add to cart, and prepare checkout. Use web-use as needed; always stop before purchase."
+name: "shop-agent"
+description: "Shop/reorder from Amazon/retailers via the VPS logged-in browser (primary); compare, add to cart, prepare checkout. Stop before purchase."
 ---
 
 # Shop Agent
 
 Browser-driven shopping assistant. Searches for products, adds to cart, and walks through checkout — but **always stops for user confirmation before placing an order**.
 
+## Browser lanes (READ FIRST — corrects a recurring mistake)
+
+- **VPS managed `openclaw` browser = PRIMARY, and it is already logged in.** The VPS-local headless Chrome (`profile="openclaw"`, `target="host"`, CDP `:18800`, persistent `userDataDir` `~/.openclaw/browser/openclaw/user-data`) holds a durable signed-in Amazon session as Jared (ships to San Diego 92130). It handles search, compare, price checks, **and logged-in cart/checkout/order-history**. Use it first for everything.
+- **Do NOT assume "logged in" means the user's Mac browser.** The Mac node browser (`clawnode-arc`, CDP `:18802`) is a **strictly compatibility fallback**: it is normally logged into nothing, and its bridge is flaky. Use it only when (a) the VPS session is actually logged out / blocked, or (b) JPop explicitly wants to co-interact in a visible browser live.
+- Never conclude "the VPS can't touch your cart." It can. Verify login state on the live page instead of guessing from lane.
+
 ## Prerequisites
 
-- **VPS headless browser (primary)**: Playwright 1.59.1 + Chromium on the VPS. Available for search, comparison, price checks, and cart-building on sites that don't require login.
-- The `web-use` skill for product/pricing/site-data research and browser context routing: lightweight retrieval, protected extraction, structured APIs, remote extraction sessions, cart, checkout, order history, Prime/login state, CAPTCHA/2FA, or the user's device/session.
-- For full functionality (saved addresses, payment methods, Prime): an attached logged-in browser session on your own machine (requires an OpenClaw browser node connected and `gateway.nodes.browser.mode: "auto"`)
+- **VPS managed `openclaw` browser (primary, logged in)**: headless Chromium on the VPS with a persistent, Amazon-authenticated profile. Use for search, comparison, price checks, cart-building, and checkout review.
+- The `web-use` skill for product/pricing/site-data research and browser-context routing: lightweight retrieval, protected extraction, structured APIs, remote extraction sessions, cart, checkout, order history, Prime/login state, CAPTCHA/2FA.
+- **Mac node browser (fallback only)**: an attached logged-in session on JPop's Mac (requires an OpenClaw browser node connected and `gateway.nodes.browser.mode: "auto"`). Not assumed logged in; use only when the VPS lane fails or live co-interaction is wanted.
 
 ## Dependency routing
 
@@ -22,16 +28,16 @@ cart/checkout.
 | Shopping need | Route |
 |---|---|
 | Product discovery, option comparison, reviews, candidate URLs | `web-use`; stay lightweight unless blocked |
-| Current price, stock, seller, Prime, coupon, selected variant | Live retailer page is ground truth; use browser/data path that can see the live offer |
+| Current price, stock, seller, Prime, coupon, selected variant | Live retailer page is ground truth; use the VPS `openclaw` browser to read the live offer |
 | Protected product/history/review data with no human-visible browser need | `web-use` protected extraction |
 | Structured fresh Amazon product data / ASIN fields | Site-specific API only when this skill says the credit tradeoff is worth it |
-| Add to cart, checkout review, order history, saved address/payment, Prime/login state | `web-use` browser context |
+| Add to cart, checkout review, order history, saved address/payment, Prime/login state | VPS `openclaw` browser (logged in) via `web-use` browser context |
 | Keepa/extension-backed Amazon history | `web-use` selects the extension-capable browser lane; this skill decides whether the history is worth using |
-| CAPTCHA, 2FA, manual visual confirmation, final purchase gate | `web-use` interactive browser, then stop for user approval |
+| CAPTCHA, 2FA, manual visual confirmation, final purchase gate | VPS `openclaw` browser first; escalate to the Mac fallback only if the VPS lane is blocked, then stop for user approval |
 
-Common Amazon flow: use `web-use` to research and select candidates with the
-lightest viable data path, then use its browser-context lane for the logged-in Amazon cart and
-checkout context.
+Common Amazon flow: use `web-use` to research/select candidates with the
+lightest viable data path, then drive the logged-in VPS `openclaw` browser for the
+Amazon cart and checkout review.
 
 ## Core safety rule
 
@@ -55,7 +61,7 @@ Classify what the user wants:
 |---|---|
 | "Buy me [specific product]" | Search and navigate directly |
 | "Order [category/vague item]" | Search, present 2-3 options, let user pick |
-| "Reorder [thing I bought before]" | Navigate to order history if logged in |
+| "Reorder [thing I bought before]" | Navigate to order history (VPS browser is logged in) |
 | "Add [item] to cart" | Search, add, confirm — do not proceed to checkout |
 | "Check price of [item]" | Search, report price — no cart action |
 | "Compare [items]" | Search both, present side-by-side summary |
@@ -71,11 +77,9 @@ Use `web-use` when data retrieval matters:
 
 ### Step 3: Select browser mode
 
-Use `web-use` for browser context and cart/checkout routing:
-
-- **Just browsing/comparing/price-checking** → **VPS headless browser (default)**. Always available, no user intervention needed.
-- **Logged-in session needed** (checkout, order history, Prime pricing) → attached user browser if Mac node is available. If not, tell user what's needed.
-- **Adding to cart on Amazon without login** → VPS headless can browse and research, but cart/checkout requires a logged-in session.
+- **Anything on Amazon (browse, compare, price, cart, checkout review, order history)** → **VPS `openclaw` browser (default, logged in).** No user intervention needed.
+- **VPS session logged out / blocked, or JPop wants to co-interact live** → Mac node browser fallback. Confirm it is logged in first; it usually is not.
+- **Never** tell the user the cart is untouchable without first verifying login state on the live VPS page.
 
 ### Step 4: Navigate the retailer
 
@@ -101,9 +105,9 @@ After order or cancellation:
 ## Login handling
 
 - **Never store, request, or handle login credentials**
-- If login is required and using managed browser: tell the user they need to log in manually, pause
+- The VPS `openclaw` browser is expected to be logged in; if it is logged out mid-flow, notify the user and pause (do not attempt to re-auth silently)
 - If 2FA prompt appears: notify user, pause
-- If login session expires mid-flow: notify user, pause
+- If a CAPTCHA / "are you a robot" page appears: notify user, pause
 
 ## When not to use this skill
 

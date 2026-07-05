@@ -1,11 +1,19 @@
 ---
 name: moltmaster
-description: Moltmaster workflow for refreshing OpenClaw provider profiles safely.
+description: Use for OpenClaw OAuth / auth-profile refresh operations, Auth Molt, Moltmaster, Codex OAuth refresh, Claude/Anthropic OAuth profile refresh planning, or any task involving refreshing, inspecting, or pruning OpenClaw auth-profile credentials without running openclaw doctor. Triggers on Auth Molt, Moltmaster, Codex OAuth refresh, auth-profile refresh, force-expired-for-refresh, openclaw credential rotation.
 ---
 
 # Moltmaster
 
 Controlled OpenClaw OAuth refresh via `scripts/moltmaster.mjs`. Wraps `resolveApiKeyForProfile` — no `openclaw doctor`, no blind mutations.
+
+> ⚠️ **Auth engine broken since 2026-06-30:** OpenClaw migrated auth profiles into the per-agent sqlite store (`agents/<id>/agent/openclaw-agent.sqlite`, `auth_profile_store` table); `auth-profiles.json` is now a broken symlink, so any live `--dry-run`/`--execute` crashes with ENOENT. Rework pending: go through the plugin-SDK `ensureAuthProfileStore` instead of raw JSON reads. Offline tests still pass (temp fixtures).
+
+## Moltmaster Pulse (live since 2026-07-03)
+
+Minimal keep-warm pings for subscription provider rate windows. Entirely separate engine from auth refresh — deterministic bash, no LLM, no credential mutation.
+
+> ⚠️ **2026-07-04 consolidation:** two Pulse engines were accidentally built in parallel on 2026-07-03 (a systemd timer + an OS-cron workspace copy), double-pinging every lane. Both legacy copies were **removed 2026-07-04** — the sole engine of record is **`~/.openclaw/extensions/moltmaster/core/pulse.sh`** (crontab `MOLTMASTER_PULSE`), published at github.com/clawSean/moltmaster. See the Pulse section below.
 
 ## Default stance
 
@@ -19,14 +27,14 @@ Controlled OpenClaw OAuth refresh via `scripts/moltmaster.mjs`. Wraps `resolveAp
 ```sh
 # Inspect (safe, no mutation)
 node skills/moltmaster/scripts/moltmaster.mjs --dry-run
-node skills/moltmaster/scripts/moltmaster.mjs --dry-run --profile openai-codex:you@example.com
+node skills/moltmaster/scripts/moltmaster.mjs --dry-run --profile openai-codex:claw3@edge.app
 
 # Standard refresh (profile must be expired or within OpenClaw's ~5 min refresh margin)
-node skills/moltmaster/scripts/moltmaster.mjs --execute --profile openai-codex:you@example.com
+node skills/moltmaster/scripts/moltmaster.mjs --execute --profile openai-codex:claw3@edge.app
 node skills/moltmaster/scripts/moltmaster.mjs --execute --all
 
 # Force-expire refresh (for usable-but-expiring profiles)
-node skills/moltmaster/scripts/moltmaster.mjs --execute --force-expired-for-refresh --profile openai-codex:you@example.com
+node skills/moltmaster/scripts/moltmaster.mjs --execute --force-expired-for-refresh --profile openai-codex:claw3@edge.app
 
 # Prune old backup files
 node skills/moltmaster/scripts/moltmaster.mjs --prune-backups --older-than 30
@@ -45,7 +53,9 @@ Requirements:
 
 ## Provider scope
 
-**Codex only by default.** The script enforces an `openai-codex:<profile-email>` allowlist. Set `AUTH_MOLT_ALLOWED_EMAIL_DOMAIN=example.com` to restrict refreshes to one domain.
+**Codex only by default.** The script enforces an explicit Codex OAuth allowlist:
+- `openai-codex:[^/\s]+@edge\.app`
+- `openai-codex:you@example.com`
 
 Before attempting any other provider, read `references/provider-expansion.md`. Do not attempt `--all` across providers blindly.
 
@@ -64,9 +74,65 @@ Covers: dry-run, flag refusals (8 cases), profile validation, prune dry-run. For
 | `AUTH_MOLT_STORE_PATH` | Override auth store path |
 | `AUTH_MOLT_BACKUP_DIR` | Override backup directory |
 | `AUTH_MOLT_STATE_FILE` | Override cooldown state file |
-| `AUTH_MOLT_ALLOWED_EMAIL_DOMAIN` | Optional email-domain allowlist, e.g. `example.com` |
-| `AUTH_MOLT_SDK_PATH` | Override OpenClaw agent-runtime SDK import path |
 
-## Notes
+## Pulse (5h+5m window-warming pings) — LIVE 2026-07-03
 
-Keep environment-specific lab notes, real profile IDs, and auth-store backups outside the skill package. This skill should contain reusable procedure and code only.
+> ⚠️ **Engine of record moved 2026-07-04:** the crontab MOLTMASTER_PULSE line now
+> runs `~/.openclaw/extensions/moltmaster/core/pulse.sh` (generalized,
+> shippable engine; same state dir `~/.openclaw/moltmaster/pulse/`, same
+> kill switch `pulse.off`, lanes in `extensions/moltmaster/lanes.conf`).
+> The legacy workspace copy (`scripts/pulse.sh` here) and the systemd copy were
+> **removed 2026-07-04** per JPop; rollback source is the git history at
+> github.com/clawSean/moltmaster. Lane changes go in the extension's lanes.conf.
+
+The engine sends one tiny model turn per lane whenever that lane's last
+ping is ≥5h05m old, so subscription 5-hour windows are already counting down
+before real work starts. Runs from OS crontab (`MOLTMASTER_PULSE`, every 5 min,
+flock-guarded) — the per-lane state gate means cron cadence ≠ ping volume.
+
+- **Lanes (all-accounts since 2026-07-04, per JPop):**
+  - Claude OAuth `personal`, `qa`, `clawdia`, `claw1`, `nick` (haiku ping via
+    direct `claude -p`, tokens from `~/.openclaw/.env`; `nick` is on per
+    JPop's "turn on all" — `PULSE_EXCLUDE_NICK=1` to opt out if Nick objects)
+  - `store-default` — `anthropic:default` token read live from the OpenClaw
+    sqlite auth store at ping time (survives gateway token refreshes)
+  - `edgeclaw-work` — the native interactive `claude` login
+    (**edgeclaw@edge.app**, work Team sub — the old claude-work lane). Runs
+    `claude -p` with NO token override so the CLI auto-refreshes
+    `~/.claude/.credentials.json` (override tokens 401 after expiry).
+  - `openai-codex` — `openclaw infer model run --model openai/gpt-5.4-mini`;
+    effective auth is `openai:you@example.com` OAuth (the warmable
+    subscription).
+  - `openai-key-main` + `openai-key-codexhome` — the two API-key OpenAI
+    accounts (.env/gateway sk-svcacct + <your-agent> codex-home sk-proj),
+    pinged via direct `curl /v1/responses` (~16-token gpt-5.4-mini call). No
+    5h window to warm — these are alive-checks, ON per JPop 2026-07-04
+    ("all of them, even personal/main").
+  - Caveat: `store-default`/`edgeclaw-work` token values are distinct from the
+    env lanes, but OAuth rotation means they *might* map to the same underlying
+    accounts — watch receipts for windows that always move together.
+- **Never route pings through `claude-auth-router.sh`** — the router rotates
+  profiles and notifies chats on limits; pings must be side-effect-free.
+- **Kill switch:** `touch ~/.openclaw/moltmaster/pulse.off` (delete to resume).
+- **Guards:** daily cap 6 pings/lane, 180s timeout, failed/limited pings still
+  stamp the lane (no retry hammering).
+- **State/log:** `~/.openclaw/moltmaster/pulse/` (`state/<lane>.last|.day`, `pulse.log`).
+- The 5h-window-start hypothesis is still unproven per-lane; verify against
+  `openclaw models status` (OpenAI meters) before trusting it for scheduling.
+
+## Known breakage (2026-07-03)
+
+- `scripts/moltmaster.mjs` (auth refresh) is **broken**: OpenClaw ≥2026.6.x
+  migrated the auth store from `auth-profiles.json` to `openclaw-agent.sqlite`
+  (2026-06-30 import); the JSON path is now a broken symlink. Needs a port
+  before any refresh work.
+- `~/scripts/claude-work.sh` execs the router with `--auth-profile work`,
+  but `claude-profiles.json` has no `work` profile — the claude-work lane will
+  error until a work profile is re-added. (2026-07-04: the work account itself
+  was located — it's the native interactive `claude` login, edgeclaw@edge.app;
+  Pulse now warms it via the `edgeclaw-work` lane. The router `work` profile is
+  still missing for actual claude-work model routing.)
+
+## Lab notebook
+
+`projects/auth-health-cleanup/` is the origin lab notebook — RALPH_LOG.md has iteration history, claw3/claw4 trial notes, and force-expiry discovery. This skill is the canonical package; the project remains the lab notebook.

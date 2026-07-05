@@ -1,32 +1,88 @@
-max_topics_per_run: 2
-default_topics_per_run: 1
+# ── Topic selection ──────────────────────────────────────────────
+# default_topics: how many topics a routine run picks (override per-run).
+# No hard cap — burn mode, fleet mode, and ad-hoc injection can exceed this.
+default_topics: 1
 mode: routine
 
-# Spend controls
-# Provider-agnostic: works with Anthropic, OpenAI, Venice/Diem, or any provider.
-# Set min_reserve_usd to keep a safety buffer (0 = no reserve).
-# Legacy Diem fields kept for backward compatibility.
+# ── Fleet mode ──────────────────────────────────────────────────
+# Feed a file of topics to process in bulk (one topic per line).
+# topic_list_path: config/fleet-topics.txt
+#
+# parallelism: how many topics to research concurrently (sub-agents).
+# 1 = sequential (safest, lowest resource usage).
+# Set higher only when you have confirmed provider headroom.
+parallelism: 1
+#
+# fleet_batch_size: how many topics to pull from the list per run.
+# 0 or omitted = process the entire list in one run.
+# fleet_batch_size: 0
+
+# ── Budget tracking (informational only) ────────────────────────
+# Budget is a SIGNAL, never a gate. If any budget script fails, the
+# run continues normally. All fields below are optional hints.
+#
+# allow_burn_mode: false prevents accidental burn; true (default) allows it.
 allow_burn_mode: true
+# min_reserve_usd: stop burning when estimated remaining drops below this.
+# 0 = no reserve. Only effective when balance data is actually available.
 min_reserve_usd: 0
-min_reserve_diem: 2.0
+# Legacy Diem field — kept for backward compatibility with Venice setups.
+# Nothing currently reads this; remove when Venice/Diem support is dropped.
+# min_reserve_diem: 2.0
 
-# Optional per-topic cost caps (provider-agnostic relative units)
-max_estimated_cost_units_per_topic_routine: 0.25
-max_estimated_cost_units_per_topic_burn: 3.0
+# Multi-profile support (optional).
+# If your provider has multiple auth profiles (e.g. team seats, API keys),
+# set auth_profiles to track rotation; the agent flags an exhausted profile.
+# auth_profiles: 1
 
-# Legacy aliases (kept for backward compatibility with older prompts/docs)
-max_estimated_diem_per_topic_routine: 0.25
-max_estimated_diem_per_topic_burn: 3.0
-
-# Multi-profile support
-# If your provider has multiple auth profiles (e.g., team seats, API keys),
-# set auth_profiles to track rotation. Agent will flag when a profile is exhausted.
-# auth_profiles: 1  # default: single profile, no rotation needed
-
-# Optional tide-pools package hook (if installed)
+# Budget probe script. Runs best-effort; failures are silent.
 usage_probe_script: scripts/provider-usage.sh
 
-# Source defaults
+# ── Execution planning ──────────────────────────────────────────
+# Decides how the run physically executes. See references/execution/execution-modes.md.
+#   single:    one session, sequential topic writing (default for routine mode)
+#   batched:   N concurrent short-lived subagents, 1 topic each
+#   supervised: coordinator + workers + checkpoint crons (long runs)
+execution_mode: single
+
+# Max concurrent subagents when execution_mode is batched/supervised.
+# KEEP SMALL. Spawning >3 at once is the #1 cause of rate-limit cascades.
+batch_size: 3
+
+# Max lifetime for a single worker subagent (seconds).
+# Short-lived subagents are more reliable than long-running ones.
+subagent_timeout_seconds: 900
+
+# For supervised runs: how often checkpoint monitors fire (minutes).
+checkpoint_interval_minutes: 30
+
+# ── Provider fallback ───────────────────────────────────────────
+# Optional ordered fallback chain. Triggered when the primary provider
+# returns qualified failures (rate_limit, cooldown, auth, transport).
+# See references/execution/provider-fallback.md for full semantics.
+#
+# Each entry is a provider identifier your orchestrator understands.
+# Examples: anthropic, openai, google, venice, local-ollama
+#
+# Leave empty [] to disable fallback (strict primary-only).
+provider_fallback: []
+
+# How many consecutive qualified failures trigger rotation to next provider.
+fallback_after_consecutive_failures: 2
+
+# Cooldown window (minutes). If the primary stays rate-limited longer than
+# this, rotate to the next provider even if failure count is low.
+fallback_cooldown_minutes: 10
+
+# ── External signal sources (optional) ──────────────────────────
+# If true, the topic-selection stage will read config/signals.yaml and
+# pull live task/issue/ticket signal to steer topics toward real
+# operational pressure. See references/topic-selection/external-signals.md.
+enable_external_signals: false
+
+# ── Source defaults ─────────────────────────────────────────────
+# Starting suggestions, NOT an exhaustive list. Use any available tool.
+# See references/research-sources.md for full source strategy.
 default_sources:
   - brave
   - knowledge-search
@@ -37,12 +93,22 @@ optional_sources:
   - coinmarketcap
   - browser
 
-# Output defaults
+# ── Output defaults ────────────────────────────────────────────
 write_topics_dir: knowledge/topics
 write_research_dir: knowledge/research
 max_lines_soft_cap: 300
 append_update_section: true
 
-# Scheduling hints (for cron payload text)
+# ── Scheduling hints ───────────────────────────────────────────
 recommended_schedule_local_time: "02:30"
 recommended_timezone: "America/Los_Angeles"
+
+# ── Supervisor / research-exploration (opt-in, re-introduced 2026-06-19) ──
+# linear = classic 4-stage crawl; tree_search = bounded branch exploration for
+# deep/high-uncertainty topics. Default linear; burn/deep runs may set tree_search.
+# See references/supervision/tree-search.md + references/supervision/quality-score.md.
+supervisor_mode: linear
+max_candidate_branches: 5
+max_branch_retries: 1
+quality_pass_threshold_routine: 8
+quality_pass_threshold_burn: 10

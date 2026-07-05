@@ -11,12 +11,12 @@ Semantic search over a configurable knowledge directory using ChromaDB + Ollama 
 
 **Ingest the knowledge directory into ChromaDB:**
 ```bash
-bash /root/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
+bash ~/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
 ```
 
 **Query the knowledge base:**
 ```bash
-bash /root/.openclaw/workspace/skills/knowledge-search/scripts/query.sh "how does the Telegram API work"
+bash ~/.openclaw/workspace/skills/knowledge-search/scripts/query.sh "how does the Telegram API work"
 ```
 
 ## What Lives Where
@@ -42,7 +42,7 @@ Use this skill for the knowledge base. Use `memory_search` / memory files for me
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SOURCE_DIR` | `/root/.openclaw/workspace/knowledge` if present, otherwise `skill/data` | Root directory to index recursively |
+| `SOURCE_DIR` | `~/.openclaw/workspace/knowledge` if present, otherwise `skill/data` | Root directory to index recursively |
 | `CHROMA_PERSIST_DIR` | `~/.openclaw/chroma/knowledge-search` | Where ChromaDB stores its data |
 | `CHROMA_COLLECTION` | `knowledge` | Collection name |
 | `EMBEDDING_MODEL` | `nomic-embed-text` | Ollama model used for embeddings |
@@ -56,13 +56,13 @@ Use this skill for the knowledge base. Use `memory_search` / memory files for me
 ### Ingest documents
 
 ```bash
-bash /root/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
+bash ~/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
 ```
 
 Override the source path when needed:
 
 ```bash
-SOURCE_DIR=/path/to/knowledge-folder bash /root/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
+SOURCE_DIR=/path/to/knowledge-folder bash ~/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh
 ```
 
 The ingest runner:
@@ -75,7 +75,7 @@ The ingest runner:
 ### Query
 
 ```bash
-bash /root/.openclaw/workspace/skills/knowledge-search/scripts/query.sh "your question here" [n_results]
+bash ~/.openclaw/workspace/skills/knowledge-search/scripts/query.sh "your question here" [n_results]
 ```
 
 Returns JSON with title, source, distance, and excerpt.
@@ -86,14 +86,14 @@ Prefer an OpenClaw cron job over system crontab when you want the agent to own r
 
 Recommended pattern:
 - schedule an isolated recurring agent turn
-- have it run `bash /root/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh`
+- have it run `bash ~/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh`
 - capture and report the final summary line when useful
 - keep delivery off unless you actually want notifications
 
 Example agent-turn payload concept:
 
 ```text
-Run bash /root/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh for the knowledge base and report the final summary line.
+Run bash ~/.openclaw/workspace/skills/knowledge-search/scripts/ingest.sh for the knowledge base and report the final summary line.
 ```
 
 Use system crontab only when you explicitly want a host-level job independent of OpenClaw.

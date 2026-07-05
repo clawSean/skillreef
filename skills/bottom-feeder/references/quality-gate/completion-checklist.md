@@ -3,23 +3,29 @@
 Before advancing to the next topic, verify the current topic's output passes ALL checks:
 
 ## Required sections (knowledge/topics file)
-- [ ] Summary — ≥3 sentences, no placeholders
+- [ ] Summary — ≥2 sentences (aim for 3 on broad topics), no placeholders
 - [ ] Current State — concrete facts with dates, not vague
 - [ ] Why It Matters — tied to the user's ecosystem/work, not generic
 - [ ] Open Questions — at least 1 genuine unknown
 - [ ] Sources — at least 2 dated sources (URL + date accessed)
 
 ## Required metadata (YAML header)
-- [ ] `confidence` set to low/medium/high (not omitted)
-- [ ] `sources_used` lists actual tools used (not assumed)
+- [ ] `confidence` set to low/medium/high
+- [ ] `sources_used` lists actual tools used
+- [ ] `crawled` timestamp present
+- [ ] `mode` set (routine|burn)
+
+## Run-policy gates (if active)
+- [ ] Provider lock/fallback constraints were respected
+- [ ] Provider rotation events (if any) logged in run-progress
+- [ ] Topic status in run-progress matches disk state
 
 ## Quality gates
-- [ ] No "TODO" or "TBD" left in body
-- [ ] If confidence is `low`, note WHY (source scarcity? contradictory info?)
-- [ ] File is self-contained — a reader with no context can understand it
-- [ ] If run policy has a provider lock, this topic was produced using the locked provider only
+- [ ] No unresolved TODO/TBD placeholders
+- [ ] If confidence is low, reason is explicitly stated
+- [ ] File is self-contained for a new reader
 
 ## Failure behavior
-- If a section can't be filled: write it with an explicit `[INCOMPLETE: reason]` tag
-- Do NOT skip the topic — partial with honesty beats moving on silently
-- Log the gap in the run progress file for follow-up
+- If a section can't be completed: mark `[INCOMPLETE: reason]`
+- Do not silently skip topic; partial + honest > missing output
+- Log gaps and retries in run-progress file

@@ -26,7 +26,7 @@ Generate professional diagrams as code using Mermaid.js syntax, then render to i
 ## Rendering Command
 
 ```bash
-mmdc -i input.mmd -o output.png -b transparent -p /root/.openclaw/workspace/skills/mermaid/references/puppeteer-config.json
+mmdc -i input.mmd -o output.png -b transparent -p ~/.openclaw/workspace/skills/mermaid/references/puppeteer-config.json
 ```
 
 **Required flags:**
@@ -189,7 +189,7 @@ flowchart TD
 ## Output Storage
 
 Store diagrams in organized locations:
-- `/root/.openclaw/workspace/diagrams/YYYY-MM-DD/` for dated work
+- `~/.openclaw/workspace/diagrams/YYYY-MM-DD/` for dated work
 - Project-specific folders for documentation
 
 Keep `.mmd` source files alongside `.png` output for future editing.

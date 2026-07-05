@@ -226,12 +226,14 @@ If that works, fold the resulting working plugin skeleton into `plugin-creator` 
 
 ## Addendum: Even Simpler Pattern for Slash-Equivalent Branches
 
-After the first feasibility note, WatchCatfish proved a lower-overhead branch style for `/health`: return Telegram `channelData.telegram.buttons` whose `callback_data` values are literal command invocations such as `/health hardware` and `/health services`. Telegram routes those callbacks back as synthetic text, so the existing plugin command parser handles them as normal `ctx.args` branches.
+After the first feasibility note, WatchCatfish tried a lower-overhead branch style for `/health`: return Telegram `channelData.telegram.buttons` whose `callback_data` values are literal command invocations such as `/health hardware` and `/health services`. That shortcut depends on Telegram routing unknown callbacks back as synthetic text, so it can regress when callback dispatch, auth gating, or command reinjection changes.
 
 Recommendation update:
 
-- If the button can be represented as `/command arg`, use **button-steered slash args** first.
-- If the callback value is plugin-private state (`example:a`) or needs edit/clear-button behavior, use `presentation.buttons` + `api.registerInteractiveHandler(...)`.
+- Use visible buttons with namespaced callback data plus `api.registerInteractiveHandler(...)` first for plugin-owned buttons, even when the branch can be represented as `/command arg`.
+- For Telegram-first command menus, `channelData.telegram.buttons` is the known-good visible rendering path; use `presentation.buttons` when channel-agnostic rendering is verified for the target delivery path.
+- Keep the callback value short and namespaced (`example:a`), and have the handler call the same branch function used by slash args.
+- Use raw `channelData.telegram.buttons` with slash-shaped `callback_data` only as a compatibility fallback after verifying the live Telegram callback path.
 - If the UX needs pages/back/select/edit-in-place, use a custom interactive handler/picker.
 
-This makes two-branch no-LLM command plugins especially easy to reproduce.
+This keeps two-branch no-LLM command plugins easy to reproduce without relying on implicit synthetic command reinjection.

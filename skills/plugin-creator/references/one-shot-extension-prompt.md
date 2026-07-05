@@ -30,31 +30,56 @@ Implementation requirements:
 2. Create/update `package.json` with:
    - `type: "module"`
    - `openclaw.extensions` pointing to the source entry, usually `./index.ts` or `./src/index.ts`
-   - `openclaw.runtimeExtensions` pointing to built JS if this package will be installed from npm/ClawHub
+   - `openclaw.runtimeExtensions` pointing to the compiled JS peer (e.g. `./dist/index.js`). This is required for all installed plugins — local, npm, and ClawHub. Without it, OpenClaw warns about missing compiled runtime output even for local installs.
+   - `scripts.build` set to `"tsc"` for easy recompilation
    - compatible OpenClaw/plugin SDK version fields if this package is meant for publishing.
-3. Create the entry point using the current OpenClaw plugin SDK:
+3. Create `tsconfig.json` for TypeScript compilation:
+   ```json
+   {
+     "compilerOptions": {
+       "target": "ES2022",
+       "module": "Node16",
+       "moduleResolution": "Node16",
+       "outDir": "./dist",
+       "rootDir": "./src",
+       "declaration": true,
+       "esModuleInterop": true,
+       "skipLibCheck": true,
+       "allowJs": true,
+       "strict": false
+     },
+     "include": ["src"]
+   }
+   ```
+   Adjust `rootDir` if the entry is at `./index.ts` instead of `./src/index.ts`.
+4. Compile TypeScript to JavaScript:
+   ```bash
+   npx tsc
+   ```
+   This produces `dist/index.js` which `runtimeExtensions` points to. The compiled output must exist before the plugin can load without warnings.
+5. Create the entry point using the current OpenClaw plugin SDK:
    - Prefer `definePluginEntry` from `openclaw/plugin-sdk/plugin-entry` when available.
    - Register the command with `api.registerCommand({ name, description, acceptsArgs, requireAuth, nativeProgressMessages, handler })`.
    - The command name must not include the leading slash.
    - Guard side effects (DB connections, background workers, network clients) behind `api.registrationMode === "full"`. OpenClaw calls register() during discovery scans too.
-4. In the command handler:
+6. In the command handler:
    - Read raw args from the current plugin command context shape.
    - Validate args.
    - Return a `ReplyPayload` object, usually `{ text: "..." }`.
-5. If the command needs a simple branch choice:
+7. If the command needs a simple branch choice:
    - First check current SDK types for plugin command typed args / `argsMenu` support.
    - If plugin `argsMenu` is not exposed, do NOT invent it.
    - Instead use either:
      a. raw slash args such as `/[COMMAND_NAME] plan`, `/[COMMAND_NAME] run`; or
      b. return `presentation.blocks` with `buttons`, and register an interactive handler with `api.registerInteractiveHandler(...)` if supported.
-6. If adding interactive buttons:
+8. If adding interactive buttons:
    - Use channel-agnostic `presentation.buttons` where possible.
    - Button values must be short and namespaced, e.g. `[PLUGIN_ID]:plan`.
    - Register an interactive handler namespace matching the prefix if the channel routes button values to plugin handlers.
    - Keep Telegram callback payloads short (Telegram callback data is 64 bytes max); store larger state under a short id if needed.
    - Telegram interactive `ctx.respond` is an object, not a function. Use methods such as `ctx.respond.editMessage(...)`, `ctx.respond.reply(...)`, `ctx.respond.clearButtons()`, `ctx.respond.editButtons(...)`, or `ctx.respond.deleteMessage()`.
-7. Add a README with install/test/use instructions.
-8. Add the smallest useful verification command/check for this repo.
+9. Add a README with install/test/use instructions.
+10. Add the smallest useful verification command/check for this repo.
 
 Research/verification sources to inspect before coding (check /usr/lib or /usr/local/lib, whichever exists):
 - Local docs:
@@ -87,8 +112,10 @@ Important current caveat:
 
 Deliverables:
 - `openclaw.plugin.json`
-- `package.json`
-- plugin entry file
+- `package.json` (with `openclaw.runtimeExtensions` and `build` script)
+- `tsconfig.json`
+- plugin entry file (TypeScript source)
+- `dist/index.js` (compiled output — run `npx tsc` before testing)
 - README usage section showing `/[COMMAND_NAME]`
 - optional interactive handler only if verified against current SDK types
 - verification output summary
@@ -181,7 +208,9 @@ api.registerInteractiveHandler({
 ## Verification Checklist
 
 - `openclaw.plugin.json` exists, id matches the entry id, and `activation.onStartup` is set.
-- `package.json` declares OpenClaw extension entry paths.
+- `package.json` declares `openclaw.extensions` (source) and `openclaw.runtimeExtensions` (compiled JS).
+- `tsconfig.json` exists with `outDir: "./dist"` matching `runtimeExtensions`.
+- `npx tsc` compiles without errors and `dist/index.js` exists.
 - `api.registerCommand(...)` is called exactly once per slash command.
 - Command name has no leading slash.
 - If using `nativeProgressMessages`, remember values are static metadata strings in the current SDK; `pickProgress()` at registration can vary across reloads but is not per-run guaranteed.
