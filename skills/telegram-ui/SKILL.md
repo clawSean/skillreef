@@ -12,9 +12,9 @@ For cross-platform orchestration of multi-step flows, also use `skills/interacti
 
 This skill exists partly to keep the WHOLE toolbox in working memory — the natural failure mode is falling back to plain text and forgetting 80% of these exist. Before composing any Telegram reply, mentally sweep the full list and pick deliberately:
 
-**callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · mentions · spoilers · blockquotes · rich messages (Bot API 10.1 body rendering: tables · collapsibles · headings · checkbox lists · math · maps · collages · slideshows · dividers · timestamps · highlights)**
+**callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · mentions · spoilers · blockquotes · rich messages (Bot API 10.1 body rendering: tables · collapsibles · headings · checkbox lists · math · maps · collages · slideshows · dividers · highlights)**
 
-If your last several messages were all plain text, that's a signal you've stopped scanning — course-correct.
+This sweep is BINDING, not advisory: every send gets a deliberate pick from this list, and content-heavy sends must land at least two rich elements (see the minimum-richness floor in ⛔ Rich by Default). If your last several messages were all plain text, you've stopped scanning — course-correct immediately.
 
 ## 🧱 Three Layers (don't conflate)
 
@@ -38,13 +38,14 @@ If your last several messages were all plain text, that's a signal you've stoppe
 - ✅ `<tg-map lat="…" long="…" zoom="…"/>` — real inline map tile with pin (verified 2026-07-05)
 - ✅ `<video src="https://…"/>` inline playable video · `<audio src="https://…"/>` audio player with duration (both verified 2026-07-05)
 - ❌ `<blockquote expandable>` — renders as a normal OPEN blockquote on iOS, no collapse (verified 2026-07-05). For collapsible content use `<details><summary>` instead.
-- ❌ `<tg-time unix="…">` with empty content — renders NOTHING on iOS (verified 2026-07-05). Write times as plain text until a working form is found (untested: inner fallback text, `datetime=` attr).
+- ❌ `<tg-time>` — fully dead on iOS (all forms verified 2026-07-05): `unix=` with empty content renders nothing; `unix=` with inner fallback text shows only the plain fallback (tag stripped, no viewer-local rendering); `datetime=` LEAKS RAW MARKUP into the message. Never use it — write times as plain text with an explicit timezone.
 - ❌ Markdown footnotes `[^1]` — leak as literal text; don't use until a working syntax is found (untested candidate: `<tg-reference name="…">` from the converter's supported-tag list)
 
 **Still-unverified tags (from converter source — promote with a date once JPop confirms):** `<tg-emoji emoji-id="…">` custom emoji · `<a name="…">` anchors + in-message `href="#…"` links · `valign`/`rowspan` table attrs · `<ol reversed>` · `figure tg-spoiler` attr
 - 🚨 **LINE BREAKS COLLAPSE (root-caused 2026-07-05):** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both still render run-on. **The only reliable structure in rich mode is explicit HTML blocks:** `<p>…</p>` paragraphs, `<ul><li>`/`<ol><li>` lists, `<br>` breaks (⚠️ must be `<br>`, NOT `<br/>` — the self-closing form gets escaped by the sanitizer). Headings/tables/details/math are block elements and are safe. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
 
 **Verified gotchas with richMessages ON (2026-07-04):**
+- ⚠️ **Escaped entities get double-decoded (verified 2026-07-05):** writing `&lt;details&gt;` (even inside `<code>`) renders as NOTHING — the pipeline decodes the entities back to `<details>` and the sanitizer strips it as a real tag. To mention an HTML tag by name in a message body, write it without angle brackets (e.g. `details` in code style, or "the details tag").
 - ⚠️ **Inbound echo blindness:** when someone replies to one of our sends, the quoted message arrives to the agent as `[unsupported Telegram rich_message received]` — we cannot read our own rich bodies back. Don't rely on reply-quote content for context; use message ids.
 - ⚠️ **Edit in forum topics:** `action=edit` rejects `telegram:<id>:topic:<n>` targets ("recipient must be a numeric chat ID") — pass the bare numeric group id + `messageId`.
 - ⚠️ **Send after a callback tap:** auto-reply may default to the huge callback message id and fail with "replyTo must be a positive integer" — pass an explicit `replyTo` to a real message id (or none via a fresh target).
@@ -74,6 +75,17 @@ These are binding requirements for every Telegram interaction — not "bias towa
 - **Edits are REQUIRED** for status updates — edit the original in place; don't spam follow-ups.
 - **Stickers** when the vibe calls for it.
 
+**Rich body blocks are REQUIRED too (verified matrix, 2026-07-05):** the verified rich-message catalog is not a showcase — it's the working vocabulary. Whenever content matches a verified block, USE the block:
+- Tabular/comparison data ⇒ **native table** (with `caption`/`bordered`/`striped`/`colspan`/`align` when they help) — never ASCII columns
+- Long optional detail, logs, fine print ⇒ **`<details><summary>` collapsible**
+- Multi-section content ⇒ **`##` headings** + **`<hr>` dividers** between sections
+- Task/checklist status ⇒ **checkbox task list**, not ✅/❌ prose
+- Key line worth calling out ⇒ **`<aside>` pull quote** or **`<mark>` highlight**; quotes get **`<blockquote>` + `<cite>`**
+- Formulas ⇒ **`<tg-math>`/`<tg-math-block>`**
+- 2+ images ⇒ **collage or slideshow**; single image with context ⇒ **`<figure>` + caption**; locations ⇒ **inline `<tg-map>`**; hosted video/audio ⇒ **inline `<video>`/`<audio>` blocks**
+
+**Minimum-richness floor:** any content-heavy send (status report, comparison, summary, multi-part answer) uses at least TWO distinct rich elements beyond prose+emoji. If a draft is plain paragraphs, that's the signal to re-sweep the toolbox before sending. Short conversational quips are exempt — don't force a table onto "yep, done ✅".
+
 **Quick rules — apply on every send, no exceptions:**
 - 2–6 options? → **buttons** (never a plain-text menu)
 - Acknowledging? → **reaction**
@@ -84,7 +96,7 @@ These are binding requirements for every Telegram interaction — not "bias towa
 
 **Emoji density — NON-NEGOTIABLE:** Use emojis heavily. Every message carries medium-to-high emoji density, every button label gets an emoji, and reactions are used freely. A flat, emoji-less Telegram message is wrong. (This mirrors the hard emoji mandate in `AGENTS.md`.)
 
-**House-style formatting — MANDATORY:** Every message body is structured with explicit HTML blocks (`<p>` paragraphs, `<ul>/<ol>` lists, `<br>` breaks — never `<br/>`), medium-to-high emoji density. Newlines and markdown lists do NOT create structure in rich mode. These are requirements, not preferences. (Full mechanics in the house-style block at the top and the 🚨 gotcha in Three Layers.)
+**House-style formatting — MANDATORY:** Every message body is structured with explicit HTML blocks (`<p>` paragraphs, `<ul>/<ol>` lists, `<br>` breaks — never `<br/>`), medium-to-high emoji density. Newlines and markdown lists do NOT create structure in rich mode. **Paragraph spacers are part of this mandate, not optional:** every pair of consecutive `<p>` blocks gets a `<p>&#160;</p>` spacer between them — bare `<p>` gives a line break with no air, and JPop has flagged the missing gap more than once. Lists/tables/headings carry their own margins; only prose paragraphs need the spacer. These are requirements, not preferences. (Full mechanics in the house-style block at the top and the 🚨 gotcha in Three Layers.)
 
 ---
 
@@ -92,12 +104,13 @@ These are binding requirements for every Telegram interaction — not "bias towa
 
 Before choosing the reply path:
 
-- **Pure info** → plain text (markdown-ish)
-- **Open-ended input needed** → plain text
+- **Short conversational reply** → prose (still HTML-block structured + emojis) — the ONLY case where prose alone is fine
+- **Pure info, content-heavy** → prose PLUS verified rich blocks (tables, headings, dividers, collapsibles, highlights — see the rich-body mandate above)
+- **Open-ended input needed** → prose question
 - **2 to 6 discrete tap-friendly options** → inline buttons
 - **7+ options from a known list** → buttons still work (Telegram has no native select dropdown — selects render as buttons)
 - **Team pulse / voting** → native poll
-- **Long content with emphasis** → markdown-ish formatting (bold, italic, code, lists)
+- **Long content with emphasis** → headings + tables + collapsibles + inline styling, not a wall of bold text
 
 A conversational suggestion list counts as a menu if the user is meant to pick from it.
 
