@@ -75,6 +75,10 @@ On Linux hosts running as root, `claws-out` is blocked by Claude; use
   is a specific reason not to.
 - Use `--model sonnet` only as an explicit lighter-cost escape hatch for routine,
   low-risk dispatches.
+- Fable (`fable` / `claude-fable-5`) is known to this harness but is not a
+  default or standing recommendation. Consider suggesting it to JPop only for
+  token-efficient, important tasks such as architecture plans, high-stakes
+  reviews, or compact strategic planning; get approval before dispatching it.
 - Do not use Haiku/fast mode for Foreman unless the user explicitly asks for a
   fast/cheap pass.
 - If multiple independent lanes help, run them concurrently and keep prompts

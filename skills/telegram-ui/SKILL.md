@@ -20,10 +20,11 @@ This sweep is BINDING, not advisory: every send gets a deliberate pick from this
 
 1. **Formatting layer** — markdown-ish text → Telegram HTML (`## Formatting` below). Always on.
 2. **UI controls layer** — `message.presentation.blocks` → inline keyboards, selects, portable fallback. Canonical path for buttons/controls.
-3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: richer native body rendering, incl. native-ish tables. **Enabled on this box 2026-07-04 (experimental).** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. Prefer exercising it for content-heavy sends (tables, structured docs) and report rendering quirks; some Telegram clients may still show rich messages as unsupported. If a send renders broken for JPop, fall back to normal formatting and log the case here.
+3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: richer native body rendering, incl. native-ish tables. **Enabled on this box 2026-07-04 (experimental).** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. Prefer exercising it for content-heavy sends (tables, structured docs) and report rendering quirks; some Telegram clients may still show rich messages as unsupported. If a send renders broken for JPop, fall back to normal formatting and log the case here. For client-specific compatibility/setup debugging, use `references/rich-message-client-compat.md`.
 
 **Rich body rendering matrix — live-verified on iOS via JPop screenshots (2026-07-04):**
-- ✅ Native tables (markdown `|` tables → real table blocks; wide tables scroll horizontally on mobile — verified, columns aren't lost — but keep key info in the first 2 columns since off-screen columns need a swipe)
+- ✅ Native markdown-pipe tables are the preferred table path with `richMessages: true`. JPop verified three markdown-pipe table patterns in a private test group on 2026-07-06: simple 3-column table, wider 5-column mobile-scroll table, and an operator-card pattern with the key result mirrored in prose first. Nick then confirmed the same markdown-pipe table probe rendered in Dev Team on 2026-07-06. All rendered cleanly.
+- ⚠️ Raw HTML tables are **path-sensitive and currently unsafe for group-visible sends**. Raw HTML `<table bordered="true" striped="true">…</table>` leaked as literal/collapsed markup for Nick in Dev Team on 2026-07-05 across Telegram Desktop latest, recently updated mobile, and Telegram Web. Treat this as a cross-client raw-table renderer/sanitizer failure, not a single-client compatibility issue. Until the renderer path is fixed, do not use raw HTML tables for group-visible operator cards.
 - ✅ Collapsible `<details><summary>` (tappable chevron)
 - ✅ `<mark>` highlight (yellow), `<sup>`/`<sub>`
 - ✅ Headings (`##` → large styled heading)
@@ -31,7 +32,7 @@ This sweep is BINDING, not advisory: every send gets a deliberate pick from this
 - ✅ Formulas: `<tg-math>E = mc^2</tg-math>` inline; `<tg-math-block>…</tg-math-block>` display math (beautifully typeset, verified 2026-07-05)
 - ✅ Standalone image blocks: `<img src="https://..."/>`
 - ✅ `<hr>` divider · `<blockquote>` with `<cite>` (citation renders gray under the quote) · `<aside>` pull quote (bordered callout) · `<footer>` (small gray line) — all verified 2026-07-05
-- ✅ Table extras (verified 2026-07-05): `<caption>`, `bordered`/`striped`, `colspan`, `align` — all render natively
+- ⚠️ Table extras (`<caption>`, `bordered`/`striped`, `colspan`, `align`) are no longer universally trusted after Nick's 2026-07-05 raw-table leak. Treat prior iOS success as path-specific, not a global guarantee.
 - ✅ `<ol start="5">` numbered-list offset (verified 2026-07-05)
 - ✅ `<figure><img …/><figcaption>…</figcaption></figure>` — image with gray caption (verified 2026-07-05)
 - ✅ `<tg-collage>` of `<img>` blocks — native grid (1 big + rest tiled); `<tg-slideshow>` — swipeable gallery with dot indicator (both verified 2026-07-05)
@@ -47,6 +48,14 @@ This sweep is BINDING, not advisory: every send gets a deliberate pick from this
 - ❌ `<tg-reference name="…" type="footnote">` — leaks as raw markup (tag not on whitelist; verified 2026-07-05). Don't use it. Markdown footnotes `[^1]` also leak. No working footnote syntax found yet.
 - ❌ Markdown footnotes `[^1]` — leak as literal text.
 - 🚨 **LINE BREAKS COLLAPSE (root-caused 2026-07-05):** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both still render run-on. **The only reliable structure in rich mode is explicit HTML blocks:** `<p>…</p>` paragraphs, `<ul><li>`/`<ol><li>` lists, `<br>` breaks (⚠️ must be `<br>`, NOT `<br/>` — the self-closing form gets escaped by the sanitizer). Headings/tables/details/math are block elements and are safe. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
+
+**Good table recipe (binding, updated 2026-07-06):**
+- Use tables when the content is genuinely comparative, matrix-like, or scan-heavy. Do not abandon tables entirely because one raw-table path failed.
+- **Preferred table path:** markdown-pipe tables in the message body. With `richMessages: true`, these have rendered as native Telegram rich tables, including horizontal scrolling on mobile. Keep the most important columns first because off-screen columns require a swipe.
+- **Verified-good patterns:** simple summary table, wide/scroll table, and operator-card table with a prose/key-result mirror all rendered correctly in Telegram forum topics on 2026-07-06.
+- **Avoid for group-visible cards:** raw HTML `<table>...</table>` and fancy table attrs. They worked in some iOS tests, but also leaked/collapsed in another group/client path. Raw-table success is path-specific, not a general guarantee.
+- If a table is operationally important and must be readable everywhere, mirror the key result in prose or a short list before/after the table.
+- If a raw table leaks, treat it as an authoring/path bug: resend as a markdown-pipe table or compact list, then log the renderer case.
 
 **Verified gotchas with richMessages ON (2026-07-04):**
 - ⚠️ **Escaped entities get double-decoded (verified 2026-07-05):** writing `&lt;details&gt;` (even inside `<code>`) renders as NOTHING — the pipeline decodes the entities back to `<details>` and the sanitizer strips it as a real tag. To mention an HTML tag by name in a message body, write it without angle brackets (e.g. `details` in code style, or "the details tag").
@@ -80,7 +89,7 @@ These are binding requirements for every Telegram interaction — not "bias towa
 - **Stickers** when the vibe calls for it.
 
 **Rich body blocks are REQUIRED too (verified matrix, 2026-07-05):** the verified rich-message catalog is not a showcase — it's the working vocabulary. Whenever content matches a verified block, USE the block:
-- Tabular/comparison data ⇒ **native table** (with `caption`/`bordered`/`striped`/`colspan`/`align` when they help) — never ASCII columns
+- Tabular/comparison data ⇒ prefer compact lists or markdown-pipe tables while rich-table rendering is path-sensitive; avoid raw HTML `<table>` in group-visible sends until fixed.
 - Long optional detail, logs, fine print ⇒ **`<details><summary>` collapsible**
 - Multi-section content ⇒ **`##` headings** + **`<hr>` dividers** between sections
 - Task/checklist status ⇒ **checkbox task list**, not ✅/❌ prose
@@ -169,7 +178,7 @@ Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as
 **What does NOT work:**
 - Raw HTML tags outside the whitelist above → escaped, leak as literal text
 - `<blockquote expandable>` → attribute not whitelisted, gets escaped (plain `<blockquote>` or `>` works)
-- Markdown tables → not supported, use bullets or plain text
+- Markdown tables in **legacy normal mode** → not supported, use bullets or plain text. With `richMessages: true`, markdown-pipe tables are the preferred native-table path; see **Good table recipe** above.
 - Headings (`#`) → stripped to plain text (headingStyle: none)
 
 ---
@@ -242,10 +251,9 @@ Then send the same choices as real inline buttons.
   "action": "send",
   "channel": "telegram",
   "target": "<chat_id>",
-  "message": "Question text 👇\n\nOptions: ✅ Yes · ❌ No",
+  "message": "<p>Question text 👇</p>",
   "presentation": {
     "blocks": [
-      { "type": "text", "text": "Question text" },
       { "type": "buttons", "buttons": [
         { "label": "✅ Yes", "value": "yes", "style": "success" },
         { "label": "❌ No", "value": "no", "style": "danger" }
@@ -255,7 +263,9 @@ Then send the same choices as real inline buttons.
 }
 ```
 
-**Raw `buttons` param also works** (`buttons=[[{text, callback_data, url?, web_app?, style?}]]`) — the Telegram renderer resolves explicit `buttons` first, then `presentation`. Prefer `presentation` for portability and fallback-text generation; the raw param is fine for quick Telegram-only sends. The CLI has no `--buttons` flag — CLI sends use `--presentation`.
+🚨 **Raw `buttons` param is NOT reliable — verified dropped live 2026-07-06** (Clawloop group msg 18942: send returned `ok: true` but the keyboard never rendered). The MCP-exposed `message` tool schema has no top-level `buttons` property, so the param is silently stripped before delivery — no error, no keyboard. **Always use `presentation.blocks` for buttons.** Older claims that "the renderer resolves explicit `buttons` first" only apply to code paths that never see the MCP schema; do not rely on them from an agent session. The CLI has no `--buttons` flag either — CLI sends use `--presentation`.
+
+⚠️ **`presentation` does not replace `message`:** a presentation-only send fails with `Message must be non-empty for Telegram sends` (verified 2026-07-06). Put the body (house-style HTML) in `message` and carry ONLY the keyboard in `presentation.blocks` — duplicating body text in a presentation `text` block risks double rendering.
 
 ### URL Buttons
 
@@ -552,7 +562,7 @@ Never surface raw callback tokens as the primary UX.
 
 ## What's NOT Available (Current Limitations)
 
-- **CLI `--buttons` flag** — doesn't exist; CLI sends use `--presentation` (the tool-side raw `buttons` param DOES work — see Sending Buttons)
+- **CLI `--buttons` flag** — doesn't exist; CLI sends use `--presentation`. From agent sessions, raw tool-side `buttons` params are stripped by the MCP schema; use `presentation.blocks` as documented in Sending Buttons.
 - **Login buttons** — not exposed
 - **Payment/Buy buttons** — not exposed
 - **Copy-to-clipboard buttons** — not exposed
