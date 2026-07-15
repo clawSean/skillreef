@@ -1,29 +1,35 @@
 ---
 name: plugin-creator-openclaw
-description: Build, review, or troubleshoot OpenClaw plugins: slash commands, message buttons, interactive handlers, manifests, SDK docs, and real command-path verification.
+description: "Create, update, audit, or route OpenClaw plugins, skills, and durable procedures; enforce AID project docs, house skill/plugin rules, SDK checks, and real command-path verification."
 ---
 
-# OpenClaw Plugin Creator
+# OpenClaw Skill + Plugin Creator
 
-Use this skill when creating or improving an OpenClaw plugin/extension.
+Use this skill before touching an OpenClaw skill, plugin/extension, or reusable procedure doc. It is the house routing layer: decide whether the artifact is a procedure, skill, plugin, project unit, or upstream contribution; then load the narrower mechanics skill or reference.
 
 ## Fast Path
+
+For any skill/plugin/procedure routing decision, read `references/authoring-governance.md`.
 
 For a minimal chat slash-command plugin, read `references/one-shot-extension-prompt.md` and adapt the prompt/template to the target plugin.
 
 For Telegram or button branching, read `references/telegram-command-buttons.md` before choosing an implementation pattern. For feasibility and a minimal two-button branching skeleton, read `references/button-branching-feasibility.md`. Remember: Telegram interactive `ctx.respond` is an object (`reply`, `editMessage`, `editButtons`, `clearButtons`, `deleteMessage`), not a callable function.
 
+For OpenClaw plugin manifest/build details, read `references/openclaw-plugin-manifest-build.md`.
+
 ## Default Workflow
 
-1. **Check current SDK shape first.** Inspect local OpenClaw docs/source before assuming examples are current.
-2. **Start boring:** make a working slash command before adding buttons, state, or channel-specific UI.
-3. **Use the smallest interaction pattern that works:**
+1. **Classify the artifact first.** Procedure for reusable instructions; skill for triggerable agent behavior; plugin for runtime/API/UI/tool behavior; AID project unit for multi-session work with state.
+2. **Load the mechanics source.** Bundled `skill-creator` for SKILL.md mechanics, Codex's built-in `plugin-creator` for Codex plugins, this skill for OpenClaw plugins and house rules, `development-orchestration` once real coding/project execution starts.
+3. **Check current SDK/docs before examples.** Inspect local OpenClaw docs/source before assuming stale examples are valid.
+4. **Start boring:** make the smallest working command/skill/procedure before adding buttons, state, or channel-specific behavior.
+5. **Use the smallest plugin interaction pattern that works:**
    - raw slash args for simple command branches
    - `channelData.telegram.buttons` with namespaced `callback_data` + `api.registerInteractiveHandler(...)` for Telegram-first command menus that must visibly render inline buttons
    - `presentation.buttons` + `api.registerInteractiveHandler(...)` when channel-agnostic rendering is verified for the target delivery path
    - custom channel-specific callback logic only for stateful pickers/wizards
-4. **Verify through the real command path:** plugin loads, command appears/runs, handler returns a valid reply, and button taps route correctly if used.
-5. **Document install + usage:** include command examples like `/example plan` and any required config.
+6. **Verify through the real path:** plugin loads, command appears/runs, handler replies, buttons route; skills validate and trigger; procedures are reachable from the owning skill/project.
+7. **Write state in the right home:** AID project docs for project work, skill references for runtime material, `knowledge/procedures/` for procedures, daily memory for audit. Never edit the generated SkillReef mirror directly.
 
 ## Baseline Plugin Audit Workflow
 
@@ -42,140 +48,15 @@ Use this when giving custom plugins the same lightweight coverage treatment as s
 5. **Write `BASELINE_PLUGIN_AUDIT.md` in the plugin root** with: baseline now present, commands run, pass/fail, and remaining gaps. Prefer this over burying results in chat logs.
 6. **Final local verification:** after workers finish, run each detected test/build command once from the parent session and summarize pass/fail. Treat “no live API/integration test” as an explicit remaining gap, not a failure.
 
-Pasteable ACPX worker prompt shape:
+Pasteable worker prompt shape:
 
 ```text
-You are Claude Code running via ACPX using Opus. Scope: exactly this OpenClaw plugin directory: <PLUGIN_DIR>.
+You are a coding agent. Scope: exactly this OpenClaw plugin directory: <PLUGIN_DIR>.
 
 Task: ensure this plugin has lightweight baseline functional/test coverage. Not exhaustive.
 
 Rules: edit only <PLUGIN_DIR>; do not restart Gateway, change global config, send messages, or make live external API calls. Read package/manifest/source, add/fix the smallest useful offline test/build/load check, run the smallest verification command, and write <PLUGIN_DIR>/BASELINE_PLUGIN_AUDIT.md with coverage, commands, result, and gaps.
 ```
-
-## Manifest Best Practices (`openclaw.plugin.json`)
-
-Every plugin needs a manifest. Beyond `id`, `name`, `description`, and `configSchema`, these fields matter for performance and correct activation:
-
-### `activation.onStartup` (required for all new plugins)
-
-OpenClaw is moving away from implicit startup loading. Every plugin should declare this explicitly:
-
-```json
-{
-  "activation": { "onStartup": false }
-}
-```
-
-- `false` — plugin is lazy-loaded on demand (CLI commands, provider/channel triggers). **Use this for plugins that don't register chat slash commands.**
-- `true` — plugin must import during Gateway startup. **Required for any plugin that registers a chat slash command** (via `api.registerCommand`), plus channel adapters, startup HTTP routes, and gateway methods needed before listen.
-
-**Chat slash commands require `onStartup: true`.** The Gateway's chat command dispatcher only knows about commands registered by plugins loaded at startup. `activation.onCommands` is a CLI planner hint — it helps `openclaw <command>` from the terminal find the right plugin, but it does **not** trigger on-demand loading when someone types `/mycommand` in Telegram or any other chat surface. If a plugin sets `onStartup: false` and only declares `onCommands`, its chat slash command will silently do nothing. The Telegram native `/` menu also won't include it since that menu is built at startup via `setMyCommands`.
-
-Without this field, the plugin falls back to the deprecated implicit startup sidecar, which loads eagerly and adds unnecessary startup/per-turn overhead. `openclaw doctor` will flag plugins missing this field.
-
-### `activation` — narrower triggers
-
-Beyond `onStartup`, the activation block supports targeted triggers so the loader only imports your plugin when relevant:
-
-```json
-{
-  "activation": {
-    "onStartup": false,
-    "onCommands": ["mycommand"],
-    "onProviders": ["myprovider"],
-    "onChannels": ["mychannel"]
-  }
-}
-```
-
-Available: `onCommands`, `onProviders`, `onChannels`, `onAgentHarnesses`, `onRoutes`, `onConfigPaths`, `onCapabilities`.
-
-### Side-effect guarding with `api.registrationMode`
-
-OpenClaw calls `register(api)` during both discovery (read-only scan) and full activation. Guard expensive work:
-
-```ts
-register(api) {
-  api.registerCommand({ name: "mycommand", ... });
-
-  if (api.registrationMode !== "full") return;
-
-  // Only run during live activation — not during discovery scans
-  startBackgroundWorker();
-  openDatabase();
-}
-```
-
-Modes: `"full"` (live runtime), `"discovery"` (read-only scan), `"setup-only"`, `"setup-runtime"`, `"cli-metadata"`.
-
-### Other manifest fields to know
-
-| Field | When to use |
-|-------|-------------|
-| `enabledByDefault` | Bundled plugins only. Omit for external plugins. |
-| `providerAuthEnvVars` | Map provider id to env var names for cheap auth detection without runtime import. Deprecated in favor of `setup.providers[].envVars`. |
-| `contracts.tools` | Declare tool ids for manifest-driven discovery without importing runtime. |
-
-### `package.json` — `setupEntry` and deferred loading
-
-For **channel plugins** that register HTTP routes or gateway methods at startup, consider a lightweight `setupEntry`:
-
-```json
-{
-  "openclaw": {
-    "extensions": ["./index.ts"],
-    "setupEntry": "./setup-entry.ts",
-    "startup": {
-      "deferConfiguredChannelFullLoadUntilAfterListen": true
-    }
-  }
-}
-```
-
-`setupEntry` loads instead of the full entry during startup/setup. Only enable deferred loading when `setupEntry` covers all pre-listen capabilities. Not needed for simple command plugins.
-
-## TypeScript Build Requirements
-
-OpenClaw plugins with TypeScript entry points (`src/index.ts`) require compiled JavaScript output. Without it, `openclaw plugins doctor` and config reload warn about missing compiled runtime output. This applies to **all** installed plugins — local, npm, and ClawHub — not just published packages.
-
-### Required files
-
-1. **`tsconfig.json`** at the plugin root:
-   ```json
-   {
-     "compilerOptions": {
-       "target": "ES2022",
-       "module": "Node16",
-       "moduleResolution": "Node16",
-       "outDir": "./dist",
-       "rootDir": "./src",
-       "declaration": true,
-       "esModuleInterop": true,
-       "skipLibCheck": true,
-       "allowJs": true,
-       "strict": false
-     },
-     "include": ["src"]
-   }
-   ```
-   Adjust `rootDir` if the entry is at `./index.ts` instead of `./src/index.ts`.
-
-2. **`package.json`** must declare both source and compiled paths:
-   ```json
-   {
-     "openclaw": {
-       "extensions": ["./src/index.ts"],
-       "runtimeExtensions": ["./dist/index.js"]
-     },
-     "scripts": {
-       "build": "tsc"
-     }
-   }
-   ```
-
-3. **Compile before testing**: run `npx tsc` to produce `dist/index.js`. The compiled output must exist before the plugin loads without warnings.
-
-4. **Verify**: `openclaw plugins doctor` should show the plugin loading without a "compiled runtime output" warning.
 
 ## Key Caveats
 
@@ -187,6 +68,8 @@ Plugin slash commands support `nativeProgressMessages`, but in the current SDK t
 
 ## Reference Files
 
+- `references/authoring-governance.md` — house routing rules for procedure vs skill vs plugin vs AID project docs, plus known authoring pitfalls.
+- `references/openclaw-plugin-manifest-build.md` — manifest activation, side-effect guarding, TypeScript/runtime output, and package build requirements.
 - `references/one-shot-extension-prompt.md` — paste-ready prompt/template for generating a minimal plugin with a chat slash command.
 - `references/telegram-command-buttons.md` — implementation research for `/think`-style arg menus, plugin presentation buttons, interactive handlers, and `/models`-style picker callbacks.
 - `references/button-branching-feasibility.md` — preliminary feasibility verdict for two-branch plugin buttons, with source evidence and a minimal skeleton.
@@ -255,4 +138,4 @@ Use `presentation.buttons` when channel-agnostic rendering is verified for the t
 - If adding probe flags, land the script and TypeScript caller together. After rollback, retest commands against current source; transient flags like `--skip-native-health` can become stale immediately.
 - Verify buttons through the real channel path: command loads, menu returns visible Telegram buttons, each namespaced callback reaches `api.registerInteractiveHandler(...)`, and callback logs show no spinner/error/no-op.
 - `openclaw plugins registry --refresh` rebuilds discovery metadata; it is not sufficient proof of live runtime reload.
-- To reload plugin code without a full Gateway restart, trigger OpenClaw's hot config reload on a `plugins.*` path, e.g. make a tiny reversible plugin config change such as `plugins.entries.<id>.config.timeoutMs` `30000 → 30001 → 30000`. Confirm logs include `config hot reload applied (...)` and `[plugin] Loaded: ...`, then restore the config value.
+- To reload plugin code without a full Gateway restart, trigger OpenClaw's hot config reload on a `plugins.*` path only after explicit approval for the live config mutation. Use a tiny reversible plugin config change such as `plugins.entries.<id>.config.timeoutMs` `30000 → 30001 → 30000`. Confirm logs include `config hot reload applied (...)` and `[plugin] Loaded: ...`, then restore the config value.

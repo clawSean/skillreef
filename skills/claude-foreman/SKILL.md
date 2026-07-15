@@ -1,6 +1,6 @@
 ---
 name: "claude-foreman"
-description: "Delegate generously to Claude Foreman; user-requested Foreman defaults to best model and max thinking."
+description: "Dispatch bounded planning, review, and implementation jobs to Claude CLI for isolated execution while the main agent remains orchestrator. Delegate generously: multi-file refactors, edits over ~50 lines, codebase exploration plus implementation, deep code reviews, second opinions, parallel review lanes, or any task needing more than 3-4 sequential tool calls. User-requested Foreman defaults to the best model and max thinking. Do NOT use for quick one-line fixes, simple config changes, or short lookups."
 ---
 
 # Claude Foreman
@@ -51,6 +51,19 @@ fast pass.
 Keep work native for one-line fixes, tiny lookups, and simple answers that do not
 benefit from isolated Claude judgment.
 
+## Optional: As a Ralph Executor
+
+Claude Foreman can execute a single heavy slice inside a Ralph Wiggum loop.
+
+- Ralph owns iteration, state, verification, and what counts as done.
+- Foreman executes the selected slice with the narrowest useful profile.
+- Offer this pairing when the user asks for Ralph/Foreman and the task fits
+  small-loop iteration but one slice is too large for inline work.
+- Return compact evidence back to the Ralph loop: files changed, diff summary,
+  checks run, pass/fail, and blockers.
+- Do not let Foreman silently expand into an open-ended loop. If more iteration
+  is needed, hand control back to Ralph.
+
 ## Profiles
 
 Five execution profiles control what Claude CLI can do:
@@ -92,6 +105,11 @@ parsing, cost logging, profile fallback, and artifact paths.
 ```bash
 exec scripts/dispatch.sh <profile> <target_dir> "<prompt>" [flags]
 ```
+
+- `<profile>` — one of: `plan`, `implement`, `review`, `wide-open`, `claws-out`
+- `<target_dir>` — working directory (repo or workspace folder). Absolute paths
+  preferred; relative paths resolve against the caller's current directory.
+- `<prompt>` — the full task description for Claude CLI
 
 Common examples:
 
@@ -211,10 +229,12 @@ Examples:
 
 ## Budget Protection
 
-The dispatch script tracks spend in `cost-log.json` and blocks below the local
-remaining-budget floor. Respect the budget warnings, but do not let routine cost
-concerns silently downgrade a user-requested Foreman run from Opus/max; report the
-budget issue if it blocks or meaningfully changes the lane.
+**Hard limit: $80 per rolling 5-hour window.** The dispatch script sums costs
+from the last 5 hours in `cost-log.json` before each run: if remaining budget
+is under $5 the dispatch is **blocked** (override with `--force`); under $15 it
+warns but proceeds. Respect the budget warnings, but do not let routine cost
+concerns silently downgrade a user-requested Foreman run from Opus/max; report
+the budget issue if it blocks or meaningfully changes the lane.
 
 ## Fallback
 
@@ -229,10 +249,3 @@ If Claude CLI is rate-limited or quota-blocked:
 All dispatch metadata is logged to `cost-log.json` in this skill directory. Each
 run also writes raw stream events under `artifacts/streams/`. Runtime learnings,
 gotchas, and adjustments go in `NOTES.md`.
-
-## Enforcement Setup
-
-The skill file is contextual, so durable enforcement belongs in always-loaded
-workspace instructions as well. Reinforce Claude Foreman usage in `SOUL.md`,
-`AGENTS.md`, and relevant channel/system prompts when JPop wants it to be a
-standing behavior.

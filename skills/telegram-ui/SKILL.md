@@ -8,117 +8,74 @@ Use this skill whenever sending interactive controls, rich formatting, polls, or
 
 For cross-platform orchestration of multi-step flows, also use `skills/interactive-sessions/SKILL.md`.
 
-## 🧰 Full Toolbox — Scan Before Every Send
+## ✅ Pre-Send Checklist — every send, no exceptions
 
-This skill exists partly to keep the WHOLE toolbox in working memory — the natural failure mode is falling back to plain text and forgetting 80% of these exist. Before composing any Telegram reply, mentally sweep the full list and pick deliberately:
+1. **Structure:** explicit HTML blocks — `<p>`, `<ul><li>`/`<ol><li>`, `<br>` (NEVER `<br/>`). Newlines, blank lines, `•` bullets, and markdown lists all collapse into run-on text in rich mode.
+2. **Air:** `<p>&#160;</p>` spacer between consecutive prose `<p>` blocks. Lists/tables/headings self-space — no spacer around them.
+3. **Emoji:** medium-to-high density in every message and every button label. A flat, emoji-less message is a defect.
+4. **Controls:** 2–6 discrete options → inline buttons (plain-text menus are FORBIDDEN) · acknowledging → reaction · answering a specific message → `replyTo` · group vote → poll · status update on a prior send → edit it in place · must stay findable → pin.
+5. **Richness floor:** content-heavy send (status, comparison, summary, multi-part) → at least TWO rich blocks from the Toolchest. Short conversational quips are exempt — don't force a table onto "yep, done ✅".
+6. **Media send?** Captions are NOT rich-body — HTML blocks leak as literal tags there. Short markdown-ish caption on the image; rich body goes in a separate text message. (Media section below.)
+7. **Game / Mini App link?** Primary button = BotFather direct link (`https://t.me/<bot>/<app>?startapp=…`) — works in groups, opens natively. Browser URL is the fallback button, never the primary. (Buttons section below.)
 
-**callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · mentions · spoilers · blockquotes · rich messages (Bot API 10.1 body rendering: tables · collapsibles · headings · checkbox lists · math · maps · collages · slideshows · dividers · highlights)**
+Botched a send? → Repair Flow below: acknowledge briefly, resend right, don't defend it.
 
-This sweep is BINDING, not advisory: every send gets a deliberate pick from this list, and content-heavy sends must land at least two rich elements (see the minimum-richness floor in ⛔ Rich by Default). If your last several messages were all plain text, you've stopped scanning — course-correct immediately.
+## 🧰 Toolchest — Full Vocabulary (scan before every send)
+
+This skill exists partly to keep the WHOLE toolbox in working memory — the natural failure mode is falling back to plain text and forgetting 80% of these exist. Sweeping this list before composing is BINDING, not advisory: every send gets a deliberate pick. If your last several messages were all plain text, you've stopped scanning — course-correct immediately.
+
+- **Controls & actions (always available):** callback buttons · URL buttons · WebApp buttons · selects · polls · reactions (stack them) · replies (`replyTo`) · edits · pins · stickers · media/captions · voice notes · mentions
+- **Inline styling (always available):** bold · italic · underline (`<u>`) · strikethrough · `||spoiler||` · inline code · code blocks · `[links](url)` · `> blockquote`
+- **Rich body blocks (ONLY when Local Status below says ON):** `##` headings · markdown-pipe tables · `<details><summary>` collapsibles · checkbox task lists · `<mark>` highlights · `<sup>`/`<sub>` · `<tg-math>`/`<tg-math-block>` formulas · `<hr>` dividers · `<blockquote>`+`<cite>` · `<aside>` pull quotes · `<footer>` fine print · `<ol start>`/`<ol reversed>` · `<img>` image blocks · `<figure>`+`<figcaption>` captioned images · `<tg-collage>` image grids · `<tg-slideshow>` swipe galleries · `<tg-map>` inline maps · `<video>`/`<audio>` inline players · `<tg-emoji>` custom emoji · named anchors + `#` jump links
+- **Dead — never use:** `<tg-time>` (leaks raw markup) · footnotes (`<tg-reference>` and markdown `[^1]` both leak) · `<blockquote expandable>` (never collapses — use `<details>`) · raw HTML `<table>` in group-visible sends (leaks on some clients — markdown-pipe instead) · `tg-spoiler` attr on `<figure>` (no-op)
+
+Match content to block: comparative data → table (or compact list) · long optional detail/logs/fine print → collapsible · multi-section → headings + dividers · checklist status → checkbox list, not ✅/❌ prose · key line → `<mark>` or `<aside>` · quotes → `<blockquote>`+`<cite>` · formulas → math blocks · 2+ images → collage/slideshow · single image with context → `<figure>`+caption · location → map · hosted video/audio → inline players.
+
+Per-element verification evidence, dates, and quirks: `references/rich-rendering-matrix.md`.
 
 ## 🧱 Three Layers (don't conflate)
 
 1. **Formatting layer** — markdown-ish text → Telegram HTML (`## Formatting` below). Always on.
 2. **UI controls layer** — `message.presentation.blocks` → inline keyboards, selects, portable fallback. Canonical path for buttons/controls.
-3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: richer native body rendering, incl. native-ish tables. **Enabled on this box 2026-07-04 (experimental).** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. Prefer exercising it for content-heavy sends (tables, structured docs) and report rendering quirks; some Telegram clients may still show rich messages as unsupported. If a send renders broken for JPop, fall back to normal formatting and log the case here. For client-specific compatibility/setup debugging, use `references/rich-message-client-compat.md`.
+3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: native rich body rendering. **Config-gated: only use rich blocks when the Local Status entry below says ON.** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. **Group/topic fallback:** if a surface renders `this message is not supported in your version of Telegram`, send normal Telegram HTML there until clients catch up; log the case in `references/rich-message-client-compat.md`.
 
-**Rich body rendering matrix — live-verified on iOS via JPop screenshots (2026-07-04):**
-- ✅ Native markdown-pipe tables are the preferred table path with `richMessages: true`. JPop verified three markdown-pipe table patterns in a private test group on 2026-07-06: simple 3-column table, wider 5-column mobile-scroll table, and an operator-card pattern with the key result mirrored in prose first. Nick then confirmed the same markdown-pipe table probe rendered in Dev Team on 2026-07-06. All rendered cleanly.
-- ⚠️ Raw HTML tables are **path-sensitive and currently unsafe for group-visible sends**. Raw HTML `<table bordered="true" striped="true">…</table>` leaked as literal/collapsed markup for Nick in Dev Team on 2026-07-05 across Telegram Desktop latest, recently updated mobile, and Telegram Web. Treat this as a cross-client raw-table renderer/sanitizer failure, not a single-client compatibility issue. Until the renderer path is fixed, do not use raw HTML tables for group-visible operator cards.
-- ✅ Collapsible `<details><summary>` (tappable chevron)
-- ✅ `<mark>` highlight (yellow), `<sup>`/`<sub>`
-- ✅ Headings (`##` → large styled heading)
-- ✅ Task lists: `<ul><li><input type="checkbox" checked/> item</li></ul>` → native checked/unchecked boxes
-- ✅ Formulas: `<tg-math>E = mc^2</tg-math>` inline; `<tg-math-block>…</tg-math-block>` display math (beautifully typeset, verified 2026-07-05)
-- ✅ Standalone image blocks: `<img src="https://..."/>`
-- ✅ `<hr>` divider · `<blockquote>` with `<cite>` (citation renders gray under the quote) · `<aside>` pull quote (bordered callout) · `<footer>` (small gray line) — all verified 2026-07-05
-- ⚠️ Table extras (`<caption>`, `bordered`/`striped`, `colspan`, `align`) are no longer universally trusted after Nick's 2026-07-05 raw-table leak. Treat prior iOS success as path-specific, not a global guarantee.
-- ✅ `<ol start="5">` numbered-list offset (verified 2026-07-05)
-- ✅ `<figure><img …/><figcaption>…</figcaption></figure>` — image with gray caption (verified 2026-07-05)
-- ✅ `<tg-collage>` of `<img>` blocks — native grid (1 big + rest tiled); `<tg-slideshow>` — swipeable gallery with dot indicator (both verified 2026-07-05)
-- ✅ `<tg-map lat="…" long="…" zoom="…"/>` — real inline map tile with pin (verified 2026-07-05)
-- ✅ `<video src="https://…"/>` inline playable video · `<audio src="https://…"/>` audio player with duration (both verified 2026-07-05)
-- ❌ `<blockquote expandable>` — renders as a normal OPEN blockquote on iOS, no collapse (verified 2026-07-05). For collapsible content use `<details><summary>` instead.
-- ❌ `<tg-time>` — fully dead on iOS (all forms verified 2026-07-05): `unix=` with empty content renders nothing; `unix=` with inner fallback text shows only the plain fallback (tag stripped, no viewer-local rendering); `datetime=` LEAKS RAW MARKUP into the message. Never use it — write times as plain text with an explicit timezone.
-- ✅ `<tg-emoji emoji-id="…">` custom emoji — renders as custom sticker (or falls back to the Unicode emoji if the id is unrecognized; verified 2026-07-05)
-- ✅ `<a name="…">` named anchors + in-message `href="#…"` jump links — anchor set and tap-to-jump both work (verified 2026-07-05)
-- ✅ `valign`/`rowspan` table attrs — merge and align render natively (verified 2026-07-05)
-- ✅ `<ol reversed>` — countdown ordering renders correctly (verified 2026-07-05)
-- ❌ `figure tg-spoiler` attr — does NOT blur the image; has no effect (verified 2026-07-05). For image spoilers use `<tg-spoiler>` wrapping (or `||…||` spoiler syntax for text); don't rely on a `tg-spoiler` attr on `<figure>`.
-- ❌ `<tg-reference name="…" type="footnote">` — leaks as raw markup (tag not on whitelist; verified 2026-07-05). Don't use it. Markdown footnotes `[^1]` also leak. No working footnote syntax found yet.
-- ❌ Markdown footnotes `[^1]` — leak as literal text.
-- 🚨 **LINE BREAKS COLLAPSE (root-caused 2026-07-05):** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both still render run-on. **The only reliable structure in rich mode is explicit HTML blocks:** `<p>…</p>` paragraphs, `<ul><li>`/`<ol><li>` lists, `<br>` breaks (⚠️ must be `<br>`, NOT `<br/>` — the self-closing form gets escaped by the sanitizer). Headings/tables/details/math are block elements and are safe. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
+**⚙️ Rich messages — Local Status**
 
-**Good table recipe (binding, updated 2026-07-06):**
-- Use tables when the content is genuinely comparative, matrix-like, or scan-heavy. Do not abandon tables entirely because one raw-table path failed.
-- **Preferred table path:** markdown-pipe tables in the message body. With `richMessages: true`, these have rendered as native Telegram rich tables, including horizontal scrolling on mobile. Keep the most important columns first because off-screen columns require a swipe.
-- **Verified-good patterns:** simple summary table, wide/scroll table, and operator-card table with a prose/key-result mirror all rendered correctly in Telegram forum topics on 2026-07-06.
-- **Avoid for group-visible cards:** raw HTML `<table>...</table>` and fancy table attrs. They worked in some iOS tests, but also leaked/collapsed in another group/client path. Raw-table success is path-specific, not a general guarantee.
-- If a table is operationally important and must be readable everywhere, mirror the key result in prose or a short list before/after the table.
-- If a raw table leaks, treat it as an authoring/path bug: resend as a markdown-pipe table or compact list, then log the renderer case.
+Setting: `channels.telegram.richMessages` in the OpenClaw config (check via `gateway config.get` or `openclaw.json`). If it isn't `true`, skip the rich body layer entirely — normal Telegram HTML + presentation blocks only.
 
-**Verified gotchas with richMessages ON (2026-07-04):**
-- ⚠️ **Escaped entities get double-decoded (verified 2026-07-05):** writing `&lt;details&gt;` (even inside `<code>`) renders as NOTHING — the pipeline decodes the entities back to `<details>` and the sanitizer strips it as a real tag. To mention an HTML tag by name in a message body, write it without angle brackets (e.g. `details` in code style, or "the details tag").
-- ⚠️ **Inbound echo blindness:** when someone replies to one of our sends, the quoted message arrives to the agent as `[unsupported Telegram rich_message received]` — we cannot read our own rich bodies back. Don't rely on reply-quote content for context; use message ids.
-- ⚠️ **Edit in forum topics:** `action=edit` rejects `telegram:<id>:topic:<n>` targets ("recipient must be a numeric chat ID") — pass the bare numeric group id + `messageId`.
-- ⚠️ **Send after a callback tap:** auto-reply may default to the huge callback message id and fail with "replyTo must be a positive integer" — pass an explicit `replyTo` to a real message id (or none via a fresh target).
-- ✅ Mixed URL + callback presentation keyboards confirmed live (JPop tap, 2026-07-04).
+- **This workspace:** ❔ not determined — check the setting in your config, then update this line. <!-- LOCAL-STATUS -->
 
-**House style (binding rules — rich-mode authoring, updated 2026-07-05):**
-- Medium-to-high emoji density on every message
-- **Structure comes from explicit HTML blocks, never newlines:** wrap every paragraph in `<p>…</p>`, every list in `<ul><li>…</li></ul>` or `<ol><li>`, force a break with `<br>` (NEVER `<br/>` — the self-closing form gets escaped)
-- Newlines, blank lines, `•` bullets, and markdown `-`/`1.` lists ALL collapse into run-on text in rich mode — verified live 2026-07-05; do not use them for body structure
-- Inline markdown still works fine (`**bold**`, `_italic_`, `` `code` ``, links) — the collapse only hits block structure
-- Reach for rich blocks when they add value: tables, `<details>`, `<mark>`, `<sup>`, `<tg-math>`, checkbox lists, headings, `<img>`
-- **Spacing reality (verified via screenshots 2026-07-05):** `<p>` gives each paragraph its own line but only modest vertical air on iOS (≈ a `<br>` gap); `<ul>`/`<ol>` lists get natural margins. Empty `<p></p>` padding blocks are IGNORED, but a paragraph holding an invisible character renders as a REAL blank line — canonical spacer: `<p>&#160;</p>` (nbsp; `<br>&#160;<br>` inline and `&#10240;` braille-blank also verified). **JPop wants paragraphs air-separated: put `<p>&#160;</p>` between consecutive `<p>` blocks in normal prose messages.** Lists already carry their own margins — no spacer needed around `<ul>`/`<ol>`. House shape: intro `<p>` → spacer → `<p>`/lists → spacer → wrap-up `<p>`.
-- **Button label length:** presentation buttons auto-chunk 3 per row and iOS truncates long labels in 3-button rows — keep labels ≲12 chars when sending 3+ buttons (e.g. "✅ All good", not "✅ All render clean")
+## ⚖️ House Rules — MANDATORY (canonical copy; other sections point here)
 
----
+The Pre-Send Checklist is the enforcement summary; these are the mechanics behind it.
 
-## ⛔ Rich by Default — MANDATORY (HARD RULES, NOT TIPS)
+**Structure & spacing (rich mode):**
+- OpenClaw's markdown→rich pipeline emits bare newlines between blocks and Telegram's rich renderer collapses them like a browser — explicit HTML blocks are the ONLY reliable structure (upstream bug; root cause in the matrix ref).
+- `<br/>` gets escaped by the sanitizer; always `<br>`.
+- Bare `<p>` gives a new line but no vertical air; empty `<p></p>` is IGNORED. Canonical spacer: `<p>&#160;</p>` between consecutive prose paragraphs — JPop has flagged missing air more than once. House shape: intro `<p>` → spacer → body `<p>`/lists → spacer → wrap-up `<p>`.
+- Inline markdown (`**bold**`, `_italic_`, `` `code` ``, links) still works in rich mode — the collapse only hits block structure.
+- To mention an HTML tag by name in a body, write it WITHOUT angle brackets (e.g. `details` in code style) — escaped entities double-decode and the sanitizer strips the resulting tag, rendering NOTHING.
 
-These are binding requirements for every Telegram interaction — not "bias toward" suggestions. A plain, low-effort message where one of these applies is a defect: fix it on the spot (see Repair Flow).
+**Tables:**
+- Preferred path: **markdown-pipe tables** — render as native rich tables incl. horizontal scroll on mobile. Put the most important columns first (off-screen columns need a swipe).
+- Raw HTML `<table>` and fancy table attrs are path-sensitive (leaked as literal markup cross-client) — never group-visible. Details in the matrix ref.
+- Operationally important table → mirror the key result in prose before/after it. If a table leaks: resend as markdown-pipe or compact list, then log the case.
 
-**You MUST default to rich UI:**
-- **Inline buttons are REQUIRED** for any Y/N or A/B/C prompt. A plain-text "would you like me to proceed?" is FORBIDDEN — send tappable options instead. 2–6 discrete options ⇒ buttons, always.
-- **Reactions are REQUIRED** to acknowledge — don't burn a whole message on "got it".
-- **Replies (`replyTo`) are REQUIRED** when answering a specific earlier message, so context threads.
-- **Polls are REQUIRED** for group votes or multi-option decisions — never collect votes in prose.
-- **Pins are REQUIRED** for announcements that must stay findable.
-- **Edits are REQUIRED** for status updates — edit the original in place; don't spam follow-ups.
-- **Stickers** when the vibe calls for it.
+**Buttons:**
+- Presentation buttons auto-chunk 3 per row and iOS truncates long labels in 3-button rows — keep labels ≲12 chars when sending 3+ buttons (e.g. "✅ All good", not "✅ All render clean").
+- Every button label gets an emoji.
 
-**Rich body blocks are REQUIRED too (verified matrix, 2026-07-05):** the verified rich-message catalog is not a showcase — it's the working vocabulary. Whenever content matches a verified block, USE the block:
-- Tabular/comparison data ⇒ prefer compact lists or markdown-pipe tables while rich-table rendering is path-sensitive; avoid raw HTML `<table>` in group-visible sends until fixed.
-- Long optional detail, logs, fine print ⇒ **`<details><summary>` collapsible**
-- Multi-section content ⇒ **`##` headings** + **`<hr>` dividers** between sections
-- Task/checklist status ⇒ **checkbox task list**, not ✅/❌ prose
-- Key line worth calling out ⇒ **`<aside>` pull quote** or **`<mark>` highlight**; quotes get **`<blockquote>` + `<cite>`**
-- Formulas ⇒ **`<tg-math>`/`<tg-math-block>`**
-- 2+ images ⇒ **collage or slideshow**; single image with context ⇒ **`<figure>` + caption**; locations ⇒ **inline `<tg-map>`**; hosted video/audio ⇒ **inline `<video>`/`<audio>` blocks**
-
-**Minimum-richness floor:** any content-heavy send (status report, comparison, summary, multi-part answer) uses at least TWO distinct rich elements beyond prose+emoji. If a draft is plain paragraphs, that's the signal to re-sweep the toolbox before sending. Short conversational quips are exempt — don't force a table onto "yep, done ✅".
-
-**Quick rules — apply on every send, no exceptions:**
-- 2–6 options? → **buttons** (never a plain-text menu)
-- Acknowledging? → **reaction**
-- Replying to a specific message? → **`replyTo`**
-- Vote / multi-option decision? → **poll**
-- Important / must stay findable? → **pin**
-- Status update on a prior message? → **edit the original**
-
-**Emoji density — NON-NEGOTIABLE:** Use emojis heavily. Every message carries medium-to-high emoji density, every button label gets an emoji, and reactions are used freely. A flat, emoji-less Telegram message is wrong. (This mirrors the hard emoji mandate in `AGENTS.md`.)
-
-**House-style formatting — MANDATORY:** Every message body is structured with explicit HTML blocks (`<p>` paragraphs, `<ul>/<ol>` lists, `<br>` breaks — never `<br/>`), medium-to-high emoji density. Newlines and markdown lists do NOT create structure in rich mode. **Paragraph spacers are part of this mandate, not optional:** every pair of consecutive `<p>` blocks gets a `<p>&#160;</p>` spacer between them — bare `<p>` gives a line break with no air, and JPop has flagged the missing gap more than once. Lists/tables/headings carry their own margins; only prose paragraphs need the spacer. These are requirements, not preferences. (Full mechanics in the house-style block at the top and the 🚨 gotcha in Three Layers.)
-
----
+**Operational gotchas:**
+- **Inbound echo blindness:** replies quoting our rich sends arrive as `[unsupported Telegram rich_message received]` — never rely on reply-quote content for context; use message ids.
+- **Edit in forum topics:** `action=edit` rejects `telegram:<id>:topic:<n>` targets ("recipient must be a numeric chat ID") — pass the bare numeric group id + `messageId`.
+- **Send after a callback tap:** auto-reply may default to the huge callback message id and fail with "replyTo must be a positive integer" — pass an explicit real `replyTo` (or none via a fresh target).
 
 ## Quick Decision Rule
 
 Before choosing the reply path:
 
 - **Short conversational reply** → prose (still HTML-block structured + emojis) — the ONLY case where prose alone is fine
-- **Pure info, content-heavy** → prose PLUS verified rich blocks (tables, headings, dividers, collapsibles, highlights — see the rich-body mandate above)
+- **Pure info, content-heavy** → prose PLUS rich blocks (≥2 — see checklist floor)
 - **Open-ended input needed** → prose question
 - **2 to 6 discrete tap-friendly options** → inline buttons
 - **7+ options from a known list** → buttons still work (Telegram has no native select dropdown — selects render as buttons)
@@ -131,7 +88,7 @@ A conversational suggestion list counts as a menu if the user is meant to pick f
 
 ## Formatting
 
-⚠️ **Rich-mode override (while `richMessages: true`, since 2026-07-04):** everything below about inline styling still applies, but body STRUCTURE must come from explicit HTML blocks (`<p>`, `<ul><li>`, `<br>`) — plain newlines and markdown lists collapse. See the house-style block at the top.
+⚠️ **Rich-mode override:** everything below about inline styling still applies, but when rich mode is ON, body STRUCTURE must come from explicit HTML blocks — see **House Rules** above.
 
 OpenClaw converts markdown-ish text to Telegram HTML (`parse_mode: "HTML"`).
 
@@ -178,430 +135,66 @@ Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as
 **What does NOT work:**
 - Raw HTML tags outside the whitelist above → escaped, leak as literal text
 - `<blockquote expandable>` → attribute not whitelisted, gets escaped (plain `<blockquote>` or `>` works)
-- Markdown tables in **legacy normal mode** → not supported, use bullets or plain text. With `richMessages: true`, markdown-pipe tables are the preferred native-table path; see **Good table recipe** above.
+- Markdown tables in **legacy normal mode** → not supported, use bullets or plain text. With `richMessages: true`, markdown-pipe tables are the preferred native-table path; see **House Rules → Tables** above.
 - Headings (`#`) → stripped to plain text (headingStyle: none)
 
 ---
 
-## User Mentions / Tagging
+## 🎛️ Action Rules (binding per-tool rules — JSON payloads live in `references/payload-recipes.md`)
 
-When referencing a specific Telegram user in a group, default to a real Telegram mention tag instead of writing only their plain name.
+**Mentions:** prefer `replyTo` context → `tg://user?id=` HTML mention → `@username` → plain name (never invent IDs). Tag once where it routes/assigns/credits attention, not every sentence.
 
-Preferred order:
-- **Reply context first:** if responding to a specific message from that person, use `replyTo` so Telegram creates the native reply link.
-- **User ID mention:** when you know the numeric Telegram user ID, write an HTML mention link: `<a href="tg://user?id=<user_id>">Nick</a>`.
-- **Username mention:** when you know their public username and do not have the numeric ID, use `@username`.
-- **Plain name fallback:** only use a plain name when no user ID or username is available. Do not invent IDs or usernames.
+**Buttons:**
+- Canonical path: `presentation.blocks` buttons block — kinds: `value` (callback), `url` (link), `webApp.url`. Mixing URL + callback in one keyboard works.
+- 🚨 Top-level `buttons` param is silently STRIPPED by the MCP schema — send returns ok, no keyboard renders. `presentation.blocks` only. (CLI likewise: `--presentation`, there is no `--buttons` flag.)
+- ⚠️ `presentation` does not replace `message`: body goes in `message`, keyboard ONLY in presentation — presentation-only sends error, duplicated body text double-renders.
+- Mirror the options in the message text — mobile truncates button titles.
+- **Mini Apps work in groups AND DMs — proven live in a group 2026-07-09 (Claw Four).** Launch hierarchy: groups/topics → primary button is a normal `url` button to the BotFather direct link (`https://t.me/<bot>/<app>?startapp=…`), which still opens natively as the Mini App, + browser fallback. DMs and surfaces proven to render it → true `webApp` button preferred. The only DM-ish limit is the true `webApp` BUTTON KIND, which Telegram drops from unproven group keyboards — never conclude "web apps don't work in groups."
+- Callback values: stable lowercase snake_case scoped to the flow (`triage_bug`, `yes`, `defer`); never surface raw tokens as the primary UX.
 
-Examples:
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "telegram:<group_chat_id>",
-  "message": "<a href=\"tg://user?id=<user_id>\">Nick</a> this one is yours."
-}
-```
+**Selects:** render as buttons on Telegram (no native dropdown) — prefer buttons; use selects only when the same flow targets Slack.
 
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "telegram:<group_chat_id>",
-  "message": "Looping <a href=\"tg://user?id=<user_id>\">JPop</a> in here."
-}
-```
+**Polls:** `action=poll` — flags: `pollAnonymous`/`pollPublic`, `pollMulti`, `pollDurationSeconds` (5–600 auto-close).
 
-Notes:
-- `tg://user?id=<id>` mention links work through OpenClaw because raw `<a href="...">` is preserved by the Telegram HTML renderer.
-- Escape or simplify display names before putting them inside the `<a>` tag; avoid raw `<`, `>`, or `&` in the visible label.
-- In group chats, use mention tags whenever the message asks for, assigns, credits, or redirects attention to a person.
-- Do not tag users gratuitously in every sentence. Tag once where it helps notification/routing, then use normal prose.
-- If the user ID comes from trusted runtime metadata or contact/group memory, it is safe to use. If the identity is uncertain, say so or use the plain-name fallback.
+**Reactions:** `action=react` (+ `remove: true`). Unicode-only, supported set: 👍 ❤️ 🔥 🎉 🤩 😱 😁 😢 💩 🤮 🤯 😴 🤬 🤡 😇 🤝 ✍️ 👀 🫡 — 🦞 does NOT work. Stack generously; reactions are free acknowledgment.
 
----
+**Edits:** `action=edit` + `messageId` — show the tapped choice, update status in place, fix typos. (Forum-topic edit gotcha in House Rules.)
 
-## Inline Buttons
+**Voice notes IN:** Telegram doesn't pass audio files through — only stubs arrive. Say so immediately ("can't hear audio — what'd you say?") and prompt a text resend; never pretend to process.
 
-### When to Use
+**Media:** `media=/abs/path` + `message` as caption. ⚠️ **Captions are NOT rich-body:** media sends bypass the rich_message path, so explicit HTML blocks (`<p>`, `<ul><li>`, spacers) leak as literal tags in captions (seen live 2026-07-10, JoeBot Demo). Captions take markdown-ish inline formatting + real line breaks only. If the update needs rich blocks, send the image (short plain caption) and the rich body as a separate message. `forceDocument: true` = no compression, sends as document; OMIT it for tappable inline photos.
 
-**Hard rule:** if the user can answer by tapping one of **2 to 6 discrete options**, use inline buttons instead of a plain text menu.
+**Stickers:** `action=sticker` with `stickerId`; find ids via `action=sticker-search`.
 
-Includes confirmations, "pick a lane" prompts, and short idea menus.
+**Pins:** `delivery: { pin: true }` on the send (bot needs pin permission in groups).
 
-### Mobile Readability Rule
-
-**Always mirror button options in the message text** because Telegram mobile may truncate or hide full button titles.
-
-Pattern:
-```
-Pick a lane 👇
-
-Options: ✅ Approve · ❌ Cancel · ⏰ Later
-```
-
-Then send the same choices as real inline buttons.
-
-### Sending Buttons
-
-**Canonical path:** use the first-class `message` tool with `presentation.blocks` containing a `buttons` block. Buttons support three kinds — `value` (callback), `url` (link), and `webApp.url` (Telegram WebApp):
-
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "message": "<p>Question text 👇</p>",
-  "presentation": {
-    "blocks": [
-      { "type": "buttons", "buttons": [
-        { "label": "✅ Yes", "value": "yes", "style": "success" },
-        { "label": "❌ No", "value": "no", "style": "danger" }
-      ]}
-    ]
-  }
-}
-```
-
-🚨 **Raw `buttons` param is NOT reliable — verified dropped live 2026-07-06** (Clawloop group msg 18942: send returned `ok: true` but the keyboard never rendered). The MCP-exposed `message` tool schema has no top-level `buttons` property, so the param is silently stripped before delivery — no error, no keyboard. **Always use `presentation.blocks` for buttons.** Older claims that "the renderer resolves explicit `buttons` first" only apply to code paths that never see the MCP schema; do not rely on them from an agent session. The CLI has no `--buttons` flag either — CLI sends use `--presentation`.
-
-⚠️ **`presentation` does not replace `message`:** a presentation-only send fails with `Message must be non-empty for Telegram sends` (verified 2026-07-06). Put the body (house-style HTML) in `message` and carry ONLY the keyboard in `presentation.blocks` — duplicating body text in a presentation `text` block risks double rendering.
-
-### URL Buttons
-
-**✅ Supported natively — verified LIVE 2026-07-04** (JPop-confirmed mixed URL + callback keyboard; earlier "broken in renderer" claims are stale — `toInlineKeyboardButton` handles `url`, `callback_data`, and `web_app`). Just put `url` on a presentation button:
-
-```json
-{ "type": "buttons", "buttons": [
-  { "label": "🌐 Edge", "url": "https://edge.app" },
-  { "label": "✅ Approve", "value": "approve", "style": "success" }
-]}
-```
-
-You can mix URL and callback buttons in the same keyboard. Telegram requires exactly one target per button (url / callback / webApp). For simple link needs without buttons, inline text links `[Edge](https://edge.app)` also work.
-
-**✅ Live-verified 2026-07-04** (private test group): mixed keyboard with 2 URL + 2 callback buttons rendered correctly and the callback delivered (`test2_ok`).
-
-### WebApp Buttons
-
-**✅ Exposed via presentation** — `{ "label": "🎮 Open App", "webApp": { "url": "https://..." } }` (legacy `web_app` also accepted). ⚠️ Telegram itself only shows WebApp buttons in **private chats** — in groups they're dropped by Telegram, not by OpenClaw. **Live-verified 2026-07-04:** sent to JPop's DM, button rendered and opened the URL in Telegram's in-app webview.
-
-### Button Grid Layouts
-
-Binary (same row):
-```json
-[[{"text":"✅ Yes","callback_data":"yes"},{"text":"❌ No","callback_data":"no"}]]
-```
-
-Binary + defer (two rows):
-```json
-[
-  [{"text":"✅ Do it","callback_data":"yes"},{"text":"❌ Cancel","callback_data":"no"}],
-  [{"text":"⏰ Not now","callback_data":"defer"}]
-]
-```
-
-Three+ choices (stacked):
-```json
-[
-  [{"text":"🔥 Now","callback_data":"now"}],
-  [{"text":"⏰ Later","callback_data":"later"}],
-  [{"text":"❌ Cancel","callback_data":"cancel"}]
-]
-```
-
-### Callback Handling
-
-When a user taps a callback button, it arrives as: `callback_data: <value>`
-
-Proceed with the selected action. Never expose raw callback values as the primary UX — translate back to human-readable.
-
-### Emoji Rule
-
-**Always use emojis on button labels.** They make buttons scannable.
-
-| Intent | Emoji |
-|--------|-------|
-| Yes / Approve | ✅ |
-| No / Cancel | ❌ |
-| Later / Defer | ⏰ |
-| Danger / Destructive | ⚠️ |
-| Info | ℹ️ |
-| Lock in | 🔒 |
-| Neutral A/B | 🅰️ 🅱️ |
-
----
-
-## Selects (Presentation)
-
-On Telegram, `presentation.blocks` selects render as inline buttons (Telegram has no native dropdown). Semantically useful for cross-platform portability and for fallback text generation.
-
-```json
-{
-  "type": "select",
-  "placeholder": "Choose lane",
-  "options": [
-    { "label": "🔐 Security", "value": "security" },
-    { "label": "🦞 Product", "value": "product" }
-  ]
-}
-```
-
-Functionally identical to buttons on Telegram. Prefer buttons for Telegram-only flows; use selects when the same flow also targets Slack (where selects render as real dropdowns).
-
----
-
-## Polls
-
-Native Telegram polls. Use for voting, quizzes, or pulse checks.
-
-```json
-{
-  "action": "poll",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "pollQuestion": "Which approach?",
-  "pollOption": ["Option A", "Option B", "Option C"],
-  "pollAnonymous": false,
-  "pollDurationSeconds": 300
-}
-```
-
-Flags:
-- `pollAnonymous` / `pollPublic` — visibility of voters
-- `pollDurationSeconds` — auto-close (5–600)
-- `pollMulti` — allow multiple selections
-
----
-
-## Edits
-
-Edit a previously sent message:
-
-```json
-{
-  "action": "edit",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "messageId": "<message_id>",
-  "message": "Updated text here."
-}
-```
-
-Useful for:
-- Showing which button was selected after a tap
-- Updating status messages
-- Correcting typos
-
----
-
-## Replies
-
-Reply to a specific message using `replyTo`:
-
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "message": "Replying to that ^",
-  "replyTo": "<message_id>"
-}
-```
-
-Telegram shows a native quote/link to the original message.
-
----
-
-## Reactions
-
-React to a message with an emoji:
-
-```json
-{
-  "action": "react",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "messageId": "<message_id>",
-  "emoji": "👍"
-}
-```
-
-Remove with `"remove": true`. Only unicode emoji supported (no custom emoji through this path).
-
-**Supported reaction emoji:** 👍 ❤️ 🔥 🎉 🤩 😱 😁 😢 💩 🤮 🤯 😴 🤬 🤡 😇 🤝 ✍️ 👀 🫡
-
-**Rules:**
-- React generously — stack multiple reactions on a message when it fits the vibe
-- 🦞 does NOT work in the default reaction set (tested & failed 2026-02-13)
-- Reactions are free acknowledgment; use them liberally instead of burning a whole message
-
----
-
-## Voice / Audio Messages
-
-Telegram does not pass audio files through to the agent — only metadata/stubs arrive.
-
-**Rule:** When a voice message arrives, respond immediately: "Can't hear audio messages — Telegram doesn't pass the file through to me. What'd you say?" Don't attempt to process. Prompt a text resend.
-
-*(Learned 2026-03-23 — Ingest group incident)*
-
----
-
-## Media & Stickers
-
-### Images / Files
-
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "media": "/absolute/path/to/file.png",
-  "message": "Caption text",
-  "forceDocument": true
-}
-```
-
-- `forceDocument: true` bypasses Telegram compression (sends as document)
-- Without it, images get compressed and GIFs may be converted to video
-- **Captions support full formatting** (bold, strike, spoiler, links — same markdown-ish renderer as message text; verified live 2026-06-10)
-
-### Stickers
-
-```json
-{
-  "action": "sticker",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "stickerId": ["<fileId>"]
-}
-```
-
-Search cached stickers:
-```json
-{
-  "action": "sticker-search",
-  "channel": "telegram",
-  "query": "cat waving",
-  "limit": 5
-}
-```
-
----
-
-## Pins
-
-Pin a message (bot must have pin permissions in groups):
-
-```json
-{
-  "action": "send",
-  "channel": "telegram",
-  "target": "<chat_id>",
-  "message": "Pinned announcement",
-  "delivery": { "pin": true }
-}
-```
-
-Or use `--pin` flag in CLI.
-
----
-
-## Presentation Cards
-
-OpenClaw `MessagePresentation` renders as: message text + inline keyboard on Telegram.
-
-Supported blocks on Telegram:
-- ✅ `text` → included in message body
-- ✅ `context` → included in message body (no visual distinction from text)
-- ⚠️ `divider` → not rendered (Telegram has no visual divider)
-- ✅ `buttons` → inline keyboard
-- ✅ `select` → inline keyboard (rendered as buttons)
-
-`title` → prepended to message text.
-`tone` → no visual effect on Telegram (matters for Slack/Teams).
-
-**Important:** keep presentation text plain/portable. Do not use raw HTML tags in presentation blocks — they will be escaped and leak as literal text.
+**Presentation cards:** block text must stay plain/portable — raw HTML in presentation blocks leaks as literal text. `divider`/`tone` are no-ops on Telegram; `title` prepends to the body.
 
 ---
 
 ## Group Final Delivery
 
-In Telegram groups, normal final assistant replies can silently fail to post (long-standing regression, upstream `#76424`). **Always deliver group-visible output with explicit `message(action="send")`** — never rely on the final answer being auto-delivered. ⏳ Re-verification scheduled after the 2026-07-04 richMessages rollout (along with media gotchas + voice-message limitation below).
-
----
+In Telegram groups, normal final assistant replies can silently fail to post (long-standing regression, upstream `#76424`). **Always deliver group-visible output with explicit `message(action="send")`** — never rely on the final answer being auto-delivered.
 
 ## Repair Flow
 
-If you realize you sent a plain-text menu that should have been buttons:
-1. Acknowledge briefly.
-2. Resend as buttons immediately.
-3. Don't defend the mistake.
+- Sent a plain-text menu that should've been buttons? → acknowledge briefly, resend as buttons, don't defend it.
+- Buttons failed/invisible? → acknowledge, restate options in plain text, continue from the typed choice, and document the failure here if reusable.
 
-If buttons fail or are invisible:
-1. Acknowledge briefly.
-2. Restate options in plain text.
-3. Continue from the user's typed choice.
-4. Document the failure for the skill if it's a reusable issue.
+## What's NOT Available
 
----
-
-## Callback Naming Convention
-
-Use stable, lowercase snake_case callback values scoped to the flow:
-
-- `game_challenge`, `game_authenticate`
-- `triage_bug`, `triage_feature`
-- `pd_edgespend`, `pd_cancel`
-- Generic: `yes`, `no`, `cancel`, `defer`
-
-Never surface raw callback tokens as the primary UX.
-
----
-
-## What's NOT Available (Current Limitations)
-
-- **CLI `--buttons` flag** — doesn't exist; CLI sends use `--presentation`. From agent sessions, raw tool-side `buttons` params are stripped by the MCP schema; use `presentation.blocks` as documented in Sending Buttons.
-- **Login buttons** — not exposed
-- **Payment/Buy buttons** — not exposed
-- **Copy-to-clipboard buttons** — not exposed
-- **Reply keyboards** (custom keyboard replacing the system keyboard) — not exposed
-- **Request contact/location buttons** — not exposed
-- **Telegram MarkdownV2** — avoid; escaping is error-prone and OpenClaw uses HTML parse mode
-- **Raw HTML outside the whitelist** — escaped by OpenClaw's renderer (see Formatting section for the allowed tags)
-- **Inbound blockquote/date metadata** — formatting markers for quotes and `tg-time` entities are stripped on inbound; only the text arrives
-
-These may become available in future OpenClaw versions.
-
-
-## Plugin Reply Buttons (`channelData.telegram.buttons`)
-
-For plugin command replies, there is a Telegram-specific path in addition to the normal `message` tool presentation path: a plugin handler can return `channelData.telegram.buttons` with Telegram-style rows of `{ text, callback_data }`. This is useful for no-LLM slash-command steering where the callback should re-enter the command path.
-
-Example:
-
-```ts
-return {
-  text: "Choose a report 👇\n\nOptions: 🖥️ Hardware · 🧰 Services",
-  channelData: {
-    telegram: {
-      buttons: [[
-        { text: "🖥️ Hardware", callback_data: "/health hardware" },
-        { text: "🧰 Services", callback_data: "/health services" }
-      ]]
-    }
-  }
-};
-```
-
-Use this for plugin-owned command menus only. For ordinary assistant sends with the `message` tool, keep using `presentation.blocks` buttons as documented above. Mirror the options in message text either way.
-
+- Login, payment, copy-to-clipboard, request-contact/location buttons; reply keyboards (system-keyboard replacement) — not exposed
+- Telegram MarkdownV2 — avoid; OpenClaw uses HTML parse mode
+- Raw HTML outside the whitelist — escaped (see Formatting)
+- Inbound blockquote/date metadata — stripped on inbound; only text arrives
+- Plugin-owned command menus have a separate `channelData.telegram.buttons` path — recipe in `references/payload-recipes.md`
 
 ## Group Admin / Control Actions
 
-Most Telegram work in this skill is message UI: formatting, buttons, polls, replies, media, reactions, edits, pins, and stickers.
+For rare group-level control actions — changing the group profile photo, checking bot admin permissions, raw Bot API methods not exposed by the `message` tool — use `references/telegram-admin-control.md`.
 
-For rare group-level control actions such as changing a group profile photo, checking bot admin permissions, or using Telegram Bot API methods not exposed by the `message` tool, use `references/telegram-admin-control.md`.
+For forum topic management — creating topics, renaming them, posting into a topic via `threadId` — use `references/telegram-forum-topics.md` (`topic-create`, `topic-edit`; needs the Manage Topics admin permission).
 
-Do this only when the user explicitly asks or the operation is clearly part of the requested Telegram group workflow. These actions can mutate group state, so verify permissions and report the exact result.
+For Telegram Mini Apps / games — direct-link anatomy, BotFather ownership split, launch-card rules — use `references/telegram-mini-apps.md`; the game apps themselves live in `~/projects/openclaw-game-night/`.
+
+Only on explicit ask or when the requested workflow clearly needs it; these mutate group state, so verify permissions and report the exact result.

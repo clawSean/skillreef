@@ -13,3 +13,11 @@ Key takeaway: `/think`-style `argsMenu: "auto"` is the cleanest native-command p
 Related one-shot prompt/template:
 
 - `skills/plugin-creator/references/one-shot-extension-prompt.md`
+
+## 2026-07-09 — Restructure + parked TODOs
+
+SKILL.md restructured (dedup mandates → Pre-Send Checklist + House Rules; matrix detail → references/rich-rendering-matrix.md; toolchest kept fully enumerated per JPop).
+
+Parked TODOs (moved out of SKILL.md):
+- ⏳ Re-verify group final-delivery regression (#76424) post-richMessages rollout, plus media gotchas + voice-message limitation.
+- 🧪 scripts/test.sh reports "4 of 17 JSON blocks invalid" — pre-existing (fails on the pre-restructure file too); likely ellipsis placeholders in examples. Decide: fix examples or teach the test to skip placeholder blocks.

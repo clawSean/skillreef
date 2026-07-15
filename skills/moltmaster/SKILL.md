@@ -21,6 +21,7 @@ Minimal keep-warm pings for subscription provider rate windows. Entirely separat
 - Never print raw token values. Fingerprints (12-char SHA-256 prefixes) only.
 - Backup files contain credentials — treat them as sensitive. Do not copy to chat, logs, or shared storage.
 - Only operate on providers verified to support refresh. Start with Codex. See `references/provider-expansion.md` before touching any other provider.
+- Do not suggest OpenAI API-key Pulse lanes by default. They spend a tiny amount of API credit and do not warm subscription windows. As of 2026-07-09, live `openai-env` / `openai-cmd` lanes are commented out locally and the Pulse engine skips API-key lanes unless `PULSE_ALLOW_API_KEYS=1` is explicitly set.
 
 ## Usage
 
@@ -103,14 +104,25 @@ flock-guarded) — the per-lane state gate means cron cadence ≠ ping volume.
   - `openai-codex` — `openclaw infer model run --model openai/gpt-5.4-mini`;
     effective auth is `openai:you@example.com` OAuth (the warmable
     subscription).
-  - `openai-key-main` + `openai-key-codexhome` — the two API-key OpenAI
-    accounts (.env/gateway sk-svcacct + <your-agent> codex-home sk-proj),
-    pinged via direct `curl /v1/responses` (~16-token gpt-5.4-mini call). No
-    5h window to warm — these are alive-checks, ON per JPop 2026-07-04
-    ("all of them, even personal/main").
+  - `openai-key-main` + `openai-key-codexhome` — optional OpenAI API-key
+    health-check lanes (.env/gateway sk-svcacct + <your-agent> codex-home
+    sk-proj), pinged via direct `curl /v1/responses` (~16-token gpt-5.4-mini
+    call). No 5h subscription window is warmed; these are alive-checks only.
+    Standing direction from 2026-07-09: recurring API-key lanes stay off by
+    default. The local `lanes.conf` entries are commented, and the live engine
+    also skips `openai-env` / `openai-cmd` unless `PULSE_ALLOW_API_KEYS=1` is
+    explicitly set. Prefer one-shot key-health checks when needed.
   - Caveat: `store-default`/`edgeclaw-work` token values are distinct from the
     env lanes, but OAuth rotation means they *might* map to the same underlying
     accounts — watch receipts for windows that always move together.
+  - Do not delete `anthropic:default` casually: it is the credential backing
+    `store-default`, and any direct Anthropic/OpenClaw-runtime model route can
+    use it. As of 2026-07-09, normal default fallback uses
+    `claude-cli/claude-opus-4-8`, but `anthropic/claude-opus-4-8` alias
+    `opus-8` is still configured as a direct OpenClaw/Anthropic lane. To retire
+    `anthropic:default`, first comment or retarget `store-default`, then remove
+    or retarget direct `anthropic/*` routes that are not pinned to
+    `agentRuntime.id: "claude-cli"`.
 - **Never route pings through `claude-auth-router.sh`** — the router rotates
   profiles and notifies chats on limits; pings must be side-effect-free.
 - **Kill switch:** `touch ~/.openclaw/moltmaster/pulse.off` (delete to resume).
@@ -119,6 +131,9 @@ flock-guarded) — the per-lane state gate means cron cadence ≠ ping volume.
 - **State/log:** `~/.openclaw/moltmaster/pulse/` (`state/<lane>.last|.day`, `pulse.log`).
 - The 5h-window-start hypothesis is still unproven per-lane; verify against
   `openclaw models status` (OpenAI meters) before trusting it for scheduling.
+- 2026-07-09 fix: `core/pulse.sh` now explicitly exits `0` after processing a
+  lanes file, so successful pings no longer look like shell failures because
+  the final `read` hit EOF.
 
 ## Known breakage (2026-07-03)
 

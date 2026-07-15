@@ -1,10 +1,6 @@
 ---
 name: shell-swap
-description: >
-  Admin tool to mass-switch every OpenClaw session and the default model to ANY
-  provider/model. Provider- and model-agnostic. Use when asked to change model,
-  switch lanes, set the default model, do a fleet-wide model change, or
-  "shell swap".
+description: "Admin tool to mass-switch every OpenClaw session and the default model to ANY provider/model. Provider- and model-agnostic. Use when asked to change model, switch lanes, set the default model, do a fleet-wide model change, or \"shell swap\"."
 ---
 
 # Shell Swap

@@ -53,7 +53,7 @@ Then follow the enforcement guidance in `SKILL.md`.
 
 ## Dispatch
 ```bash
-scripts/dispatch.sh <profile> <target_dir> "<prompt>" [--model <alias>] [--worktree] [--force] [--max-turns N]
+scripts/dispatch.sh <profile> <target_dir> "<prompt>" [--model <alias>] [--worktree] [--force] [--max-turns N] [--provider claude-cli|claude-work] [--profile <name>] [--no-profile-fallback]
 ```
 
 Profiles:
@@ -67,14 +67,62 @@ Default model is **Opus** across profiles. Use `--model sonnet` as an explicit l
 
 Compatibility: `unsafe` is still accepted as a legacy alias for `claws-out`. `root-wide` and `claws-wide` are accepted as aliases for `wide-open`.
 
+## Optional Extra Filesystem Roots
+
+Foreman dispatches run with the target directory as Claude's primary working
+area. If your local setup needs Claude to read additional host paths, set
+`FOREMAN_EXTRA_ADD_DIRS` to a colon-separated list before dispatching:
+
+```bash
+FOREMAN_EXTRA_ADD_DIRS="/Users/clawdia:/opt/homebrew:/tmp" \
+  scripts/dispatch.sh plan /path/to/repo "Inspect the local toolchain"
+```
+
+When set, Foreman appends those paths to the Claude CLI command as:
+
+```bash
+--add-dir /Users/clawdia /opt/homebrew /tmp
+```
+
+Keep machine-specific paths in your environment or wrapper scripts, not in the
+shared skill. This keeps the repo portable while still supporting richer local
+inspection on hosts that need it.
+
 ## Optional Claude Account Profiles
 
 Foreman normally inherits the caller's ambient Claude CLI auth. That keeps the
 standalone skill portable: users who only have one `claude` login can keep using
 the normal dispatch command with no profile setup.
 
-On machines with multiple Claude setup-token accounts, Foreman can pin an auth
-profile for a run:
+On machines with multiple usable env-token profiles, plain no-flag dispatches
+can enter the profile-aware fallback lane automatically. Auto-detection is
+deliberately conservative:
+
+- `--profile`, `--provider`, and `--no-profile-fallback` always win.
+- If the caller already exported `CLAUDE_CODE_OAUTH_TOKEN`, Foreman preserves
+  that ambient token and does not auto-route.
+- If fewer than two profiles have exported non-empty token env vars, Foreman
+  stays ambient.
+- Missing, malformed, or incomplete profiles config falls back to ambient.
+- The decision keys on usable `claude-profiles.json` entries, not on Sean's
+  local `~/scripts/claude-auth-router.sh` wrapper.
+
+On machines with multiple Claude setup-token accounts, Foreman can use the
+profile-aware `claude-cli` lane. With `--provider claude-cli`, fallback is the
+default behavior: Foreman tries the active profile first, then the remaining
+profiles in `claude-profiles.json`, de-prioritizing profiles whose
+`cooldown_until` is still active. If only one profile exists, it simply runs that
+profile once.
+
+```bash
+scripts/dispatch.sh plan /path/to/repo \
+  "Reply exactly: FOREMAN_PROFILE_OK" \
+  --model sonnet \
+  --provider claude-cli
+```
+
+Explicit profile pinning stays strict and never falls through to another
+account:
 
 ```bash
 scripts/dispatch.sh plan /path/to/repo \
@@ -115,10 +163,21 @@ Rules:
 - Tokens live only in the environment. The profiles file stores env var names,
   not token values.
 - Env var names must be shell-safe: `[A-Za-z_][A-Za-z0-9_]*`.
-- `claude-auth-active` is only a local default-profile switch for the
-  `claude-cli` lane. It is not automatic failover.
+- The JSON `active` field is the first-choice profile for the `claude-cli`
+  fallback lane. The legacy standalone `claude-auth-active` file is retired; to
+  switch the default profile, edit `active` in `claude-profiles.json`.
+- `--profile <name>` is strict by design. Use it for proof runs and debugging.
+- `--no-profile-fallback` keeps `--provider claude-cli` on the active/default
+  profile without trying the rest of the profile list. Without `--provider`, it
+  also suppresses no-flag auto-detection and leaves the run ambient.
 - `claude-work` is treated as the `work` profile for Sean's local OpenClaw
   setup; regular Foreman users do not need that provider wrapper.
+- Fallback only retries opening-request quota failures, such as a Claude CLI
+  result event with `api_error_status: 429` or `assistant_error: rate_limit`.
+  Foreman does not retry after tool use, token usage, or non-zero cost, so it
+  does not duplicate a run that already made progress.
+- Failed fallback profiles are cooled down in the profiles JSON for
+  `FOREMAN_CLAUDE_PROFILE_COOLDOWN_SECONDS` seconds, default `300`.
 
 To add another account/profile:
 
@@ -139,6 +198,18 @@ To add another account/profile:
 ```bash
 scripts/smoke-claude-profile.sh --profile backup --model sonnet
 ```
+
+4. If the account should appear as an OpenClaw `/models` selectable provider,
+   add or update the OpenClaw CLI backend/model config separately and validate it
+   with:
+
+```bash
+scripts/smoke-openclaw-model.sh --model claude-work/claude-sonnet-4-6
+```
+
+That OpenClaw provider step is intentionally separate from Foreman. Foreman only
+uses profile auth when the caller enters the profile-aware lane with
+`--provider` or pins an account with `--profile`.
 
 ## Mac Node Claude Auth Router
 
@@ -185,17 +256,6 @@ Foreman wrapper form:
   "Review this and summarize findings."
 ```
 
-4. If the account should appear as an OpenClaw `/models` selectable provider,
-   add or update the OpenClaw CLI backend/model config separately and validate it
-   with:
-
-```bash
-scripts/smoke-openclaw-model.sh --model claude-work/claude-sonnet-4-6
-```
-
-That OpenClaw provider step is intentionally separate from Foreman. Foreman only
-needs profile auth when the caller explicitly asks it to pin an account.
-
 ## Live Smoke Tests
 
 The reusable smoke tests save artifacts under `artifacts/smokes/`.
@@ -207,6 +267,41 @@ scripts/smoke-claude-profile.sh --profile work --model sonnet
 # OpenClaw selectable provider proof through the agent pipeline. Prints parsed response text.
 scripts/smoke-openclaw-model.sh --model claude-work/claude-sonnet-4-6
 ```
+
+## Sean's Live Claude Auth Router
+
+Sean's local OpenClaw Claude CLI backends use
+`~/scripts/claude-auth-router.sh` and `~/scripts/claude-work.sh`.
+Those scripts are intentionally outside this standalone skill repo, but this
+repo carries an offline regression test for the live router:
+
+```bash
+scripts/test-claude-auth-router.sh
+```
+
+Current router behavior:
+
+- Interactive/no-`-p` Claude sessions still `exec claude "$@"` and pass through.
+- Noninteractive `-p` calls with `--output-format stream-json` are streamed
+  through a tiny classifier.
+- Known opening rate-limit/session-limit failures are converted into a friendly,
+  emoji-bearing synthetic success result instead of raw Claude CLI quota text.
+- The router still does not retry the failed prompt. For implicit active-profile
+  calls, it cools down the limited profile, switches the JSON `active` field in
+  `claude-profiles.json` to the next usable profile, and asks the caller to send
+  the last message again now. Explicit `--auth-profile`/`--profile` calls remain
+  pinned.
+- When every profile is cooling down (nothing left to rotate to), the router
+  surfaces a real error (is_error result + non-zero exit) instead of a friendly
+  synthetic success, so OpenClaw's native model fallback can hand the turn to
+  the next configured model. `CLAUDE_AUTH_ROUTER_ERROR_ON_EXHAUSTED=0` restores
+  the old always-friendly behavior.
+- The classifier keys on failure-channel surfaces observed in real logs:
+  `rate_limit_event.status=rejected`, `assistant.error=rate_limit`, result
+  `is_error=true` plus `api_error_status` `429`/`529`, or the exact
+  `You've hit your session limit` wording.
+- Successful content that merely talks about "rate limit" is passed through and
+  does not trigger the friendly rewrite.
 
 ## Notes
 This skill is intended for heavier or higher-stakes work where native tool-call editing would be inefficient, context-expensive, or better handled by a separated reviewer/implementer.

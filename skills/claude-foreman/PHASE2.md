@@ -65,6 +65,13 @@ For long-running dispatches, tail the temp output file and forward partial
 output back to the calling session so there's visible progress. Useful for
 wide-open runs that might take several minutes.
 
+### tmux Supervision
+Use bundled `tmux` for Foreman runs that need interactive/persistent terminal
+supervision: launch or attach in a named session, capture panes for liveness,
+and send keys only after a prompt is understood. This complements ACPX/Foreman;
+it does not replace ACPX or conflict with it. Good candidates are stuck prompts,
+manual approvals, long-running CLI smoke sessions, and Mac-node terminal work.
+
 ### acpx flow Support
 `acpx flow` runs multi-step workflow files. Could replace complex dispatch.sh
 logic for multi-phase work (plan → review output → implement → verify).

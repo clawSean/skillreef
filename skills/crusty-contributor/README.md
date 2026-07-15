@@ -17,6 +17,7 @@ This is not a code generator. It's a workflow harness: how to scope a contributi
 ## What it includes
 
 - `SKILL.md` — the workflow, decision gates, and merge-positioning doctrine
+- `ROADMAP.md` — future adoption notes for review tooling and contributor workflow upgrades
 - `references/openclaw.md` — OpenClaw-specific contribution overlay (deltas only)
 - `references/openclaw-proof-runbook.md` — the mandatory proof gate + label decoder with real PR examples
 - `references/pr-template.md` — starting PR structure (swap sections to match a repo's enforced gates)

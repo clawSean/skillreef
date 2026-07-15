@@ -1,6 +1,6 @@
 ---
 name: "web-use"
-description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live"
+description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Read before declaring any page blocked — Cloudflare, CAPTCHA, and \"Just a moment\" pages get Browserless /unblock first. Domain skills keep site-specific policy."
 ---
 
 # Web Use

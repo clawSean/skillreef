@@ -59,6 +59,15 @@ If **our PR is stale, duplicated, or has a stronger competing PR**:
 - If a clean/actionable PR gets no maintainer signal for roughly 2-3 weeks, move it to background watch unless new evidence raises merge probability.
 - When commenting publicly on overlap, offer consolidation/help and avoid language about beating, winning, or outcompeting another contributor.
 
+### Close-reason audit discipline
+
+When auditing old Sean/JPop OpenClaw PRs, keep the factual packet separate from the lesson synthesis:
+
+- Build or read the lossless GitHub-backed audit artifact first: PR metadata, timeline close/merge events, issue comments, review bodies, and review comments.
+- Do not infer the root cause from labels or local project notes alone; GitHub PRs do not expose a structured close-reason field.
+- Do not update this overlay with takeaway lessons until JPop has reviewed the factual packet, optional model reviews have converged, and the agreed causes are explicit.
+- Before deleting any local worktree, preserve local-only proof logs, draft bodies, screenshots, transcripts, or untracked artifacts that are not already in GitHub comments, project logs, or the audit artifact.
+
 When doing a strategy or second-opinion pass, stop at recommendations first. External PR comments, pushes, or closes need explicit execution intent from the user or a prior still-active request.
 
 If the **bug is fixed in a newer OpenClaw release** than what's installed:
