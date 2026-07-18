@@ -7,13 +7,22 @@ import path from 'node:path';
 import process from 'node:process';
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
-const SDK_CANDIDATE_PATHS = [
-  '/usr/local/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
-  '/usr/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
-];
-const SDK_PATH = process.env.AUTH_MOLT_SDK_PATH
-  ?? SDK_CANDIDATE_PATHS.find((candidate) => fs.existsSync(candidate))
-  ?? SDK_CANDIDATE_PATHS[0];
+
+function resolveSdkPath() {
+  const sdkSuffix = 'openclaw/dist/plugin-sdk/agent-runtime.js';
+  const candidates = [
+    process.env.AUTH_MOLT_SDK_PATH,
+    process.env.MOLTMASTER_SDK_PATH,
+    process.env.HOMEBREW_PREFIX ? path.join(process.env.HOMEBREW_PREFIX, 'lib', 'node_modules', sdkSuffix) : null,
+    '/opt/homebrew/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
+    '/usr/local/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
+    '/usr/lib/node_modules/openclaw/dist/plugin-sdk/agent-runtime.js',
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
+}
+
+const SDK_PATH = resolveSdkPath();
 const DEFAULT_STORE_PATH = path.join(os.homedir(), '.openclaw', 'agents', 'main', 'agent', 'auth-profiles.json');
 const STORE_PATH = process.env.AUTH_MOLT_STORE_PATH ?? DEFAULT_STORE_PATH;
 const SKILL_DIR = path.resolve(__dirname, '..');
@@ -22,10 +31,12 @@ const STATE_FILE = process.env.AUTH_MOLT_STATE_FILE ?? path.join(SKILL_DIR, '.re
 const CODEX_PROFILE_ALLOWLIST = [
   /^openai-codex:[^/\s]+@edge\.app$/,
   /^openai-codex:pearson\.jaredb@gmail\.com$/,
+  /^openai-codex:you@example\.com$/,
 ];
 const CODEX_EMAIL_ALLOWLIST = [
   /@edge\.app$/,
   /^pearson\.jaredb@gmail\.com$/,
+  /^you@example\.com$/,
 ];
 const WARN_WITHIN_MS = 14 * 24 * 60 * 60 * 1000;
 const COOLDOWN_MS = 60_000;
@@ -127,7 +138,7 @@ function validateTarget(profileId, profile) {
   if (!allowlistedProfileId(profileId)) throw new Error(`Refusing non-allowlisted profile id: ${profileId}`);
   if (!profile || profile.provider !== 'openai-codex') throw new Error(`Refusing non-Codex provider for ${profileId}`);
   if (profile.type !== 'oauth') throw new Error(`Refusing non-OAuth profile for ${profileId}: ${profile.type}`);
-  if (profile.email && !allowlistedEmail(profile.email)) throw new Error(`Refusing unexpected email for ${profileId}`);
+  if (profile.email && !allowlistedEmail(profile.email)) throw new Error(`Refusing unexpected email domain for ${profileId}`);
 }
 
 function ensureBackupDir() {
