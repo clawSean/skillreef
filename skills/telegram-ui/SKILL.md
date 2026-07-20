@@ -61,7 +61,7 @@ The Pre-Send Checklist is the enforcement summary; these are the mechanics behin
 **Emphasis & copyability:**
 - Use bold as a scan anchor: `**Result:** shipped` · `**Next:** approve` · `**Risk:** rate limit`; bold the shortest phrase that carries the point.
 - Keep bold under ~20% of body words and never bold whole paragraphs, lists, emoji runs, headings, table cells, or button labels merely for extra emphasis.
-- Wrap anything plausibly copied in inline code: `` `issue-76424` ``, `` `openclaw config validate` ``, `` `$49.95` ``, `` `report.csv` ``, addresses, hashes, codes, and raw URLs. Use `[named links](url)` for navigation; code-style the raw URL only when copying it matters.
+- Wrap anything plausibly copied in inline code: `` `issue-76424` ``, `` `openclaw config validate` ``, `` `$49.95` ``, `` `report.csv` ``, addresses, hashes, codes, and raw URLs. Use `[named links](url)` for navigation, but any raw URL shown as text gets inline code — when in doubt, make it copiable.
 
 **Tables:**
 - Preferred path: **markdown-pipe tables** — render as native rich tables incl. horizontal scroll on mobile. Put the most important columns first (off-screen columns need a swipe).
