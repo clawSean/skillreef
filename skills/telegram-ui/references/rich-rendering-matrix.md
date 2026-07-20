@@ -46,7 +46,7 @@ Raw HTML `<table bordered="true" striped="true">…</table>` leaked as literal/c
 - ✅ `<br/>` no longer leaks as literal text — renders as a break (T5). `<br>` remains the canonical form.
 - Empty `<p></p>` still appears IGNORED (T4/T6 gaps identical with and without it) — medium confidence.
 
-**Caveat:** the fix is in the Telegram CLIENT renderer, not OpenClaw's pipeline (which still emits bare `\n`). Recipients on stale clients may still see run-on text — if reported, fall back to explicit HTML blocks for that surface and log the case in `rich-message-client-compat.md`. Verified only on iOS so far; Desktop/Web unverified post-update.
+**Caveat:** the fix is in the Telegram CLIENT renderer, not OpenClaw's pipeline (which still emits bare `\n`). Recipients on stale clients may still see run-on text — if reported, fall back to explicit HTML blocks for that surface and log the case in `rich-message-client-compat.md`. Coverage: iOS = full T1–T6 battery; **macOS Desktop = partial** (markdown paragraph structure + air + bold + inline code confirmed 2026-07-20 via self-captured node screenshot of live DM messages; spacer-delta and full battery still pending); Web unverified.
 
 **Re-running the battery** (after a major OpenClaw upgrade or Telegram client change). Record alongside the results: OpenClaw version · `channels.telegram.richMessages` state · Telegram client platform + app version/build · surface (DM/group/topic) · one screenshot per probe. (2026-07-20 run gap: iOS app version/build not recorded — capture it next time.) Send each probe as its own message with the exact body shown (`\n` = literal newline):
 
