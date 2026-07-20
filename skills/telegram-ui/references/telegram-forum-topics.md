@@ -31,7 +31,7 @@ Use `threadId` with the topic id:
   "action": "send",
   "target": "-1003778833824",
   "threadId": "5054",
-  "message": "<p>Hello from inside the topic 🦞</p>"
+  "message": "Hello from inside the topic 🦞"
 }
 ```
 

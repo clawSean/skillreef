@@ -10,8 +10,8 @@ For cross-platform orchestration of multi-step flows, also use `skills/interacti
 
 ## ✅ Pre-Send Checklist — every send, no exceptions
 
-1. **Structure:** explicit HTML blocks — `<p>`, `<ul><li>`/`<ol><li>`, `<br>` (NEVER `<br/>`). Newlines, blank lines, `•` bullets, and markdown lists all collapse into run-on text in rich mode.
-2. **Air:** `<p>&#160;</p>` spacer between consecutive prose `<p>` blocks. Lists/tables/headings self-space — no spacer around them.
+1. **Structure (rebased 2026-07-20):** on the calibrated post-2026-07-19 Telegram iOS client, plain markdown renders natively — paragraphs split by a blank line, `-` lists, single newlines all keep their structure (T1–T6 battery verified live). Markdown is the workspace default; Desktop/Web are UNVERIFIED post-update. Two distinct fallbacks: stale client shows run-on text but still renders rich bodies → explicit rich-body blocks (`<p>`, `<ul><li>`, `<br>`) for that surface; client shows the "not supported" fallback → normal Telegram formatting only (literal line breaks + text bullets, NO structural tags).
+2. **Air:** one blank line (or consecutive `<p>` blocks) between thoughts/blocks — JPop wants air, and paragraphs now get natural margins on their own. 🚫 **`<p>&#160;</p>` spacer is RETIRED** — it double-pads now (JPop flagged the overkill gap 2026-07-20). Never send it.
 3. **Emoji:** medium-to-high density in every message and every button label. A flat, emoji-less message is a defect.
 4. **Controls:** 2–6 discrete options → inline buttons (plain-text menus are FORBIDDEN) · acknowledging → reaction · answering a specific message → `replyTo` · group vote → poll · status update on a prior send → edit it in place · must stay findable → pin.
 5. **Richness floor:** content-heavy send (status, comparison, summary, multi-part) → at least TWO rich blocks from the Toolchest. Short conversational quips are exempt — don't force a table onto "yep, done ✅".
@@ -37,23 +37,26 @@ Per-element verification evidence, dates, and quirks: `references/rich-rendering
 
 1. **Formatting layer** — markdown-ish text → Telegram HTML (`## Formatting` below). Always on.
 2. **UI controls layer** — `message.presentation.blocks` → inline keyboards, selects, portable fallback. Canonical path for buttons/controls.
-3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: native rich body rendering. **Config-gated: only use rich blocks when the Local Status entry below says ON.** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. **Group/topic fallback:** if a surface renders `this message is not supported in your version of Telegram`, send normal Telegram HTML there until clients catch up; log the case in `references/rich-message-client-compat.md`.
+3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: native rich body rendering. **Config-gated: only use rich blocks when the Local Status entry below says ON.** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. **Group/topic fallback:** if a surface renders `this message is not supported in your version of Telegram`, avoid rich bodies there — normal Telegram formatting with literal line breaks (structural `p`/`ul`/`br` are NOT whitelisted on that path and leak); log the case in `references/rich-message-client-compat.md`.
 
 **⚙️ Rich messages — Local Status**
 
 Setting: `channels.telegram.richMessages` in the OpenClaw config (check via `gateway config.get` or `openclaw.json`). If it isn't `true`, skip the rich body layer entirely — normal Telegram HTML + presentation blocks only.
 
 - **This workspace:** ❔ not determined — check the setting in your config, then update this line. <!-- LOCAL-STATUS -->
+- **Calibrated against:** OpenClaw **2026.7.1** (`richMessages: true`) + JPop's Telegram **iOS** client post-update **2026-07-19** (newline-collapse fix; exact app version/build not recorded — capture it on the next battery run). iOS-only calibration; Desktop/Web unverified post-update. Re-run the T1–T6 battery (matrix ref has exact payloads + capture checklist) after a major OpenClaw upgrade or Telegram client change.
 
 ## ⚖️ House Rules — MANDATORY (canonical copy; other sections point here)
 
 The Pre-Send Checklist is the enforcement summary; these are the mechanics behind it.
 
-**Structure & spacing (rich mode):**
-- OpenClaw's markdown→rich pipeline emits bare newlines between blocks and Telegram's rich renderer collapses them like a browser — explicit HTML blocks are the ONLY reliable structure (upstream bug; root cause in the matrix ref).
-- `<br/>` gets escaped by the sanitizer; always `<br>`.
-- Bare `<p>` gives a new line but no vertical air; empty `<p></p>` is IGNORED. Canonical spacer: `<p>&#160;</p>` between consecutive prose paragraphs — JPop has flagged missing air more than once. House shape: intro `<p>` → spacer → body `<p>`/lists → spacer → wrap-up `<p>`.
-- Inline markdown (`**bold**`, `_italic_`, `` `code` ``, links) still works in rich mode — the collapse only hits block structure.
+**Structure & spacing (rich mode) — REBASED 2026-07-20 (verified on calibrated iOS client; Desktop/Web unverified):**
+- On the calibrated post-2026-07-19 iOS client, Telegram's renderer no longer collapses newlines: plain markdown paragraphs (blank line between), `-` lists, and single `\n` line breaks all render with correct structure and natural air (T1–T6 battery 2026-07-20 — history + evidence in the matrix ref). Other clients: unverified until battery-tested.
+- House shape now: **plain markdown, one blank line between thoughts/blocks.** JPop still wants air between blocks — one blank line delivers it; never double it.
+- 🚫 `<p>&#160;</p>` spacer RETIRED: paragraphs get real margins now, so the spacer double-pads (JPop flagged the overkill gap same day). Same for `<br>&#160;<br>` / `&#10240;` variants — all dead.
+- Two fallbacks — don't mix them: (a) stale client that RENDERS rich bodies but collapses newlines → explicit rich-body blocks (`<p>`, `<ul><li>`, `<br>`) for that surface; (b) client showing the unsupported-rich-message fallback → no rich body at all — normal Telegram formatting with literal line breaks and text bullets (structural tags leak there). Log cases in `references/rich-message-client-compat.md`. Empty `<p></p>` still appears ignored.
+- `<br/>` no longer leaks as literal text (verified 2026-07-20); `<br>` remains the safe form.
+- Inline markdown (`**bold**`, `_italic_`, `` `code` ``, links) works as always.
 - To mention an HTML tag by name in a body, write it WITHOUT angle brackets (e.g. `details` in code style) — escaped entities double-decode and the sanitizer strips the resulting tag, rendering NOTHING.
 
 **Tables:**
@@ -74,7 +77,7 @@ The Pre-Send Checklist is the enforcement summary; these are the mechanics behin
 
 Before choosing the reply path:
 
-- **Short conversational reply** → prose (still HTML-block structured + emojis) — the ONLY case where prose alone is fine
+- **Short conversational reply** → prose (plain markdown + emojis) — the ONLY case where prose alone is fine
 - **Pure info, content-heavy** → prose PLUS rich blocks (≥2 — see checklist floor)
 - **Open-ended input needed** → prose question
 - **2 to 6 discrete tap-friendly options** → inline buttons
@@ -88,7 +91,7 @@ A conversational suggestion list counts as a menu if the user is meant to pick f
 
 ## Formatting
 
-⚠️ **Rich-mode override:** everything below about inline styling still applies, but when rich mode is ON, body STRUCTURE must come from explicit HTML blocks — see **House Rules** above.
+⚠️ **Rich-mode note:** on the calibrated post-2026-07-19 iOS client, markdown block structure renders natively in rich mode too — explicit rich-body blocks are a stale-client fallback, not a mandate (Desktop/Web unverified). See **House Rules** above.
 
 OpenClaw converts markdown-ish text to Telegram HTML (`parse_mode: "HTML"`).
 
@@ -115,11 +118,7 @@ OpenClaw converts markdown-ish text to Telegram HTML (`parse_mode: "HTML"`).
 OpenClaw's Telegram renderer **preserves** these raw HTML tags instead of escaping them:
 `<b> <strong> <i> <em> <u> <ins> <s> <strike> <del> <code> <pre> <tg-spoiler> <blockquote>` plus attribute forms `<a href="...">`, `<span class="tg-spoiler">`, `<tg-emoji emoji-id="...">`, `<tg-time datetime="...">`.
 
-Use raw HTML for the two things markdown-ish can't express:
-- **Underline:** `<u>underlined</u>` (markdown `__x__` gives bold, not underline)
-- **Date/time entity:** `<tg-time datetime="...">June 15</tg-time>` — ⚠️ API accepts the tag but it renders as **plain text** on iOS (verified via screenshot 2026-06-10). No date chip, no tap action. Don't bother — just write the date as text.
-
-Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as literal text.
+Use raw HTML for what markdown-ish can't express — chiefly **underline**: `<u>underlined</u>` (markdown `__x__` gives bold, not underline). `<tg-time>` is dead (renders plain text — just write the date). Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as literal text.
 
 **Reading formatted inbound messages (what survives → agent):**
 - ✅ `~~strikethrough~~`, `||spoiler||`, `[label](url)` links — arrive as markdown markers, readable
@@ -133,8 +132,7 @@ Any tag NOT on the whitelist (`<div>`, `<script>`, etc.) is escaped and leaks as
   - `[May 18 — Capri](https://example.com/?date=2026-05-18)`
 
 **What does NOT work:**
-- Raw HTML tags outside the whitelist above → escaped, leak as literal text
-- `<blockquote expandable>` → attribute not whitelisted, gets escaped (plain `<blockquote>` or `>` works)
+- Raw HTML tags outside the whitelist above → escaped, leak as literal text (incl. `<blockquote expandable>` — plain `<blockquote>` or `>` works)
 - Markdown tables in **legacy normal mode** → not supported, use bullets or plain text. With `richMessages: true`, markdown-pipe tables are the preferred native-table path; see **House Rules → Tables** above.
 - Headings (`#`) → stripped to plain text (headingStyle: none)
 

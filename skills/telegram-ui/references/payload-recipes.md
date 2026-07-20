@@ -1,6 +1,6 @@
 # Payload Recipes — message tool JSON for every Telegram action
 
-Copy-paste payloads for the rules in SKILL.md's Action Rules section. `target` defaults to the current source conversation — include it only when sending elsewhere. Omit `channel` unless sending outside the current channel.
+Copy-paste payloads for the rules in SKILL.md's Action Rules section. `target` defaults to the current source conversation — include it only when sending elsewhere. Omit `channel` unless sending outside the current channel. Message bodies below are plain markdown/text (house default since 2026-07-20); use explicit rich-body HTML only as the stale-client fallback per SKILL.md.
 
 ## Mentions
 
@@ -17,7 +17,7 @@ Copy-paste payloads for the rules in SKILL.md's Action Rules section. `target` d
 
 ```json
 { "action": "send", "target": "<chat_id>",
-  "message": "<p>Question text 👇</p>",
+  "message": "Question text 👇",
   "presentation": { "blocks": [
     { "type": "buttons", "buttons": [
       { "label": "✅ Yes", "value": "yes", "style": "success" },
@@ -36,7 +36,7 @@ Mini Apps launch fine from groups — the proven group path is a normal URL butt
 
 ```json
 { "action": "send",
-  "message": "<p>Claw Four is live 🦞🎮 Tap in and choose your name.</p>",
+  "message": "Claw Four is live 🦞🎮 Tap in and choose your name.",
   "presentation": { "blocks": [
     { "type": "buttons", "buttons": [
       { "label": "🎮 Play", "url": "https://t.me/<bot_username>/<app_short_name>?startapp=<room_or_payload>", "style": "success" },

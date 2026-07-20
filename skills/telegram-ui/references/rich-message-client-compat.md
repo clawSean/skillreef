@@ -14,7 +14,7 @@ If a rich body renders badly on one client:
 2. Check whether the issue follows the client, chat type, or markup shape.
 3. Mirror operationally important content in plain prose or compact lists.
 4. Prefer markdown-pipe tables over raw HTML tables.
-5. Fall back to normal Telegram formatting when readability matters more than rich body rendering.
+5. Pick the right fallback for the failure you actually see: client RENDERS rich bodies but collapses newlines (stale renderer) → explicit rich-body blocks (`<p>`, `<ul><li>`, `<br>`); client shows the `not supported in your version of Telegram` fallback → drop the rich body entirely and send normal Telegram formatting with literal line breaks and text bullets (structural `p`/`ul`/`br` are not whitelisted on that path and leak as literal tags).
 
 ## JPop Mac Audit — 2026-07-06
 
@@ -75,7 +75,7 @@ ls -ld "$HOME/Library/Application Support/Telegram Desktop" 2>/dev/null || true
 
 ## Known OpenClaw-Side Compatibility Notes
 
-- OpenClaw's rich HTML path collapses literal newlines in rich mode; use explicit HTML blocks (`<p>`, `<ul><li>`, `<br>`) for structure.
+- On the calibrated post-2026-07-19 iOS client, literal newlines render correctly in rich mode (2026-07-20 rebase — plain markdown is the house default). Older/unverified clients may still collapse them; use explicit rich-body HTML blocks (`<p>`, `<ul><li>`, `<br>`) only after observing that failure on the specific surface.
 - Raw HTML tables are path-sensitive and unsafe for group-visible operator cards.
 - Markdown-pipe tables are the preferred table path while `richMessages: true` is enabled.
 - Inbound replies to our rich bodies may arrive as `[unsupported Telegram rich_message received]`; use message ids instead of relying on quoted body content.

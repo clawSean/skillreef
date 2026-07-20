@@ -33,13 +33,31 @@ Per-element verification record for Telegram Bot API 10.1 `rich_message` bodies 
 
 Raw HTML `<table bordered="true" striped="true">…</table>` leaked as literal/collapsed markup for Nick in Dev Team on 2026-07-05 across Telegram Desktop latest, recently updated mobile, and Telegram Web — a cross-client raw-table renderer/sanitizer failure, not a single-client issue. Earlier iOS successes (incl. `<caption>`, `colspan`, `align` extras verified 2026-07-04/05) are path-specific, not a general guarantee. Until the renderer path is fixed: markdown-pipe tables only for group-visible sends.
 
-## Structure collapse — root cause (2026-07-05)
+## Structure collapse — FIXED on calibrated iOS client (2026-07-20); Desktop/Web unverified
 
-OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer collapses literal newlines like a browser. Markdown blank lines and `-` lists do NOT fix it — verified live, both render run-on. Only explicit HTML blocks (`<p>`, `<ul><li>`, `<ol><li>`, `<br>`) create structure. `<br/>` gets escaped by the sanitizer — must be `<br>`. This is an OpenClaw bug worth an upstream fix (newlines should become `<br>`/`<p>` in the rich HTML build).
+**History:** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer used to collapse literal newlines like a browser (root-caused 2026-07-05). That forced the explicit-HTML-blocks-only regime.
 
-## Spacing verification (screenshots, 2026-07-05)
+**2026-07-20 rebase (T1–T6 screenshot battery, JPop's iOS after Telegram app update):**
+- ✅ Markdown paragraphs separated by blank lines render as separate paragraphs with natural air (T1)
+- ✅ Markdown `-` bullets and `1.` numbered lists render one item per line with list margins (T2)
+- ✅ Single bare `\n` renders as a line break (T3)
+- ✅ Bare `<p>` blocks now get real vertical margins — one blank-line-equivalent gap, JPop's preferred air (T4, T6)
+- 🚫 `<p>&#160;</p>` nbsp spacer now DOUBLE-pads (own blank line + p margins) — visibly fatter gap than bare `<p>` (T5, T6; JPop flagged the overkill). Spacer and its variants (`<br>&#160;<br>`, `&#10240;`) are retired.
+- ✅ `<br/>` no longer leaks as literal text — renders as a break (T5). `<br>` remains the canonical form.
+- Empty `<p></p>` still appears IGNORED (T4/T6 gaps identical with and without it) — medium confidence.
 
-`<p>` gives each paragraph its own line but only modest vertical air on iOS (≈ a `<br>` gap); `<ul>`/`<ol>` lists get natural margins. Empty `<p></p>` padding blocks are IGNORED, but a paragraph holding an invisible character renders as a REAL blank line. Canonical spacer: `<p>&#160;</p>` (nbsp). `<br>&#160;<br>` inline and `&#10240;` braille-blank also verified working.
+**Caveat:** the fix is in the Telegram CLIENT renderer, not OpenClaw's pipeline (which still emits bare `\n`). Recipients on stale clients may still see run-on text — if reported, fall back to explicit HTML blocks for that surface and log the case in `rich-message-client-compat.md`. Verified only on iOS so far; Desktop/Web unverified post-update.
+
+**Re-running the battery** (after a major OpenClaw upgrade or Telegram client change). Record alongside the results: OpenClaw version · `channels.telegram.richMessages` state · Telegram client platform + app version/build · surface (DM/group/topic) · one screenshot per probe. (2026-07-20 run gap: iOS app version/build not recorded — capture it next time.) Send each probe as its own message with the exact body shown (`\n` = literal newline):
+
+- T1 (markdown paragraphs): `First paragraph.\n\nSecond paragraph.\n\nThird paragraph.` → expect three separate paragraphs with air
+- T2a (bullets): `- alpha\n- beta\n- gamma` → expect one item per line with list margins
+- T2b (numbered list, separate message): `1. one\n2. two\n3. three` → expect numbered items one per line (kept separate from T2a so blank-line behavior between list types isn't conflated with item behavior)
+- T3 (bare newlines): `line one\nline two\nline three` → expect three lines
+- T4 (bare p + empty p): `<p>A</p><p>B</p><p></p><p>C</p>` → expect natural gaps; empty `<p></p>` adds nothing
+- T5a (nbsp spacer): `<p>A</p><p>&#160;</p><p>B</p>` → expect spacer gap FATTER than T4's natural gap (validates spacer stays retired)
+- T5b (br forms): `line1<br>line2<br/>line3` → expect two line breaks, no literal `br/` leak (validates `<br/>` handling only)
+- T6 (side-by-side calibration): one message containing both a bare-p gap and an nbsp-spacer gap → direct comparison screenshot
 
 ## Other verified quirks
 
