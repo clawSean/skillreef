@@ -17,6 +17,7 @@ For cross-platform orchestration of multi-step flows, also use `skills/interacti
 5. **Richness floor:** content-heavy send (status, comparison, summary, multi-part) → at least TWO rich blocks from the Toolchest. Short conversational quips are exempt — don't force a table onto "yep, done ✅".
 6. **Media send?** Captions are NOT rich-body — HTML blocks leak as literal tags there. Short markdown-ish caption on the image; rich body goes in a separate text message. (Media section below.)
 7. **Game / Mini App link?** Primary button = BotFather direct link (`https://t.me/<bot>/<app>?startapp=…`) — works in groups, opens natively. Browser URL is the fallback button, never the primary. (Buttons section below.)
+8. **Scan + copy:** In prose beyond a one-line quip, bold 1–3 short lead-ins or key outcomes, but keep bold under ~20% of body words and never bold whole paragraphs or duplicate hierarchy from headings, tables, or buttons. Wrap every plausible copy target—IDs, commands, URLs shown as text, codes, amounts, addresses, hashes, and filenames—in inline code.
 
 Botched a send? → Repair Flow below: acknowledge briefly, resend right, don't defend it.
 
@@ -39,9 +40,7 @@ Per-element verification evidence, dates, and quirks: `references/rich-rendering
 2. **UI controls layer** — `message.presentation.blocks` → inline keyboards, selects, portable fallback. Canonical path for buttons/controls.
 3. **Rich body layer** — `channels.telegram.richMessages: true` → Telegram Bot API 10.1 `rich_message` sends/edits: native rich body rendering. **Config-gated: only use rich blocks when the Local Status entry below says ON.** It upgrades the message BODY only — it does NOT replace presentation, polls, reactions, pins, or any control above. **Group/topic fallback:** if a surface renders `this message is not supported in your version of Telegram`, avoid rich bodies there — normal Telegram formatting with literal line breaks (structural `p`/`ul`/`br` are NOT whitelisted on that path and leak); log the case in `references/rich-message-client-compat.md`.
 
-**⚙️ Rich messages — Local Status**
-
-Setting: `channels.telegram.richMessages` in the OpenClaw config (check via `gateway config.get` or `openclaw.json`). If it isn't `true`, skip the rich body layer entirely — normal Telegram HTML + presentation blocks only.
+**⚙️ Rich messages — Local Status:** `channels.telegram.richMessages` in the OpenClaw config (check via `gateway config.get` or `openclaw.json`). If it isn't `true`, skip the rich body layer entirely — normal Telegram HTML + presentation blocks only.
 
 - **This workspace:** ❔ not determined — check the setting in your config, then update this line. <!-- LOCAL-STATUS -->
 - **Calibrated against:** OpenClaw **2026.7.1** (`richMessages: true`) + JPop's Telegram **iOS** client post-update **2026-07-19** (newline-collapse fix; exact app version/build not recorded — capture it on the next battery run). iOS-only calibration; Desktop/Web unverified post-update. Re-run the T1–T6 battery (matrix ref has exact payloads + capture checklist) after a major OpenClaw upgrade or Telegram client change.
@@ -59,6 +58,11 @@ The Pre-Send Checklist is the enforcement summary; these are the mechanics behin
 - Inline markdown (`**bold**`, `_italic_`, `` `code` ``, links) works as always.
 - To mention an HTML tag by name in a body, write it WITHOUT angle brackets (e.g. `details` in code style) — escaped entities double-decode and the sanitizer strips the resulting tag, rendering NOTHING.
 
+**Emphasis & copyability:**
+- Use bold as a scan anchor: `**Result:** shipped` · `**Next:** approve` · `**Risk:** rate limit`; bold the shortest phrase that carries the point.
+- Keep bold under ~20% of body words and never bold whole paragraphs, lists, emoji runs, headings, table cells, or button labels merely for extra emphasis.
+- Wrap anything plausibly copied in inline code: `` `issue-76424` ``, `` `openclaw config validate` ``, `` `$49.95` ``, `` `report.csv` ``, addresses, hashes, codes, and raw URLs. Use `[named links](url)` for navigation; code-style the raw URL only when copying it matters.
+
 **Tables:**
 - Preferred path: **markdown-pipe tables** — render as native rich tables incl. horizontal scroll on mobile. Put the most important columns first (off-screen columns need a swipe).
 - Raw HTML `<table>` and fancy table attrs are path-sensitive (leaked as literal markup cross-client) — never group-visible. Details in the matrix ref.
@@ -74,8 +78,6 @@ The Pre-Send Checklist is the enforcement summary; these are the mechanics behin
 - **Send after a callback tap:** auto-reply may default to the huge callback message id and fail with "replyTo must be a positive integer" — pass an explicit real `replyTo` (or none via a fresh target).
 
 ## Quick Decision Rule
-
-Before choosing the reply path:
 
 - **Short conversational reply** → prose (plain markdown + emojis) — the ONLY case where prose alone is fine
 - **Pure info, content-heavy** → prose PLUS rich blocks (≥2 — see checklist floor)
