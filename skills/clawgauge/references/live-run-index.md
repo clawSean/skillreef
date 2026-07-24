@@ -21,4 +21,4 @@ compatibility symlink to `runs/legacy-20260621-staging-runs/` so older chat and
 memory links still resolve without making `~/projects` a second source of
 truth.
 
-New runs default to `skills/model-quality-benchmark/runs/<run-id>/`.
+New runs default to `skills/clawgauge/runs/<run-id>/`.

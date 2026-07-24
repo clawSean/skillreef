@@ -1,4 +1,4 @@
-# Model Quality Benchmark Report
+# ClawGauge Report
 
 Date:
 Benchmark commit/version:

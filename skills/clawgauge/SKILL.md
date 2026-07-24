@@ -1,9 +1,9 @@
 ---
-name: "model-quality-benchmark"
+name: "clawgauge"
 description: "Compare model quality with ClawBench scoring plus Personal Agent QA gates. Use when asked whether a model is capable, which model is better for OpenClaw-style work, or to run/score a benchmark with evidence instead of vibes. Never report scores without real ClawBench artifacts."
 ---
 
-# Model Quality Benchmark
+# ClawGauge
 
 Use this skill when JPop asks whether a model is capable, trustworthy, ready for
 OpenClaw agent work, worth adopting, or better than another model for
@@ -115,7 +115,7 @@ Default assumptions:
    - Run the Personal Agent Benchmark Pack with `mock-openai` from an OpenClaw source checkout when available:
 
 ```bash
-bash skills/model-quality-benchmark/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
+bash skills/clawgauge/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
 ```
 
    - Pass condition: command exits 0, writes QA artifacts, and uses only fake QA workspace state plus the temp state/config root.
@@ -128,7 +128,7 @@ bash skills/model-quality-benchmark/scripts/run_personal_agent_preflight_isolate
    - Strict model test by default: `MQB_ALT_MODE=strict` sets `--alt-model == --model`, which disables cross-model fallback (OpenClaw only adds the alternate to the fallback chain when it differs from the primary). This prevents a GPT failure from being silently rescued by Claude (or vice-versa). Use `MQB_ALT_MODE=cross` only when you explicitly want the production fallback pair, and flag it.
    - Catalog self-heal: the scenario catalog loads every `qa/scenarios/**.yaml`; one file the built `dist` parser rejects blocks ALL suite runs. The runner transiently quarantines such blockers and ALWAYS restores them on exit, leaving the OpenClaw tree byte-for-byte as found. No OpenClaw source is persistently modified.
    - GPT auth: when a model needs OpenAI live auth, the runner reads `OPENAI_API_KEY` from the codex-home `auth.json` via command substitution straight into `OPENCLAW_LIVE_OPENAI_KEY`. The value is never echoed and the file is never `cat`-ed. Claude CLI models get `--cli-auth-mode subscription`.
-   - Default output: the runner writes to `skills/model-quality-benchmark/runs/run-<timestamp>/` by default. Override with `MQB_OUT=/tmp/...` only for disposable experiments or when a user explicitly wants external artifact routing.
+   - Default output: the runner writes to `skills/clawgauge/runs/run-<timestamp>/` by default. Override with `MQB_OUT=/tmp/...` only for disposable experiments or when a user explicitly wants external artifact routing.
    - Reliable scenarios: `preflight` (the bootstrap `approval-turn-tool-followthrough` scenario) is the fast, dependable anchor (~30s). The `personal-agent` pack scenarios are richer but can stall; rely on the per-scenario timeout + sidecar labels.
 
 ```bash
@@ -136,9 +136,9 @@ bash skills/model-quality-benchmark/scripts/run_personal_agent_preflight_isolate
 MQB_MODELS="<baseline-provider/model> <candidate-provider/model>" \
 MQB_SCENARIOS="preflight personal-approval-denial-stop" \
 MQB_TIMEOUT=240 \
-bash skills/model-quality-benchmark/scripts/run_model_quality_benchmark.sh
+bash skills/clawgauge/scripts/run_model_quality_benchmark.sh
 # then score the printed MQB_RUN_DIR:
-python3 skills/model-quality-benchmark/scripts/score_qa_suite.py \
+python3 skills/clawgauge/scripts/score_qa_suite.py \
   --run-dir <MQB_RUN_DIR> --out <MQB_RUN_DIR>/score-report.md --json <MQB_RUN_DIR>/scorecard.json
 ```
 
@@ -154,7 +154,7 @@ python3 skills/model-quality-benchmark/scripts/score_qa_suite.py \
      - `t3-web-research-and-cite`
      - `t5-hallucination-resistant-evidence`
    - Use 3 runs per task when quota allows. If quota is tight, run 1 pass only as a harness smoke and label it non-decisive.
-   - Run the exact same task IDs, run count, concurrency, benchmark commit, OpenClaw version, and profile/tool surface for baseline and candidate. Save raw result JSONs under `skills/model-quality-benchmark/runs/<run-id>/`.
+   - Run the exact same task IDs, run count, concurrency, benchmark commit, OpenClaw version, and profile/tool surface for baseline and candidate. Save raw result JSONs under `skills/clawgauge/runs/<run-id>/`.
    - Compare the two result JSON files with `scripts/compare_clawbench_results.py`.
    - Required useful-score surfaces: `overall_score`, `overall_completion`, `overall_trajectory`, `overall_behavior`, `overall_reliability`, `overall_pass_hat_k`, `overall_worst_of_n`, latency, tokens, cost/pass, per-task deltas, failure mode counts.
    - Treat fallback usage, auth failure, provider routing drift, or gateway instability as separate infra findings, not model wins.
@@ -179,13 +179,13 @@ demo block in Workflow step 4.
 For a harness-health mock preflight (NOT a model-quality signal):
 
 ```bash
-bash skills/model-quality-benchmark/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
+bash skills/clawgauge/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
 ```
 
 For an audit run that leaves the temp state root on disk:
 
 ```bash
-MQB_KEEP_QA_ROOT=1 bash skills/model-quality-benchmark/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
+MQB_KEEP_QA_ROOT=1 bash skills/clawgauge/scripts/run_personal_agent_preflight_isolated.sh ~/projects/openclaw
 ```
 
 For ClawBench scored comparison:
@@ -201,7 +201,7 @@ clawbench run \
   -t t2-config-loader \
   -t t3-web-research-and-cite \
   -t t5-hallucination-resistant-evidence \
-  -o skills/model-quality-benchmark/runs/<run-id>/<baseline-safe>.clawbench.json
+  -o skills/clawgauge/runs/<run-id>/<baseline-safe>.clawbench.json
 
 clawbench run \
   --model <candidate-provider/model> \
@@ -212,12 +212,12 @@ clawbench run \
   -t t2-config-loader \
   -t t3-web-research-and-cite \
   -t t5-hallucination-resistant-evidence \
-  -o skills/model-quality-benchmark/runs/<run-id>/<candidate-safe>.clawbench.json
+  -o skills/clawgauge/runs/<run-id>/<candidate-safe>.clawbench.json
 
-python3 skills/model-quality-benchmark/scripts/compare_clawbench_results.py \
-  --baseline skills/model-quality-benchmark/runs/<run-id>/<baseline-safe>.clawbench.json \
-  --candidate skills/model-quality-benchmark/runs/<run-id>/<candidate-safe>.clawbench.json \
-  --out skills/model-quality-benchmark/runs/<run-id>/clawbench-comparison.md
+python3 skills/clawgauge/scripts/compare_clawbench_results.py \
+  --baseline skills/clawgauge/runs/<run-id>/<baseline-safe>.clawbench.json \
+  --candidate skills/clawgauge/runs/<run-id>/<candidate-safe>.clawbench.json \
+  --out skills/clawgauge/runs/<run-id>/clawbench-comparison.md
 ```
 
 Add `--profile <profile.yaml>` when a profile exists and should be part of the comparison.

@@ -27,7 +27,7 @@
 #                      the bootstrap preflight scenario
 #   MQB_PROVIDER_MODE  mock-openai|aimock|live-frontier (default live-frontier)
 #   MQB_TIMEOUT        per-scenario seconds          (default 240)
-#   MQB_OUT            run output dir                (default skills/model-quality-benchmark/runs/run-<ts>)
+#   MQB_OUT            run output dir                (default skills/clawgauge/runs/run-<ts>)
 #   MQB_CONCURRENCY    scenario worker concurrency   (default 1)
 #   MQB_FAST           1 => pass --fast              (default 1)
 #   MQB_ALT_MODE       strict|cross                  (default strict; strict => alt==primary, no fallback)
@@ -46,7 +46,7 @@ ALT_MODE="${MQB_ALT_MODE:-strict}"
 OPENAI_AUTH_JSON="${MQB_OPENAI_AUTH_JSON:-~/.openclaw/agents/<your-agent>/agent/codex-home/auth.json}"
 KEEP_ROOT="${MQB_KEEP_QA_ROOT:-0}"
 TS="$(date -u +%Y%m%dT%H%M%SZ)"
-OUT="${MQB_OUT:-~/.openclaw/workspace/skills/model-quality-benchmark/runs/run-$TS}"
+OUT="${MQB_OUT:-~/.openclaw/workspace/skills/clawgauge/runs/run-$TS}"
 
 if [[ ! -f "$REPO_ROOT/package.json" || ! -f "$REPO_ROOT/openclaw.mjs" ]]; then
   echo "ERROR: not an OpenClaw source checkout: $REPO_ROOT" >&2

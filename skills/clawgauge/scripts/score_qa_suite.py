@@ -208,7 +208,7 @@ def render_markdown(records: dict[str, ModelRecord]) -> str:
     provider_modes = sorted({r.provider_mode for r in models if r.provider_mode})
 
     lines: list[str] = []
-    lines.append("# Model Quality Benchmark — QA Suite Score")
+    lines.append("# ClawGauge — QA Suite Score")
     lines.append("")
     lines.append(f"- Generated: `{now}`")
     if provider_modes:
