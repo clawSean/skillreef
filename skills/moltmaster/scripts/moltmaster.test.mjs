@@ -199,7 +199,7 @@ run('non-edge.app email rejected', ['--dry-run', '--profile', 'openai-codex:bade
   storePath: mixedStorePath,
   ...testEnv(),
   expectExit: 1,
-  expectStderr: ['unexpected email'],
+  expectStderr: ['unexpected email domain'],
 });
 run('non-allowlisted profile ID rejected', ['--dry-run', '--profile', 'anthropic:badid'], {
   storePath: mixedStorePath,

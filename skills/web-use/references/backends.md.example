@@ -13,7 +13,7 @@ Copy this file to `backends.md` and fill in the env var names or 1Password refer
 | Browserless (`/session`) | opt-in persistent protected extraction session | No | use sparingly only when cookies/localStorage/sessionStorage/cache must persist across repeated same-site BQL/CDP calls |
 | TinyFish Browser API (CDP session) | remote stealth browser primitive for brittle or multi-step flows | Secondary / situational | works on protected pages when used as a browser session |
 | Site-specific structured data API | clean structured fields for one site | No | domain skill owns credential, cost policy, and when it is worth a call |
-| OpenClaw browser | interactive human-visible browsing | No | use for login, 2FA, manual review, checkout |
+| OpenClaw browser | interactive human-visible browsing | No | use for login, 2FA, manual review, cart, checkout, or account state |
 
 ---
 
@@ -32,6 +32,9 @@ Or via environment variables:
 export BROWSERLESS_TOKEN="..."
 export TINYFISH_API_KEY="..."
 ```
+
+`BROWSERLESS_API_KEY` is accepted as a legacy fallback by the local helper
+scripts, but new config should use `BROWSERLESS_TOKEN`.
 
 ---
 
@@ -95,6 +98,18 @@ python3 skills/web-use/scripts/browserless_session.py stop \
 ```
 
 Do not paste the session file contents, `browserQL`, `connect`, or `stop` URLs into chat or logs. They include the Browserless token and should be treated as bearer credentials.
+
+### Browserless media-request helper
+
+```bash
+BROWSERLESS_TOKEN="<your token>" \
+  python3 skills/web-use/scripts/browserless_media_requests.py \
+  <URL>
+```
+
+Use this when a page exposes media only after rendering or playback, such as a
+public social post/Reel where `yt-dlp` failed. Returned CDN URLs are temporary;
+store source URL, method, fetch time, and summarized media metadata by default.
 
 ### TinyFish helper
 
