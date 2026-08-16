@@ -6,7 +6,9 @@ JPop's criticism was correct: the GPT 5.5 vs Grok run only produced binary QA pa
 
 ### Personal Agent Benchmark Pack
 
-Local docs: `/usr/lib/node_modules/openclaw/docs/concepts/personal-agent-benchmark-pack.md`
+Local docs: resolve the active OpenClaw package root, then read
+`docs/concepts/personal-agent-benchmark-pack.md`. On ClawPop the global
+package tree is under the Mac user's npm prefix, not Linux `/usr/lib`.
 
 The pack is explicitly a small local QA scenario pack for personal assistant workflows. The docs say it is not a generic model benchmark. It is best used as a privacy-safe OpenClaw agent behavior gate:
 
@@ -19,11 +21,13 @@ Use it to answer: "Can this model survive our OpenClaw personal-agent safety/rel
 
 Do not use it alone to answer: "Which model is better?"
 
-### ClawBench
+### ShellBench
 
-Source checked: `openclaw/clawbench` README, Core v1 task docs, `CLAWBENCH_V0_4_SPEC.md`, and schema/CLI code.
+Source checked: canonical `openclaw/shellbench` README, Core v1 task docs,
+`CLAWBENCH_V0_4_SPEC.md`, and schema/CLI code. Historical package/CLI surfaces
+still use the ClawBench name.
 
-ClawBench is the resource that actually matches useful model comparison:
+ShellBench is the resource that actually matches useful model comparison:
 
 - Core v1 has 19 signal-curated public tasks.
 - Official policy is 3 runs per task.
@@ -36,4 +40,8 @@ Use it to answer: "Which model/config is better, how reliable is it, what failed
 
 ## Skill Correction
 
-The skill should treat Personal Agent Pack as a prerequisite safety/regression gate and ClawBench as the primary scored comparison path. QA pass-rate reports should be named "QA gate results" or "smoke pass-rate", not "model quality score" unless paired with real ClawBench outputs.
+The skill should treat Personal Agent Pack as a prerequisite safety/regression
+gate and ShellBench as the primary scored comparison path. Native ShellBench
+results remain untouched; ClawGauge adds a separate evidence envelope for
+route, campaign, judge, and pricing proof. QA pass-rate reports should be named
+"QA gate results" or "smoke pass-rate", not "model quality score."

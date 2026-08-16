@@ -2,7 +2,7 @@
   "schema_version": "clawgauge.evidence.v1",
   "source_artifact": {
     "schema": "shellbench.BenchmarkResult",
-    "sha256": "sha256:71e00c16090cd444bfb849b786bded4b412786f10a67b2f504751a61e7f0653b"
+    "sha256": "sha256:99c93c9ef4c363ef7f16a7a3d814f268a93e9a61740618f8de1ae32577909233"
   },
   "provenance": {
     "openclaw": {
@@ -37,30 +37,30 @@
     "route": {
       "requested": {
         "provider": "test",
-        "model": "test/baseline",
+        "model": "test/candidate",
         "reasoning": "high",
         "fast": "off"
       },
       "observed": {
         "provider": "test",
-        "model": "test/baseline",
+        "model": "test/candidate",
         "reasoning": "high",
         "fast": false
       },
       "identity_verified": true,
       "identity_proof": {
         "kind": "synthetic-trace",
-        "reference": "fixture://route/test-baseline"
+        "reference": "fixture://route/test-candidate"
       },
       "reasoning_verified": true,
       "reasoning_proof": {
         "kind": "synthetic-trace",
-        "reference": "fixture://reasoning/test-baseline"
+        "reference": "fixture://reasoning/test-candidate"
       },
       "fallback_used": false,
       "fallback_proof": {
         "kind": "synthetic-trace",
-        "reference": "fixture://fallback/test-baseline"
+        "reference": "fixture://fallback/test-candidate"
       }
     },
     "judge": {
@@ -105,10 +105,10 @@
     }
   },
   "benchmark_result": {
-    "submission_id": "synthetic-baseline",
-    "model": "test/baseline",
+    "submission_id": "synthetic-candidate",
+    "model": "test/candidate",
     "provider": "test",
-    "timestamp": "2026-08-16T00:00:00Z",
+    "timestamp": "2026-08-16T00:05:00Z",
     "openclaw_version": "2026.7.1-demo",
     "benchmark_version": "0.4.0.dev1-demo",
     "environment": {
@@ -123,41 +123,39 @@
       "subsets": [],
       "capabilities": []
     },
-    "overall_score": 0.68,
-    "overall_completion": 0.72,
-    "overall_trajectory": 0.64,
-    "overall_behavior": 0.78,
-    "overall_reliability": 0.67,
-    "overall_median_latency_ms": 3400,
-    "overall_p95_latency_ms": 6100,
-    "overall_input_tokens": 8100,
-    "overall_output_tokens": 1400,
-    "overall_reasoning_tokens": 900,
-    "overall_total_tokens": 10400,
-    "overall_cost_usd": 0.31,
-    "overall_tokens_per_pass": 15200,
-    "overall_cost_per_pass": 0.46,
-    "overall_worst_of_n": 0.48,
-    "overall_ci_lower": 0.6,
-    "overall_ci_upper": 0.76,
-    "overall_pass_hat_k": 0.5,
-    "overall_failure_mode_counts": {
-      "skipped_verification": 1
-    },
+    "overall_score": 0.74,
+    "overall_completion": 0.79,
+    "overall_trajectory": 0.7,
+    "overall_behavior": 0.82,
+    "overall_reliability": 0.83,
+    "overall_median_latency_ms": 3900,
+    "overall_p95_latency_ms": 7200,
+    "overall_input_tokens": 8600,
+    "overall_output_tokens": 1500,
+    "overall_reasoning_tokens": 1200,
+    "overall_total_tokens": 11300,
+    "overall_cost_usd": 0.39,
+    "overall_tokens_per_pass": 13600,
+    "overall_cost_per_pass": 0.47,
+    "overall_worst_of_n": 0.59,
+    "overall_ci_lower": 0.67,
+    "overall_ci_upper": 0.81,
+    "overall_pass_hat_k": 1.0,
+    "overall_failure_mode_counts": {},
     "task_results": [
       {
         "task_id": "t1-fs-quick-note",
         "runs": 3,
-        "mean_task_score": 0.82,
-        "mean_completion_score": 0.9,
-        "mean_trajectory_score": 0.76,
-        "mean_behavior_score": 0.9,
-        "reliability_score": 0.67,
-        "pass_rate": 0.67,
-        "pass_hat_k": false,
-        "worst_of_n": 0.61,
-        "p95_duration_ms": 4100,
-        "cost_per_pass": 0.29,
+        "mean_task_score": 0.86,
+        "mean_completion_score": 0.94,
+        "mean_trajectory_score": 0.8,
+        "mean_behavior_score": 0.92,
+        "reliability_score": 1.0,
+        "pass_rate": 1.0,
+        "pass_hat_k": true,
+        "worst_of_n": 0.78,
+        "p95_duration_ms": 4700,
+        "cost_per_pass": 0.31,
         "capabilities": [
           "filesystem"
         ],
@@ -166,23 +164,21 @@
       {
         "task_id": "t4-delegation-repair",
         "runs": 3,
-        "mean_task_score": 0.54,
-        "mean_completion_score": 0.54,
-        "mean_trajectory_score": 0.52,
-        "mean_behavior_score": 0.66,
+        "mean_task_score": 0.62,
+        "mean_completion_score": 0.64,
+        "mean_trajectory_score": 0.6,
+        "mean_behavior_score": 0.72,
         "reliability_score": 0.67,
         "pass_rate": 0.67,
-        "pass_hat_k": false,
-        "worst_of_n": 0.35,
-        "p95_duration_ms": 8100,
+        "pass_hat_k": true,
+        "worst_of_n": 0.4,
+        "p95_duration_ms": 9700,
         "cost_per_pass": 0.63,
         "capabilities": [
           "delegation",
           "recovery"
         ],
-        "failure_mode_counts": {
-          "skipped_verification": 1
-        }
+        "failure_mode_counts": {}
       }
     ]
   }

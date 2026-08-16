@@ -1,123 +1,188 @@
 #!/usr/bin/env python3
-"""Summarize a ClawBench result JSON into a compact Markdown report.
-
-Usage:
-  python scripts/summarize_clawbench_result.py results/model-smoke.json
-"""
+"""Summarize one versioned ClawGauge ShellBench evidence envelope."""
 
 from __future__ import annotations
 
+import argparse
 import json
+import math
 import sys
 from pathlib import Path
-from statistics import mean
 from typing import Any
 
-
-def get(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
-    cur: Any = data
-    for key in keys:
-        if not isinstance(cur, dict) or key not in cur:
-            return default
-        cur = cur[key]
-    return cur
-
-
-def task_stats(data: dict[str, Any]) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
-    for tier in data.get("tier_results", []) or []:
-        for task in tier.get("task_stats", []) or []:
-            if isinstance(task, dict):
-                out.append(task)
-    if out:
-        return out
-    for key in ("task_stats", "tasks"):
-        raw = data.get(key)
-        if isinstance(raw, list):
-            return [x for x in raw if isinstance(x, dict)]
-    return []
+from compare_clawbench_results import (
+    SCHEMA,
+    get,
+    number,
+    pricing_valid,
+    provenance_of,
+    result_of,
+    task_rows,
+    validate_envelope,
+)
 
 
-def fmt_num(value: Any, digits: int = 3) -> str:
-    try:
-        return f"{float(value):.{digits}f}"
-    except Exception:
-        return "n/a"
+def read_result(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise ValueError("result root must be a JSON object")
+    return value
+
+
+def fmt(value: Any, digits: int = 3) -> str:
+    value = number(value)
+    return "n/a" if value is None else f"{value:.{digits}f}"
+
+
+def pct(value: Any) -> str:
+    value = number(value)
+    return "n/a" if value is None else f"{value * 100:.0f}%"
+
+
+def failure_evidence(result: dict[str, Any]) -> dict[str, Any] | None:
+    value = result.get("overall_failure_mode_counts")
+    return value if "overall_failure_mode_counts" in result and isinstance(value, dict) else None
+
+
+def summary_object(envelope: dict[str, Any], source: Path) -> dict[str, Any]:
+    result, prov = result_of(envelope), provenance_of(envelope)
+    blockers, _facts = validate_envelope(envelope, "evidence")
+    rows = task_rows(result)
+    priced = pricing_valid(prov)
+    metric_keys = (
+        "overall_score", "overall_ci_lower", "overall_ci_upper",
+        "overall_completion", "overall_trajectory", "overall_behavior",
+        "overall_reliability", "overall_pass_hat_k", "overall_worst_of_n",
+        "overall_median_latency_ms", "overall_p95_latency_ms",
+        "overall_input_tokens", "overall_output_tokens",
+        "overall_reasoning_tokens", "overall_total_tokens",
+        "overall_tokens_per_pass", "overall_cost_usd", "overall_cost_per_pass",
+    )
+    metrics = {key: number(result.get(key)) for key in metric_keys}
+    if not priced:
+        metrics["overall_cost_usd"] = None
+        metrics["overall_cost_per_pass"] = None
+    tasks = []
+    for task_id, item in sorted(rows.items()):
+        tasks.append({
+            "task_id": task_id,
+            "runs": item.get("runs"),
+            "score": number(item.get("mean_task_score")),
+            "completion": number(item.get("mean_completion_score")),
+            "trajectory": number(item.get("mean_trajectory_score")),
+            "behavior": number(item.get("mean_behavior_score")),
+            "reliability": number(item.get("reliability_score")),
+            "pass_hat_k": item.get("pass_hat_k"),
+            "worst_of_n": number(item.get("worst_of_n")),
+            "cost_per_pass": number(item.get("cost_per_pass")) if priced else None,
+            "capabilities": item.get("capabilities") or [],
+            "failure_modes": item.get("failure_mode_counts")
+            if isinstance(item.get("failure_mode_counts"), dict) else None,
+        })
+    return {
+        "source": source.name,
+        "schema_version": envelope.get("schema_version"),
+        "artifact_status": "incomplete" if blockers else "complete",
+        "missing_or_invalid_evidence": blockers,
+        "model": result.get("model"),
+        "provider": result.get("provider"),
+        "benchmark_version": result.get("benchmark_version"),
+        "openclaw_version": result.get("openclaw_version"),
+        "openclaw_commit": get(prov, "openclaw", "commit"),
+        "shellbench_commit": get(prov, "shellbench", "commit"),
+        "host_class": get(prov, "host", "class"),
+        "campaign_id": get(prov, "campaign", "id"),
+        "route_requested": get(prov, "route", "requested"),
+        "route_observed": get(prov, "route", "observed"),
+        "judge_requested": get(prov, "judge", "requested"),
+        "judge_observed": get(prov, "judge", "observed"),
+        "release_id": get(prov, "release", "id"),
+        "task_ids_fingerprint": get(prov, "release", "task_ids_fingerprint"),
+        "pricing_source": get(prov, "pricing", "source") if priced else None,
+        "pricing_as_of": get(prov, "pricing", "as_of") if priced else None,
+        "pricing_currency": get(prov, "pricing", "currency") if priced else None,
+        "task_count": len(tasks),
+        "min_runs_per_task": min([int(number(item["runs"]) or 0) for item in tasks] or [0]),
+        "metrics": metrics,
+        "failure_modes": failure_evidence(result),
+        "tasks": tasks,
+    }
+
+
+def render(summary: dict[str, Any]) -> str:
+    metrics = summary["metrics"]
+    lines = [
+        f"# ShellBench Summary: {summary['model'] or 'unknown'}", "",
+        f"- Artifact: **{summary['artifact_status']}**",
+        f"- Source label: {summary['source']}",
+        f"- Envelope: {summary['schema_version'] or 'n/a'}",
+        f"- Provider / model: {summary['provider'] or 'n/a'} / {summary['model'] or 'n/a'}",
+        f"- Benchmark: {summary['benchmark_version'] or 'n/a'}",
+        f"- OpenClaw: {summary['openclaw_version'] or 'n/a'} at {summary['openclaw_commit'] or 'n/a'}",
+        f"- ShellBench commit: {summary['shellbench_commit'] or 'n/a'}",
+        f"- Host / campaign: {summary['host_class'] or 'n/a'} / {summary['campaign_id'] or 'n/a'}",
+        f"- Release / fingerprint: {summary['release_id'] or 'n/a'} / {summary['task_ids_fingerprint'] or 'n/a'}",
+        f"- Tasks / minimum runs: {summary['task_count']} / {summary['min_runs_per_task']}", "",
+    ]
+    if summary["missing_or_invalid_evidence"]:
+        lines.extend(["## Missing Or Invalid Evidence", ""])
+        lines.extend(f"- {item}" for item in summary["missing_or_invalid_evidence"])
+        lines.append("")
+    lines.extend([
+        "## Score Surfaces", "",
+        f"- Overall: {fmt(metrics['overall_score'])} (CI {fmt(metrics['overall_ci_lower'])}–{fmt(metrics['overall_ci_upper'])})",
+        f"- Completion / trajectory / behavior: {fmt(metrics['overall_completion'])} / {fmt(metrics['overall_trajectory'])} / {fmt(metrics['overall_behavior'])}",
+        f"- Reliability / pass^k / worst-of-n: {fmt(metrics['overall_reliability'])} / {pct(metrics['overall_pass_hat_k'])} / {fmt(metrics['overall_worst_of_n'])}",
+        f"- Latency p50 / p95: {fmt(metrics['overall_median_latency_ms'], 0)}ms / {fmt(metrics['overall_p95_latency_ms'], 0)}ms",
+        f"- Tokens/pass: {fmt(metrics['overall_tokens_per_pass'], 0)}",
+        f"- Cost/pass: {'n/a' if metrics['overall_cost_per_pass'] is None else 'USD ' + format(metrics['overall_cost_per_pass'], '.4f')}",
+        f"- Pricing: {summary['pricing_source'] or 'n/a'} / {summary['pricing_as_of'] or 'n/a'} / {summary['pricing_currency'] or 'n/a'}", "",
+        "## Tasks", "",
+        "| Task | Runs | Score | Reliability | pass^k | Worst | Cost/pass |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ])
+    for item in summary["tasks"]:
+        cost = "n/a" if item["cost_per_pass"] is None else "USD " + format(item["cost_per_pass"], ".4f")
+        lines.append(
+            f"| {item['task_id']} | {item['runs'] or 'n/a'} | {fmt(item['score'])} | "
+            f"{fmt(item['reliability'])} | {item['pass_hat_k'] if item['pass_hat_k'] is not None else 'n/a'} | "
+            f"{fmt(item['worst_of_n'])} | {cost} |"
+        )
+    lines.extend(["", "## Failure Modes", ""])
+    failures = summary["failure_modes"]
+    if failures is None:
+        lines.append("- n/a (failure evidence absent)")
+    elif failures:
+        lines.extend(f"- {key}: {value}" for key, value in sorted(failures.items()) if value)
+    else:
+        lines.append("- none (explicit empty count map)")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def main() -> int:
-    if len(sys.argv) != 2:
-        print("usage: summarize_clawbench_result.py <result.json>", file=sys.stderr)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("result", type=Path)
+    parser.add_argument("--out", type=Path)
+    parser.add_argument("--json", dest="json_out", type=Path)
+    parser.add_argument("--allow-incomplete", action="store_true")
+    args = parser.parse_args()
+    try:
+        envelope = read_result(args.result)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 2
-    path = Path(sys.argv[1])
-    data = json.loads(path.read_text(encoding="utf-8"))
-    tasks = task_stats(data)
-
-    scores = []
-    pass_rates = []
-    worst = []
-    for task in tasks:
-        for key in ("mean_task_score", "task_score", "mean_run_score", "mean"):
-            if key in task:
-                try:
-                    scores.append(float(task[key]))
-                except Exception:
-                    pass
-                break
-        if "pass_rate" in task:
-            try:
-                pass_rates.append(float(task["pass_rate"]))
-            except Exception:
-                pass
-        for key in ("worst_of_n", "min_score"):
-            if key in task:
-                try:
-                    worst.append(float(task[key]))
-                except Exception:
-                    pass
-                break
-
-    model = data.get("model") or get(data, "metadata", "model", default="unknown")
-    overall = data.get("overall_score")
-    if overall is None and scores:
-        overall = mean(scores)
-
-    print(f"# ClawBench Summary: {model}")
-    print()
-    print(f"- Source: `{path}`")
-    print(f"- Overall score: {fmt_num(overall)}")
-    print(f"- Tasks summarized: {len(tasks)}")
-    if pass_rates:
-        print(f"- Mean pass rate: {fmt_num(mean(pass_rates))}")
-    if worst:
-        print(f"- Worst-of-n mean: {fmt_num(mean(worst))}")
-    for key, label in (
-        ("overall_cost_per_pass", "Cost/pass"),
-        ("overall_tokens_per_pass", "Tokens/pass"),
-        ("total_estimated_cost_usd", "Total estimated cost"),
-        ("total_tokens", "Total tokens"),
-    ):
-        if key in data:
-            print(f"- {label}: {data[key]}")
-    print()
-    if tasks:
-        print("## Tasks")
-        for task in tasks:
-            tid = task.get("task_id") or task.get("id") or "unknown-task"
-            score = None
-            for key in ("mean_task_score", "task_score", "mean_run_score", "mean"):
-                if key in task:
-                    score = task[key]
-                    break
-            bits = [f"score={fmt_num(score)}"]
-            if "pass_rate" in task:
-                bits.append(f"pass_rate={fmt_num(task['pass_rate'])}")
-            if "pass_hat_k" in task:
-                bits.append(f"pass^k={task['pass_hat_k']}")
-            if "worst_of_n" in task:
-                bits.append(f"worst={fmt_num(task['worst_of_n'])}")
-            print(f"- `{tid}`: " + ", ".join(bits))
-    return 0
+    summary = summary_object(envelope, args.result)
+    report = render(summary) + "\n"
+    if args.out:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(report, encoding="utf-8")
+    else:
+        sys.stdout.write(report)
+    if args.json_out:
+        args.json_out.parent.mkdir(parents=True, exist_ok=True)
+        args.json_out.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    return 2 if summary["artifact_status"] == "incomplete" and not args.allow_incomplete else 0
 
 
 if __name__ == "__main__":

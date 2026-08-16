@@ -1,53 +1,106 @@
-# ClawGauge Report
+# ClawGauge Decision Report
 
+Run ID:
 Date:
-Benchmark commit/version:
-OpenClaw version:
-Baseline model:
-Candidate model:
-Run count per task:
-Task subset:
+Decision owner:
+Baseline route:
+Candidate route:
+Budget / actual spend:
 
-## Verdict
+## Decision
 
-Verdict: usable | promising-but-risky | not-ready
-Confidence: decisive | smoke-only | blocked
-
+Verdict: adopt | adopt-for-<lane> | keep-baseline | indeterminate | blocked
+Confidence: routing-smoke | directional | decision-grade
+Strongest limitation:
 One-sentence read:
 
-## Summary
+## Lane Matrix
 
-- Baseline overall:
-- Candidate overall:
-- Pass rate:
-- pass^k:
-- Worst-of-n:
-- Cost/pass:
-- Tokens/pass:
-- p50/p95 latency:
+| Lane | Recommended route | Confidence | Why | Do not use when |
+|---|---|---|---|---|
+| Daily operator | | | | |
+| Coding/file work | | | | |
+| Research/browser | | | | |
+| Conversation/persona | | | | |
+| Background/cheap | | | | |
+| Reviewer/escalation | | | | |
 
-## Task Results
+## Protocol Identity
 
-- Task:
-  - Baseline:
-  - Candidate:
-  - Notes:
+- OpenClaw version/commit:
+- ShellBench version/commit/release/task fingerprint:
+- Host class / campaign ID / time window:
+- Adapter and tool/profile fingerprint:
+- Requested and observed models:
+- Reasoning proof:
+- Requested/effective fast or priority:
+- Fallback / retry / exclusion policy:
+- Requested/observed judge route, reasoning, and proof:
+- Tasks / repetitions / concurrency / counterbalanced order:
+- Comparable: yes/no
 
-## Failure Modes
+## ShellBench
 
-- Candidate:
+| Metric | Baseline | Candidate | Delta |
+|---|---:|---:|---:|
+| Overall score + CI | | | |
+| Completion | | | |
+| Trajectory | | | |
+| Behavior | | | |
+| Reliability | | | |
+| pass^k | | | |
+| Worst-of-n | | | |
+| p50/p95 latency | | | |
+| Tokens/pass | | | |
+| Cost/pass | | | |
+
+Task/capability deltas:
+
+Trust canary (reported separately):
+
+## Personal Agent QA Gate
+
 - Baseline:
+- Candidate:
+- Scenario set:
+- Stalls/blocks/skips:
 
-## Harness Notes
+## Persona and Naturalness
 
-- Fallback used:
-- Auth/quota issues:
-- Provider routing drift:
-- Gateway/infra issues:
+- Scenario(s):
+- Scenario fingerprint:
+- Transcript or transcript hashes:
+- Requested/observed judges and verified provider families:
+- Blind labels:
+- Mean ranks/scores:
+- Agreement/disagreement:
+- Strengths:
+- Weaknesses:
+
+## Failures and Exclusions
+
+- Model failures:
+- Infrastructure failures:
+- Auth/quota:
 - Missing artifacts:
+- Excluded runs and reasons:
 
-## Recommendation
+## Cost Source
 
-- Next action:
-- Do not use for:
-- Expand to Core-19? yes/no
+- Pricing source/date/currency:
+- Input/cache/output/reasoning rates:
+- Exact measured spend or unavailable:
+- Quality/reliability/worst-of-n/pass^k value floors:
+
+## Artifacts
+
+- Manifest:
+- Untouched native ShellBench traces/results:
+- ClawGauge evidence envelopes/attestations:
+- QA:
+- Character:
+- Comparison JSON/Markdown:
+
+## Next Action
+
+Stop | fix infra and rerun | expand to Core-19 | expand to n=6 | adopt named lane

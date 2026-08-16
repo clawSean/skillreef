@@ -1,24 +1,20 @@
-# Live Run Index
+# Run Evidence
 
-This index migrates the useful current run evidence from the staging project into the skill package.
+The current workflow and public package contain sanitized synthetic fixtures
+only. A live local skill may retain historical artifacts under `examples/runs/`
+or `runs/` from earlier revisions; treat those as archival, machine-specific
+evidence, not a current baseline or distributable package.
 
-## Representative Examples
+New runs belong under `skills/clawgauge/runs/<run-id>/` on the evaluating
+machine and should preserve:
 
-- `examples/runs/gpt55-vs-xai-grok43/score-report.md`
-- `examples/runs/gpt55-vs-xai-grok43/scorecard.json`
+- the frozen decision and run manifest
+- untouched native ShellBench artifacts
+- ClawGauge evidence envelopes and attestations
+- QA summaries, `qa-evidence.json`, and every attempt sidecar
+- character summaries, transcript hashes, and judge attestations
+- comparison JSON/Markdown and the final lane decision
 
-## Migrated Staging Artifacts
-
-The following staging artifacts were moved into this skill under
-`runs/legacy-20260621-staging-runs/`:
-
-- `runs/legacy-20260621-staging-runs/2026-06-21-gpt55-vs-opus46.md`
-- `runs/legacy-20260621-staging-runs/run-gpt55-vs-opus48-completed-score.md`
-- `runs/legacy-20260621-staging-runs/run-gpt55-vs-xai-grok43/`
-
-The old `~/projects/model-quality-benchmark-runs` path is now a
-compatibility symlink to `runs/legacy-20260621-staging-runs/` so older chat and
-memory links still resolve without making `~/projects` a second source of
-truth.
-
-New runs default to `skills/clawgauge/runs/<run-id>/`.
+Publish only deliberately scrubbed evidence. The public mirror excludes both
+historical run directories. Historical VPS paths and former compatibility
+symlinks are not part of the current Mac workflow.

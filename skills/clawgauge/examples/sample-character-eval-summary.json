@@ -1,0 +1,163 @@
+{
+  "scenarioId": "character-vibes-gollum",
+  "runs": [
+    {
+      "model": "test/baseline",
+      "status": "pass",
+      "durationMs": 2100,
+      "thinkingDefault": "high",
+      "fastMode": false,
+      "transcript": "User: Precious, sort the lantern list.\nAssistant: We sorts it, yes—blue lantern first, then red, and the cracked one goes last.",
+      "stats": {
+        "transcriptChars": 127,
+        "transcriptLines": 2,
+        "userTurns": 1,
+        "assistantTurns": 1
+      }
+    },
+    {
+      "model": "test/candidate",
+      "status": "pass",
+      "durationMs": 2400,
+      "thinkingDefault": "high",
+      "fastMode": false,
+      "transcript": "User: Precious, sort the lantern list.\nAssistant: Blue first, red second, cracked last, precious. A tidy little list, gollum!",
+      "stats": {
+        "transcriptChars": 125,
+        "transcriptLines": 2,
+        "userTurns": 1,
+        "assistantTurns": 1
+      }
+    }
+  ],
+  "judgments": [
+    {
+      "model": "anthropic/test-judge",
+      "thinkingDefault": "high",
+      "fastMode": false,
+      "blindModels": true,
+      "timeoutMs": 300000,
+      "durationMs": 3200,
+      "rankings": [
+        {
+          "model": "test/candidate",
+          "rank": 1,
+          "score": 8.7,
+          "summary": "More playful while staying coherent.",
+          "strengths": ["commits cleanly to the persona"],
+          "weaknesses": ["slightly terse"]
+        },
+        {
+          "model": "test/baseline",
+          "rank": 2,
+          "score": 8.1,
+          "summary": "Natural, but less surprising.",
+          "strengths": ["consistent character voice"],
+          "weaknesses": ["less playful detail"]
+        }
+      ]
+    },
+    {
+      "model": "openai/test-judge",
+      "thinkingDefault": "high",
+      "fastMode": false,
+      "blindModels": true,
+      "timeoutMs": 300000,
+      "durationMs": 3500,
+      "rankings": [
+        {
+          "model": "test/baseline",
+          "rank": 1,
+          "score": 8.5,
+          "summary": "More natural conversational rhythm.",
+          "strengths": ["fluid persona voice"],
+          "weaknesses": ["less concise"]
+        },
+        {
+          "model": "test/candidate",
+          "rank": 2,
+          "score": 8.3,
+          "summary": "Clear and funny, but more constructed.",
+          "strengths": ["playful closing beat"],
+          "weaknesses": ["slightly mechanical ordering"]
+        }
+      ]
+    }
+  ],
+  "clawgaugeAttestation": {
+    "schemaVersion": "clawgauge.character-evidence.v1",
+    "evidenceScope": "persona-naturalness",
+    "scenario": {
+      "id": "character-vibes-gollum",
+      "definitionSha256": "b4157c957d8453c6646182d761afa399c9699d818af7c03ba7cf4fd61aa3d383"
+    },
+    "candidates": [
+      {
+        "model": "test/baseline",
+        "requestedProvider": "test",
+        "requestedModel": "baseline",
+        "observedProvider": "test",
+        "observedModel": "baseline",
+        "identityVerified": true,
+        "identityProofSha256": "f649c18cf6d665826388319369ef3408cef6285ed14aa96f00ff6d816ba42084",
+        "requestedThinking": "high",
+        "observedThinking": "high",
+        "reasoningVerified": true,
+        "reasoningProofSha256": "54a476c224ff1db3ac39a18679ba92073d6935b3f6dda25eda22f9552ff78618",
+        "requestedFastMode": false,
+        "observedFastMode": false,
+        "fallbackDisabled": true,
+        "fallbackUsed": false,
+        "fallbackProofSha256": "787cb6b44211872db916c93f21ef47f4894228e59ebd68baf63c00d87246090a",
+        "transcriptComplete": true,
+        "transcriptSha256": "c8dd87efa03d70394dbf2be0851676b6a99549db121d1fef2c50639200f3ccac"
+      },
+      {
+        "model": "test/candidate",
+        "requestedProvider": "test",
+        "requestedModel": "candidate",
+        "observedProvider": "test",
+        "observedModel": "candidate",
+        "identityVerified": true,
+        "identityProofSha256": "34c49d0e65c131158c12b39cbd40c97724371f9d5a25c93c42f2623ffa22575a",
+        "requestedThinking": "high",
+        "observedThinking": "high",
+        "reasoningVerified": true,
+        "reasoningProofSha256": "e5e18cd9a105afd98c18df63f5e1358b8d871c6990f4bf40d7ac9760a84063f7",
+        "requestedFastMode": false,
+        "observedFastMode": false,
+        "fallbackDisabled": true,
+        "fallbackUsed": false,
+        "fallbackProofSha256": "76206035b18aa01fee7403986af9a3c6de7fc78d56d457a67608d06f4e970a48",
+        "transcriptComplete": true,
+        "transcriptSha256": "c37b634be068c7e05770890cc4f2b92845ae68dba6a22d4c508a9a551b08e5e5"
+      }
+    ],
+    "judges": [
+      {
+        "requestedModel": "anthropic/test-judge",
+        "observedModel": "anthropic/test-judge",
+        "providerFamily": "anthropic",
+        "providerFamilyVerified": true,
+        "identityVerified": true,
+        "identityProofSha256": "dcc6071bd37a9a60e9d3ab4c0c24b8b6e6871351d70ae9c7d66ef8411b33af85",
+        "reasoningVerified": true,
+        "reasoningProofSha256": "73c59c5837771e538f890fe02854462cc63ad6c12d567950c259b703138ce84f",
+        "blindLabelsVerified": true,
+        "blindLabelMapSha256": "dbfd2189b5905e78aa84e74d38f091b41b2ccb6f1dfe63d6c12cbd617a64a61f"
+      },
+      {
+        "requestedModel": "openai/test-judge",
+        "observedModel": "openai/test-judge",
+        "providerFamily": "openai",
+        "providerFamilyVerified": true,
+        "identityVerified": true,
+        "identityProofSha256": "5da3388600027e6b8fd393b3d97caad02b94929ac9fb3f95d7b5ffef2a9ef5fd",
+        "reasoningVerified": true,
+        "reasoningProofSha256": "2397fa8b5592d50711462a9e8be910bfbc28c8250617d2825f7e47f08132963f",
+        "blindLabelsVerified": true,
+        "blindLabelMapSha256": "faef78151163a8468043ec57388d29526c85e05cf8332089b546e1ccb9fe8ee2"
+      }
+    ]
+  }
+}

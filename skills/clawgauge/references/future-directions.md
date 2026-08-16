@@ -1,68 +1,60 @@
 # Future Directions
 
-These are useful later, but out of scope until the basic model-quality benchmark is proven.
+Only promote these after the core QA + character + ShellBench workflow has
+produced credible local comparisons.
 
-## SeanBench Scenario Pack
+## 1. Sanitized system-fit cards
 
-A fake-but-representative scenario pack modeled after Sean/JPop workflows:
+Create 8–12 versioned, fake-data tasks matching the work lanes that matter:
 
-- Telegram mention-gating and reply-context behavior
-- fake preference recall from temporary QA memory
-- fake secret no-echo and safe diagnostics
-- proof-backed contribution status reporting
-- code review with source reads and tests
-- source-backed research memo
-- usage-log summarization
-- denial of sensitive local read requests
-- failure recovery after a bad tool call
-- Bottom Feeder-style knowledge extraction
+- ambiguous request and intent inference
+- additional code/repo changes with verification beyond the required pinned
+  coding task used for coding-lane decisions
+- cited research memo
+- privacy-safe memory recall
+- tool failure recovery
+- approval/denial followthrough
+- concise Telegram-style response
+- reviewer catching an attractive but wrong result
 
-All scenarios should use fake data and deterministic verifiers first.
+Keep hidden expected outcomes and deterministic checks. Freeze the cards before
+running candidates; maintain a holdout set to resist prompt/task overfitting.
+This supplements ShellBench—it does not replace it or become a vanity
+"SeanBench" leaderboard.
 
-## Operational Usage Telemetry
+## 2. Longitudinal routing registry
 
-A separate lane for real-world usage visibility:
+Store comparable run manifests and lane decisions so model aliases, provider
+changes, OpenClaw upgrades, and price changes can invalidate stale guidance
+explicitly. Never compare raw scores across platform drift.
 
-- OpenClaw `/usage`, `/status`, and `/usage cost`
-- transcript-backed usage entries
-- provider quota windows from `openclaw status --usage`
-- token and cache counters by provider/model/runtime
-- fallback frequency and retry spend
-- sanitized Partner Trace JSONL exports for process analysis
+## 3. Operational telemetry
 
-This is not the first benchmark. It answers "what are we spending and where are tokens going?" rather than "is the new model capable?"
+Track real-world usage separately from evaluation:
 
-## External Benchmark Adapter: Agents' Last Exam
+- provider/model/runtime tokens and cache counters
+- fallback/retry rate
+- quota windows
+- latency and spend
+- sanitized failure taxonomy
 
-A later adapter/inspiration lane for evaluating full agent harnesses beyond ClawBench.
+This answers "what are we spending and where is it failing?" rather than "which
+model is capable?"
 
-Agents' Last Exam (ALE) from Berkeley RDI is relevant because it evaluates frontier agent systems on long-horizon, economically valuable tasks across many industries. Its shape maps well to the eventual mature version of this skill:
+## 4. External harness adapters
 
-- real OS sandboxes instead of simplified prompt-only tasks
-- hidden references staged only after the agent finishes
-- deterministic graders and verifiable outcomes
-- captured trajectories, raw logs, and task artifacts
-- full harness comparison rather than model-only answer comparison
-- existing harness paths for OpenClaw-style, Codex, Grok, Claude/Cursor-style agents
+- ClawWork for economic-value tasks
+- Agents' Last Exam for long-horizon sandboxed work
+- browser/desktop suites when computer use becomes a routing decision
+- cross-harness OpenClaw vs Codex/Claude Code/Hermes comparisons
 
-Do not make ALE the immediate path. Treat it as a v4/v5 external benchmark adapter after Sean/JPop have clean local ClawBench comparisons and Personal Agent QA gates. ALE setup is heavier: GCP or Docker sandbox setup, cloud/project configuration, secrets, longer runs, and broader infra cleanup. The near-term job remains ClawBench-first scored comparisons plus OpenClaw Personal Agent QA gates.
+Use remote disposable compute and the upstream campaign runbook for this work.
 
-Useful future work:
+## 5. Statistical extensions
 
-- capture ALE repo commit, task list, environment, provider routing, run count, and cost in model-quality reports
-- add an `ale` result-ingest/summarizer path only after ClawBench JSON comparison is stable
-- compare OpenClaw harness behavior against Codex/Grok/Claude-style harnesses when the question is about agent-system design, not only model choice
-- borrow ALE's hidden-reference and trajectory/artifact discipline for any future SeanBench scenarios
-
-## Decision Layer
-
-Later, benchmark outputs could drive a model-routing guide:
-
-- best model by task class
-- cheapest acceptable model by task class
-- models to avoid for tool-heavy work
-- models that need narrower tool surfaces
-- when to escalate to premium models
-- when local/open-weight models are acceptable
-
-Do not build this until ClawBench and the personal-agent pack have produced credible local results.
+- paired task-level bootstrap deltas
+- model-order and time-window effects
+- sequential stopping calculations
+- judge calibration and cross-provider agreement
+- task SNR retirement/replacement policy
+- explicit non-inferiority margins by work lane
