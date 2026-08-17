@@ -10,7 +10,7 @@ machine and should preserve:
 
 - the frozen decision and run manifest
 - untouched native ShellBench artifacts
-- ClawGauge evidence envelopes and attestations
+- ClawGauge v2 envelopes, including cache kind/config/lifecycle/hits and downstream route proofs
 - QA summaries, `qa-evidence.json`, and every attempt sidecar
 - character summaries, transcript hashes, and judge attestations
 - comparison JSON/Markdown and the final lane decision

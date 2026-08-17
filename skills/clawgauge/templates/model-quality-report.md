@@ -32,11 +32,14 @@ One-sentence read:
 - Host class / campaign ID / time window:
 - Adapter and tool/profile fingerprint:
 - Requested and observed models:
+- Direct/router/mixed mode and downstream identity/cache/fallback proof:
 - Reasoning proof:
 - Requested/effective fast or priority:
 - Fallback / retry / exclusion policy:
 - Requested/observed judge route, reasoning, and proof:
 - Tasks / repetitions / concurrency / counterbalanced order:
+- Cache profile / kind / runtime / engine / version / capacity fingerprint:
+- Cache reset, server lifecycle, within-task reuse, and cross-task reuse:
 - Comparable: yes/no
 
 ## ShellBench
@@ -57,6 +60,21 @@ One-sentence read:
 Task/capability deltas:
 
 Trust canary (reported separately):
+
+## Cache and Latency
+
+| Evidence | Baseline | Candidate |
+|---|---|---|
+| Cache kind | | |
+| Runtime / version / engine | | |
+| Capacity / config fingerprint | | |
+| Cold / warm / hit requests | | |
+| Reused input tokens / metric | | |
+| Cold p50/p95 | | |
+| Warm p50/p95 | | |
+| Lifecycle / reuse proof | | |
+| Speed evidence usable | | |
+| Router downstream observations / fingerprint | | |
 
 ## Personal Agent QA Gate
 

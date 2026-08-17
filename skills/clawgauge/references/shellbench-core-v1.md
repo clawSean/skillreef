@@ -28,6 +28,10 @@ Use a smaller subset only for budgeted screening and label its reduced
 coverage. Coding-lane claims require both coding tasks plus at least one repo
 task.
 
+The task set and n=3 confidence rule do not change for cache-aware trials.
+Declare one cache profile before the campaign; collect cold and warm request
+evidence inside those same task repetitions instead of multiplying the suite.
+
 For the strongest compact coding/repo proof, use `t2-config-loader`: its pinned
 asset pack is `t2_config_loader`, deterministic completion runs `pytest -q`,
 and trajectory expects read/edit/execute, at least two distinct reads before

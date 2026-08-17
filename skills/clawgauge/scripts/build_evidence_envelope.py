@@ -2,9 +2,9 @@
 """Build or validate a ClawGauge evidence envelope around ShellBench output.
 
 The ShellBench BenchmarkResult remains byte-for-byte data inside
-benchmark_result. All route, judge, pricing, campaign, and release attestations
-come from the separate --attestation document; they are never attributed to
-upstream ShellBench.
+benchmark_result. All route, cache, judge, pricing, campaign, and release
+attestations come from the separate --attestation document; they are never
+attributed to upstream ShellBench.
 """
 
 from __future__ import annotations
@@ -51,6 +51,8 @@ def main() -> int:
     args = parser.parse_args()
     try:
         source = read_object(args.input)
+        if "schema_version" in source and source.get("schema_version") != SCHEMA:
+            raise ValueError(f"unsupported envelope schema; expected {SCHEMA}")
         if source.get("schema_version") == SCHEMA:
             if args.attestation:
                 raise ValueError("--attestation cannot replace provenance in an existing envelope")

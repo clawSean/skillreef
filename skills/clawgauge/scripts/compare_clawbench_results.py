@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "clawgauge.evidence.v1"
+SCHEMA = "clawgauge.evidence.v2"
 CORE19_TASK_IDS_FINGERPRINT = (
     "sha256:5c19c73824478c6890b46e09fe74530ed393991e0ea02a83fe973fdba24509ea"
 )
@@ -60,6 +60,25 @@ PRICING_RATE_KEYS = (
     "cached_input_per_million",
     "output_per_million",
     "reasoning_per_million",
+)
+CACHE_PROFILES = {
+    "route-native",
+    "controlled-cold-then-warm",
+    "cold-only",
+}
+CACHE_KINDS = {
+    "prefix-kv",
+    "residency-only",
+    "full-response-memoization",
+    "embedding-result",
+    "opaque-provider-managed",
+}
+ROUTING_MODES = {"direct", "router", "mixed"}
+CACHE_PROTOCOL_FIELDS = (
+    "profile",
+    "reset_between_task_repetitions",
+    "within_task_reuse",
+    "cross_task_reuse",
 )
 
 
@@ -122,6 +141,270 @@ def provenance_of(envelope: dict[str, Any]) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def cache_config_payload(cache: dict[str, Any]) -> dict[str, Any]:
+    """Return the canonical, proof-free cache configuration identity."""
+    runtime = cache.get("runtime") if isinstance(cache.get("runtime"), dict) else {}
+    config = cache.get("configuration") if isinstance(cache.get("configuration"), dict) else {}
+    capacity = config.get("capacity") if isinstance(config.get("capacity"), dict) else {}
+    return {
+        "runtime": {
+            "visibility": runtime.get("visibility"),
+            "kind": runtime.get("kind"),
+            "name": runtime.get("name"),
+            "version": runtime.get("version"),
+            "engine": runtime.get("engine"),
+        },
+        "enabled": config.get("enabled"),
+        "persistence": config.get("persistence"),
+        "capacity": {
+            "visibility": capacity.get("visibility"),
+            "limits": capacity.get("limits"),
+        },
+    }
+
+
+def cache_of(prov: dict[str, Any]) -> dict[str, Any]:
+    value = prov.get("cache")
+    return value if isinstance(value, dict) else {}
+
+
+def count(value: Any) -> int | None:
+    parsed = number(value)
+    if parsed is None or parsed < 0 or not parsed.is_integer():
+        return None
+    return int(parsed)
+
+
+def validate_latency(
+    blockers: list[str], side: str, label: str, value: Any, request_count: int | None,
+) -> dict[str, float] | None:
+    if request_count == 0:
+        if value is not None:
+            blockers.append(f"{side}: cache {label} latency must be null when there are no {label} requests")
+        return None
+    if not isinstance(value, dict):
+        blockers.append(f"{side}: missing cache {label} latency evidence")
+        return None
+    p50, p95 = number(value.get("p50")), number(value.get("p95"))
+    if p50 is None or p95 is None or p50 < 0 or p95 < p50:
+        blockers.append(f"{side}: invalid cache {label} p50/p95 latency evidence")
+        return None
+    return {"p50": p50, "p95": p95}
+
+
+def validate_cache(blockers: list[str], side: str, prov: dict[str, Any]) -> dict[str, Any]:
+    """Validate route-specific cache identity and normalized cache treatment."""
+    start = len(blockers)
+    cache = cache_of(prov)
+    if not cache:
+        blockers.append(f"{side}: missing provenance.cache")
+        return {"valid": False, "speed_usable": False}
+
+    runtime = cache.get("runtime")
+    if not isinstance(runtime, dict):
+        blockers.append(f"{side}: missing provenance.cache.runtime")
+        runtime = {}
+    runtime_visibility = runtime.get("visibility")
+    runtime_kind = runtime.get("kind")
+    if runtime_visibility not in {"known", "opaque"}:
+        blockers.append(f"{side}: cache runtime visibility must be known or opaque")
+    if runtime_kind not in CACHE_KINDS:
+        blockers.append(f"{side}: cache runtime kind must be one of {sorted(CACHE_KINDS)}")
+    if runtime_visibility == "opaque" and runtime_kind != "opaque-provider-managed":
+        blockers.append(f"{side}: opaque cache runtime must use kind opaque-provider-managed")
+    if runtime_kind == "opaque-provider-managed" and runtime_visibility != "opaque":
+        blockers.append(f"{side}: opaque-provider-managed cache kind requires opaque runtime visibility")
+    for key in ("name", "engine"):
+        if not text(runtime.get(key)):
+            blockers.append(f"{side}: missing provenance.cache.runtime.{key}")
+    if runtime_visibility == "known" and not text(runtime.get("version")):
+        blockers.append(f"{side}: known cache runtime requires a version")
+    if runtime_visibility == "opaque":
+        if runtime.get("version") is not None:
+            blockers.append(f"{side}: opaque cache runtime version must be null")
+        if not proof(runtime.get("proof")):
+            blockers.append(f"{side}: opaque cache runtime requires a proof")
+
+    config = cache.get("configuration")
+    if not isinstance(config, dict):
+        blockers.append(f"{side}: missing provenance.cache.configuration")
+        config = {}
+    enabled = config.get("enabled")
+    if not isinstance(enabled, bool):
+        blockers.append(f"{side}: cache enabled state must be boolean")
+    if not text(config.get("persistence")):
+        blockers.append(f"{side}: missing cache persistence scope")
+    if not proof(config.get("proof")):
+        blockers.append(f"{side}: cache configuration proof is missing")
+
+    capacity = config.get("capacity")
+    if not isinstance(capacity, dict):
+        blockers.append(f"{side}: missing cache capacity")
+        capacity = {}
+    capacity_visibility = capacity.get("visibility")
+    limits = capacity.get("limits")
+    if capacity_visibility not in {"known", "opaque", "not-applicable"}:
+        blockers.append(f"{side}: invalid cache capacity visibility")
+    if not isinstance(limits, dict):
+        blockers.append(f"{side}: cache capacity limits must be an object")
+        limits = {}
+    bad_limits = [
+        str(key) for key, value in limits.items()
+        if not text(key) or count(value) is None
+    ]
+    if bad_limits:
+        blockers.append(f"{side}: invalid cache capacity limits: {sorted(bad_limits)}")
+    if enabled is True and capacity_visibility == "known" and not limits:
+        blockers.append(f"{side}: enabled known cache requires at least one capacity limit")
+    if capacity_visibility == "opaque":
+        if limits:
+            blockers.append(f"{side}: opaque cache capacity cannot claim numeric limits")
+        if not proof(capacity.get("proof")):
+            blockers.append(f"{side}: opaque cache capacity requires a proof")
+    if capacity_visibility == "not-applicable" and (enabled is not False or limits):
+        blockers.append(f"{side}: not-applicable cache capacity is valid only when cache is disabled")
+    if enabled is False and capacity_visibility != "not-applicable":
+        blockers.append(f"{side}: disabled cache must use not-applicable capacity")
+
+    claimed_fingerprint = text(config.get("fingerprint"))
+    actual_fingerprint = digest(cache_config_payload(cache))
+    if claimed_fingerprint != actual_fingerprint:
+        blockers.append(f"{side}: cache configuration fingerprint mismatch")
+
+    protocol = cache.get("protocol")
+    if not isinstance(protocol, dict):
+        blockers.append(f"{side}: missing provenance.cache.protocol")
+        protocol = {}
+    profile = protocol.get("profile")
+    if profile not in CACHE_PROFILES:
+        blockers.append(f"{side}: unsupported cache protocol profile")
+    for key in CACHE_PROTOCOL_FIELDS[1:]:
+        if not isinstance(protocol.get(key), bool):
+            blockers.append(f"{side}: cache protocol {key} must be boolean")
+    reset = protocol.get("reset_between_task_repetitions")
+    within = protocol.get("within_task_reuse")
+    cross = protocol.get("cross_task_reuse")
+    if profile == "controlled-cold-then-warm" and (reset is not True or within is not True or cross is not False):
+        blockers.append(f"{side}: controlled-cold-then-warm cache protocol is inconsistent")
+    if profile == "cold-only" and (reset is not True or within is not False or cross is not False):
+        blockers.append(f"{side}: cold-only cache protocol is inconsistent")
+
+    lifecycle = cache.get("lifecycle")
+    if not isinstance(lifecycle, dict):
+        blockers.append(f"{side}: missing provenance.cache.lifecycle")
+        lifecycle = {}
+    for key in ("server_scope", "reset_mechanism", "reuse_scope"):
+        if not text(lifecycle.get(key)):
+            blockers.append(f"{side}: missing provenance.cache.lifecycle.{key}")
+    reuse_scope = lifecycle.get("reuse_scope")
+    if reuse_scope not in {"none", "within-task", "campaign", "provider-managed"}:
+        blockers.append(f"{side}: invalid cache lifecycle reuse_scope")
+    if lifecycle.get("stability_verified") is not True or not proof(lifecycle.get("stability_proof")):
+        blockers.append(f"{side}: cache lifecycle stability is not proven")
+    if reset is True and lifecycle.get("reset_mechanism") == "none":
+        blockers.append(f"{side}: cache reset policy contradicts lifecycle reset mechanism")
+    if within is True and reuse_scope not in {"within-task", "campaign", "provider-managed"}:
+        blockers.append(f"{side}: within-task cache reuse contradicts lifecycle reuse_scope")
+    if within is False and reuse_scope == "within-task":
+        blockers.append(f"{side}: disabled within-task reuse contradicts lifecycle reuse_scope")
+    if cross is False and reuse_scope == "campaign":
+        blockers.append(f"{side}: disabled cross-task reuse contradicts lifecycle reuse_scope")
+
+    observed = cache.get("observed")
+    if not isinstance(observed, dict):
+        blockers.append(f"{side}: missing provenance.cache.observed")
+        observed = {}
+    if observed.get("configuration_fingerprint") != actual_fingerprint:
+        blockers.append(f"{side}: observed cache configuration fingerprint mismatch")
+    request_count = count(observed.get("request_count"))
+    cold_count = count(observed.get("cold_request_count"))
+    warm_count = count(observed.get("warm_request_count"))
+    for label, value in (("request", request_count), ("cold request", cold_count), ("warm request", warm_count)):
+        if value is None:
+            blockers.append(f"{side}: invalid cache {label} count")
+    if request_count == 0:
+        blockers.append(f"{side}: cache request_count must be positive")
+    if None not in (request_count, cold_count, warm_count) and cold_count + warm_count != request_count:
+        blockers.append(f"{side}: cold and warm cache request counts do not equal request_count")
+
+    hit_status = observed.get("hit_status")
+    if hit_status not in {"observed", "none-observed", "unavailable"}:
+        blockers.append(f"{side}: invalid cache hit evidence status")
+    hit_count, reused_tokens = count(observed.get("hit_request_count")), count(observed.get("reused_input_tokens"))
+    if hit_status == "unavailable":
+        if observed.get("hit_request_count") is not None or observed.get("reused_input_tokens") is not None or observed.get("hit_metric") is not None:
+            blockers.append(f"{side}: unavailable cache hit evidence cannot claim counters")
+    else:
+        if hit_count is None or reused_tokens is None or not text(observed.get("hit_metric")):
+            blockers.append(f"{side}: cache hit counters and metric are incomplete")
+        if hit_count is not None and warm_count is not None and hit_count > warm_count:
+            blockers.append(f"{side}: cache hit count exceeds warm request count")
+        if hit_status == "observed" and hit_count == 0:
+            blockers.append(f"{side}: observed cache hits require a nonzero hit count")
+        if hit_status == "observed" and runtime_kind == "prefix-kv" and reused_tokens == 0:
+            blockers.append(f"{side}: observed prefix/KV cache hits require nonzero reused input tokens")
+        if hit_status == "none-observed" and (hit_count != 0 or reused_tokens != 0):
+            blockers.append(f"{side}: none-observed cache evidence requires zero hit counters")
+    if not proof(observed.get("hit_proof")):
+        blockers.append(f"{side}: cache hit evidence proof is missing")
+    if enabled is False and hit_status != "none-observed":
+        blockers.append(f"{side}: disabled cache cannot report observed or unavailable hits")
+    if runtime_kind == "full-response-memoization" and (enabled is True or hit_status == "observed"):
+        blockers.append(f"{side}: full-response memoization enabled or hit invalidates repeated agent quality/trust evidence")
+    if runtime_kind == "residency-only" and (
+        hit_status != "none-observed" or hit_count != 0 or reused_tokens != 0
+    ):
+        blockers.append(f"{side}: residency-only cache cannot claim request hits or reused input tokens")
+    if runtime_kind == "embedding-result" and reused_tokens not in {0, None}:
+        blockers.append(f"{side}: embedding-result cache cannot claim reused model input tokens")
+
+    cold_latency = validate_latency(blockers, side, "cold", observed.get("cold_latency_ms"), cold_count)
+    warm_latency = validate_latency(blockers, side, "warm", observed.get("warm_latency_ms"), warm_count)
+    if profile == "controlled-cold-then-warm" and (not cold_count or not warm_count):
+        blockers.append(f"{side}: controlled-cold-then-warm requires cold and warm requests")
+    if profile == "cold-only" and (not cold_count or warm_count != 0):
+        blockers.append(f"{side}: cold-only profile requires only cold requests")
+
+    valid = len(blockers) == start
+    speed_usable = valid and hit_status != "unavailable" and (
+        (cold_count == 0 or cold_latency is not None)
+        and (warm_count == 0 or warm_latency is not None)
+    )
+    return {
+        "valid": valid,
+        "runtime": {
+            "visibility": runtime.get("visibility"),
+            "kind": runtime.get("kind"),
+            "name": runtime.get("name"),
+            "version": runtime.get("version"),
+            "engine": runtime.get("engine"),
+        },
+        "configuration_fingerprint": actual_fingerprint,
+        "capacity": {
+            "visibility": capacity_visibility,
+            "limits": limits,
+        },
+        "protocol": {key: protocol.get(key) for key in CACHE_PROTOCOL_FIELDS},
+        "lifecycle": {
+            "server_scope": lifecycle.get("server_scope"),
+            "reset_mechanism": lifecycle.get("reset_mechanism"),
+            "reuse_scope": lifecycle.get("reuse_scope"),
+        },
+        "observed": {
+            "request_count": request_count,
+            "cold_request_count": cold_count,
+            "warm_request_count": warm_count,
+            "hit_status": hit_status,
+            "hit_request_count": hit_count,
+            "reused_input_tokens": reused_tokens,
+            "hit_metric": observed.get("hit_metric"),
+            "cold_latency_ms": cold_latency,
+            "warm_latency_ms": warm_latency,
+        },
+        "speed_usable": speed_usable,
+    }
+
+
 def task_rows(result: dict[str, Any]) -> dict[str, dict[str, Any]]:
     rows = result.get("task_results")
     if not isinstance(rows, list):
@@ -158,11 +441,11 @@ def observed_fast_state(value: Any) -> bool:
     return isinstance(value, bool)
 
 
-def validate_route(blockers: list[str], side: str, result: dict[str, Any], prov: dict[str, Any]) -> None:
+def validate_route(blockers: list[str], side: str, result: dict[str, Any], prov: dict[str, Any]) -> dict[str, Any]:
     route = get(prov, "route")
     if not isinstance(route, dict):
         blockers.append(f"{side}: missing provenance.route")
-        return
+        return {"routing_mode": None, "downstream_fingerprint": None, "downstream_count": 0}
     requested, observed = route.get("requested"), route.get("observed")
     for label, value in (("requested", requested), ("observed", observed)):
         if not isinstance(value, dict):
@@ -196,6 +479,75 @@ def validate_route(blockers: list[str], side: str, result: dict[str, Any], prov:
         blockers.append(f"{side}: route reasoning proof is missing or unverified")
     if route.get("fallback_used") is not False or not proof(route.get("fallback_proof")):
         blockers.append(f"{side}: fallback absence is not explicitly proven")
+
+    routing_mode = route.get("routing_mode")
+    downstream = route.get("downstream")
+    normalized: list[dict[str, Any]] = []
+    if routing_mode not in ROUTING_MODES:
+        blockers.append(f"{side}: route routing_mode must be direct, router, or mixed")
+    elif routing_mode == "direct":
+        if downstream is not None:
+            blockers.append(f"{side}: direct route must not include downstream routing attestation")
+    else:
+        if not isinstance(downstream, dict):
+            blockers.append(f"{side}: {routing_mode} route requires downstream routing attestation")
+        else:
+            if downstream.get("complete") is not True:
+                blockers.append(f"{side}: downstream route coverage is not complete")
+            if not proof(downstream.get("coverage_proof")):
+                blockers.append(f"{side}: downstream route coverage proof is missing")
+            observations = downstream.get("observations")
+            if not isinstance(observations, list) or not observations:
+                blockers.append(f"{side}: downstream route observations are missing")
+                observations = []
+            for index, item in enumerate(observations):
+                label = f"{side}: downstream observation {index}"
+                if not isinstance(item, dict):
+                    blockers.append(f"{label} is not an object")
+                    continue
+                provider, model = text(item.get("provider")), text(item.get("model"))
+                cache_fingerprint = text(item.get("cache_configuration_fingerprint"))
+                if not provider or not model:
+                    blockers.append(f"{label} identity is missing")
+                if not cache_fingerprint or len(cache_fingerprint) != 71 or not cache_fingerprint.startswith("sha256:"):
+                    blockers.append(f"{label} cache configuration fingerprint is missing or invalid")
+                else:
+                    try:
+                        int(cache_fingerprint[7:], 16)
+                    except ValueError:
+                        blockers.append(f"{label} cache configuration fingerprint is missing or invalid")
+                if item.get("fallback_used") is not False:
+                    blockers.append(f"{label} reports fallback use or lacks a false fallback state")
+                for proof_name in ("identity_proof", "cache_proof", "fallback_proof"):
+                    if not proof(item.get(proof_name)):
+                        blockers.append(f"{label} {proof_name.replace('_', ' ')} is missing")
+                normalized.append({
+                    "provider": provider,
+                    "model": model,
+                    "cache_configuration_fingerprint": cache_fingerprint,
+                    "fallback_used": item.get("fallback_used"),
+                })
+            identities = {
+                (item.get("provider"), item.get("model"), item.get("cache_configuration_fingerprint"))
+                for item in normalized
+            }
+            if routing_mode == "mixed" and len(identities) < 2:
+                blockers.append(f"{side}: mixed route requires at least two distinct downstream identities/cache configurations")
+    downstream_fingerprint = digest({
+        "routing_mode": routing_mode,
+        "observations": sorted(
+            normalized,
+            key=lambda item: (
+                str(item.get("provider")), str(item.get("model")),
+                str(item.get("cache_configuration_fingerprint")),
+            ),
+        ),
+    }) if routing_mode in ROUTING_MODES else None
+    return {
+        "routing_mode": routing_mode,
+        "downstream_fingerprint": downstream_fingerprint,
+        "downstream_count": len(normalized),
+    }
 
 
 def validate_judge(blockers: list[str], side: str, prov: dict[str, Any]) -> None:
@@ -277,9 +629,15 @@ def validate_envelope(envelope: dict[str, Any], side: str) -> tuple[list[str], d
         blockers.append(f"{side}: subset release count is inconsistent with observed count")
     if claimed and claimed != actual:
         blockers.append(f"{side}: release task fingerprint mismatch")
-    validate_route(blockers, side, result, prov)
+    route_facts = validate_route(blockers, side, result, prov)
     validate_judge(blockers, side, prov)
-    return blockers, {"fingerprint": actual, "pricing": pricing_valid(prov)}
+    cache_facts = validate_cache(blockers, side, prov)
+    return blockers, {
+        "fingerprint": actual,
+        "pricing": pricing_valid(prov),
+        "route": route_facts,
+        "cache": cache_facts,
+    }
 
 
 def protocol_audit(baseline_env: dict[str, Any], candidate_env: dict[str, Any]) -> tuple[list[str], list[str], dict[str, Any]]:
@@ -299,6 +657,20 @@ def protocol_audit(baseline_env: dict[str, Any], candidate_env: dict[str, Any]) 
         blockers.append("protocol mismatch: requested fast state")
     if get(base_prov, "route", "observed", "fast") != get(cand_prov, "route", "observed", "fast"):
         blockers.append("protocol mismatch: observed effective fast state")
+    base_cache, cand_cache = base_facts.get("cache", {}), cand_facts.get("cache", {})
+    base_cache_protocol = base_cache.get("protocol", {})
+    cand_cache_protocol = cand_cache.get("protocol", {})
+    for field in CACHE_PROTOCOL_FIELDS:
+        if base_cache_protocol.get(field) != cand_cache_protocol.get(field):
+            blockers.append(f"protocol mismatch: provenance.cache.protocol.{field}")
+    base_route, cand_route = get(base_prov, "route", "observed"), get(cand_prov, "route", "observed")
+    if isinstance(base_route, dict) and isinstance(cand_route, dict):
+        route_keys = ("provider", "model", "reasoning", "fast")
+        if all(base_route.get(key) == cand_route.get(key) for key in route_keys):
+            if base_cache.get("configuration_fingerprint") != cand_cache.get("configuration_fingerprint"):
+                blockers.append("protocol mismatch: same exact route has different cache configuration fingerprint")
+            if base_facts.get("route", {}).get("downstream_fingerprint") != cand_facts.get("route", {}).get("downstream_fingerprint"):
+                blockers.append("protocol mismatch: same exact route has different downstream routing identity/cache/fallback attribution")
     if set(base_tasks) != set(cand_tasks):
         blockers.append("protocol mismatch: task IDs differ")
     for task_id in set(base_tasks) & set(cand_tasks):
@@ -335,6 +707,11 @@ def protocol_audit(baseline_env: dict[str, Any], candidate_env: dict[str, Any]) 
     ):
         pricing_comparable = False
         warnings.append("pricing date, currency, or source differs; value comparison is unavailable")
+    cache_speed_comparable = bool(
+        base_cache.get("speed_usable") and cand_cache.get("speed_usable")
+    )
+    if not cache_speed_comparable:
+        warnings.append("cache hit or cold/warm latency evidence is unavailable; speed comparison is unavailable")
     facts = {
         "min_runs_per_task": min_runs, "task_count": task_count,
         "shellbench_coverage": coverage,
@@ -343,6 +720,12 @@ def protocol_audit(baseline_env: dict[str, Any], candidate_env: dict[str, Any]) 
         "fallback_proven_off": not any("fallback absence" in item for item in blockers),
         "pricing_proven": base_pricing and cand_pricing,
         "pricing_comparable": pricing_comparable,
+        "cache_protocol_profile": base_cache_protocol.get("profile"),
+        "cache_speed_comparable": cache_speed_comparable,
+        "baseline_cache": base_cache,
+        "candidate_cache": cand_cache,
+        "baseline_route": base_facts.get("route", {}),
+        "candidate_route": cand_facts.get("route", {}),
     }
     return sorted(set(blockers)), sorted(set(warnings)), facts
 
@@ -449,6 +832,8 @@ def build_result(
     }
     if objective == "value" and not facts["pricing_comparable"] and not blockers:
         result["objective_read"]["leader"] = "unavailable-pricing-protocol"
+    if objective == "speed" and not facts["cache_speed_comparable"] and not blockers:
+        result["objective_read"]["leader"] = "unavailable-cache-evidence"
     return result
 
 
@@ -486,6 +871,30 @@ def render(out: dict[str, Any], baseline_env: dict[str, Any], candidate_env: dic
     for key, label, kind in METRICS:
         item = out["metrics"][key]
         lines.append(f"| {label} | {fmt(item['baseline'], kind)} | {fmt(item['candidate'], kind)} |")
+    lines.extend(["", "## Cache Evidence", ""])
+    lines.append(f"- Protocol profile: {out['facts']['cache_protocol_profile'] or 'n/a'}")
+    lines.append(f"- Speed evidence comparable: {'yes' if out['facts']['cache_speed_comparable'] else 'no'}")
+    lines.extend(["", "| Route | Cache kind | Runtime / engine | Capacity | Cold / warm / hits | Reused input | Cold p50/p95 | Warm p50/p95 |", "|---|---|---|---|---:|---:|---:|---:|"])
+    for label, cache in (("Baseline", out["facts"]["baseline_cache"]), ("Candidate", out["facts"]["candidate_cache"])):
+        runtime = cache.get("runtime", {})
+        capacity = cache.get("capacity", {})
+        observed = cache.get("observed", {})
+        cold, warm = observed.get("cold_latency_ms"), observed.get("warm_latency_ms")
+        cold_text = "n/a" if not cold else f"{cold['p50']:.0f}/{cold['p95']:.0f}ms"
+        warm_text = "n/a" if not warm else f"{warm['p50']:.0f}/{warm['p95']:.0f}ms"
+        capacity_text = "opaque" if capacity.get("visibility") == "opaque" else json.dumps(capacity.get("limits", {}), sort_keys=True)
+        counts = f"{observed.get('cold_request_count')}/{observed.get('warm_request_count')}/{observed.get('hit_request_count') if observed.get('hit_request_count') is not None else 'n/a'}"
+        reused = observed.get("reused_input_tokens")
+        lines.append(
+            f"| {label} | {runtime.get('kind') or 'n/a'} | {runtime.get('name') or 'n/a'} {runtime.get('version') or 'opaque'} / {runtime.get('engine') or 'n/a'} | "
+            f"{capacity_text} | {counts} | {reused if reused is not None else 'n/a'} | {cold_text} | {warm_text} |"
+        )
+    lines.extend(["", "## Route Attribution", ""])
+    for label, route in (("Baseline", out["facts"]["baseline_route"]), ("Candidate", out["facts"]["candidate_route"])):
+        lines.append(
+            f"- {label}: {route.get('routing_mode') or 'n/a'}; downstream observations={route.get('downstream_count', 0)}; "
+            f"fingerprint={route.get('downstream_fingerprint') or 'n/a'}"
+        )
     lines.extend(["", "## Failure Modes", ""])
     for label, failures in (("Baseline", out["baseline_failure_modes"]), ("Candidate", out["candidate_failure_modes"])):
         detail = "n/a (failure evidence absent)" if failures is None else "none (explicit empty count map)" if not failures else ", ".join(f"{key}={value}" for key, value in sorted(failures.items()))

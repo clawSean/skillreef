@@ -1,5 +1,5 @@
 {
-  "schema_version": "clawgauge.evidence.v1",
+  "schema_version": "clawgauge.evidence.v2",
   "source_artifact": {
     "schema": "shellbench.BenchmarkResult",
     "sha256": "sha256:99c93c9ef4c363ef7f16a7a3d814f268a93e9a61740618f8de1ae32577909233"
@@ -35,6 +35,7 @@
       "tool_profile_fingerprint": "synthetic-profile-v1"
     },
     "route": {
+      "routing_mode": "direct",
       "requested": {
         "provider": "test",
         "model": "test/candidate",
@@ -61,6 +62,69 @@
       "fallback_proof": {
         "kind": "synthetic-trace",
         "reference": "fixture://fallback/test-candidate"
+      }
+    },
+    "cache": {
+      "runtime": {
+        "visibility": "known",
+        "kind": "prefix-kv",
+        "name": "synthetic-runtime-b",
+        "version": "2.0.0",
+        "engine": "block-prefix-cache"
+      },
+      "configuration": {
+        "enabled": true,
+        "persistence": "process-memory",
+        "capacity": {
+          "visibility": "known",
+          "limits": {
+            "blocks": 2048,
+            "block_size_tokens": 16
+          }
+        },
+        "fingerprint": "sha256:4f0a6cc58344feb51a56058b8723c5f205562241a8f074f4dd5e795bb7634cb4",
+        "proof": {
+          "kind": "synthetic-runtime-config",
+          "reference": "fixture://cache/config/candidate"
+        }
+      },
+      "protocol": {
+        "profile": "controlled-cold-then-warm",
+        "reset_between_task_repetitions": true,
+        "within_task_reuse": true,
+        "cross_task_reuse": false
+      },
+      "lifecycle": {
+        "server_scope": "task-repetition",
+        "reset_mechanism": "fresh-process",
+        "reuse_scope": "within-task",
+        "stability_verified": true,
+        "stability_proof": {
+          "kind": "synthetic-server-manifest",
+          "reference": "fixture://cache/lifecycle/candidate"
+        }
+      },
+      "observed": {
+        "configuration_fingerprint": "sha256:4f0a6cc58344feb51a56058b8723c5f205562241a8f074f4dd5e795bb7634cb4",
+        "request_count": 18,
+        "cold_request_count": 6,
+        "warm_request_count": 12,
+        "hit_status": "observed",
+        "hit_request_count": 12,
+        "reused_input_tokens": 60000,
+        "hit_metric": "cache_n",
+        "cold_latency_ms": {
+          "p50": 3000,
+          "p95": 5500
+        },
+        "warm_latency_ms": {
+          "p50": 500,
+          "p95": 900
+        },
+        "hit_proof": {
+          "kind": "synthetic-request-telemetry",
+          "reference": "fixture://cache/hits/candidate"
+        }
       }
     },
     "judge": {

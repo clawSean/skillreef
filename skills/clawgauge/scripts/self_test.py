@@ -66,6 +66,55 @@ def rehash(envelope: dict) -> None:
     )
 
 
+def rehash_cache(envelope: dict) -> str:
+    cache = envelope["provenance"]["cache"]
+    runtime = cache["runtime"]
+    config = cache["configuration"]
+    capacity = config["capacity"]
+    payload = {
+        "runtime": {
+            "visibility": runtime.get("visibility"),
+            "kind": runtime.get("kind"),
+            "name": runtime.get("name"),
+            "version": runtime.get("version"),
+            "engine": runtime.get("engine"),
+        },
+        "enabled": config.get("enabled"),
+        "persistence": config.get("persistence"),
+        "capacity": {
+            "visibility": capacity.get("visibility"),
+            "limits": capacity.get("limits"),
+        },
+    }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    fingerprint = "sha256:" + hashlib.sha256(raw.encode()).hexdigest()
+    config["fingerprint"] = fingerprint
+    cache["observed"]["configuration_fingerprint"] = fingerprint
+    return fingerprint
+
+
+def downstream_observation(provider: str, model: str, cache_fingerprint: str, label: str) -> dict:
+    return {
+        "provider": provider,
+        "model": model,
+        "cache_configuration_fingerprint": cache_fingerprint,
+        "fallback_used": False,
+        "identity_proof": {"kind": "synthetic-trace", "reference": f"fixture://downstream/{label}/identity"},
+        "cache_proof": {"kind": "synthetic-trace", "reference": f"fixture://downstream/{label}/cache"},
+        "fallback_proof": {"kind": "synthetic-trace", "reference": f"fixture://downstream/{label}/fallback"},
+    }
+
+
+def set_router(envelope: dict, mode: str, observations: list[dict]) -> None:
+    route = envelope["provenance"]["route"]
+    route["routing_mode"] = mode
+    route["downstream"] = {
+        "complete": True,
+        "coverage_proof": {"kind": "synthetic-trace", "reference": f"fixture://downstream/{mode}/coverage"},
+        "observations": observations,
+    }
+
+
 def qa_candidate(summary: dict, model: str, status: str = "pass") -> dict:
     out = copy.deepcopy(summary)
     run_data = out["run"]
@@ -109,6 +158,26 @@ def profile_summary(model: str, scenario: str) -> dict:
     }
 
 
+def compare_case(
+    tmp: Path, name: str, baseline: dict, candidate: dict, *,
+    objective: str = "quality", expected: int = 0,
+) -> dict:
+    baseline_path = tmp / f"{name}-baseline.json"
+    candidate_path = tmp / f"{name}-candidate.json"
+    output_path = tmp / f"{name}-comparison.json"
+    write(baseline_path, baseline)
+    write(candidate_path, candidate)
+    run(
+        str(SCRIPTS / "compare_clawbench_results.py"),
+        "--baseline", str(baseline_path),
+        "--candidate", str(candidate_path),
+        "--objective", objective,
+        "--json", str(output_path),
+        expected=expected,
+    )
+    return load(output_path)
+
+
 def main() -> int:
     checks = 0
     with tempfile.TemporaryDirectory(prefix="clawgauge-self-test-") as raw_tmp:
@@ -126,7 +195,7 @@ def main() -> int:
         )
         summary = load(summary_json)
         assert summary["artifact_status"] == "complete"
-        assert summary["schema_version"] == "clawgauge.evidence.v1"
+        assert summary["schema_version"] == "clawgauge.evidence.v2"
         assert summary["source"] == baseline_path.name
         checks += 3
 
@@ -160,6 +229,315 @@ def main() -> int:
         assert comparison["confidence"] == "directional"
         assert comparison["objective_read"]["leader"] == "no-clear-leader"
         checks += 3
+
+        # Cache engines and capacities are route identity, not pair-equality
+        # requirements. The normalized cache treatment must still match.
+        assert baseline["provenance"]["cache"]["runtime"]["engine"] != candidate["provenance"]["cache"]["runtime"]["engine"]
+        assert comparison["facts"]["cache_speed_comparable"] is True
+        checks += 2
+
+        legacy = copy.deepcopy(baseline)
+        legacy["schema_version"] = "clawgauge.evidence.v1"
+        legacy_result = compare_case(tmp, "legacy-cache-schema", legacy, candidate, expected=2)
+        assert any("clawgauge.evidence.v2" in item for item in legacy_result["blockers"])
+        legacy_path = tmp / "legacy-envelope.json"
+        write(legacy_path, legacy)
+        legacy_build = run(
+            str(SCRIPTS / "build_evidence_envelope.py"), str(legacy_path), expected=2,
+        )
+        assert "unsupported envelope schema" in legacy_build.stderr
+        checks += 2
+
+        missing_cache = copy.deepcopy(candidate)
+        missing_cache["provenance"].pop("cache")
+        missing_cache_result = compare_case(tmp, "missing-cache", baseline, missing_cache, expected=2)
+        assert any("missing provenance.cache" in item for item in missing_cache_result["blockers"])
+        checks += 1
+
+        bad_fingerprint = copy.deepcopy(candidate)
+        bad_fingerprint["provenance"]["cache"]["configuration"]["fingerprint"] = "sha256:bad"
+        bad_fingerprint_result = compare_case(tmp, "bad-cache-fingerprint", baseline, bad_fingerprint, expected=2)
+        assert any("cache configuration fingerprint mismatch" in item for item in bad_fingerprint_result["blockers"])
+        checks += 1
+
+        fractional_capacity = copy.deepcopy(candidate)
+        fractional_capacity["provenance"]["cache"]["configuration"]["capacity"]["limits"]["blocks"] = 1.5
+        rehash_cache(fractional_capacity)
+        fractional_result = compare_case(tmp, "fractional-cache-capacity", baseline, fractional_capacity, expected=2)
+        assert any("invalid cache capacity limits" in item for item in fractional_result["blockers"])
+        checks += 1
+
+        protocol_cases = (
+            ("profile", "route-native"),
+            ("reset_between_task_repetitions", False),
+            ("within_task_reuse", False),
+            ("cross_task_reuse", True),
+        )
+        for field, value in protocol_cases:
+            drift = copy.deepcopy(candidate)
+            drift["provenance"]["cache"]["protocol"][field] = value
+            drift_result = compare_case(tmp, f"cache-protocol-{field}", baseline, drift, expected=2)
+            assert any(f"provenance.cache.protocol.{field}" in item for item in drift_result["blockers"])
+            checks += 1
+
+        lifecycle_drift = copy.deepcopy(candidate)
+        lifecycle_drift["provenance"]["cache"]["lifecycle"]["reuse_scope"] = "campaign"
+        lifecycle_result = compare_case(tmp, "cache-lifecycle-drift", baseline, lifecycle_drift, expected=2)
+        assert any("cross-task reuse contradicts" in item for item in lifecycle_result["blockers"])
+        checks += 1
+
+        no_hit_proof = copy.deepcopy(candidate)
+        no_hit_proof["provenance"]["cache"]["observed"].pop("hit_proof")
+        no_hit_result = compare_case(tmp, "cache-no-hit-proof", baseline, no_hit_proof, expected=2)
+        assert any("cache hit evidence proof is missing" in item for item in no_hit_result["blockers"])
+        checks += 1
+
+        fake_disabled = copy.deepcopy(candidate)
+        disabled_cache = fake_disabled["provenance"]["cache"]
+        disabled_cache["configuration"]["enabled"] = False
+        disabled_cache["configuration"]["persistence"] = "none"
+        disabled_cache["configuration"]["capacity"] = {"visibility": "not-applicable", "limits": {}}
+        rehash_cache(fake_disabled)
+        disabled_result = compare_case(tmp, "cache-disabled-with-hits", baseline, fake_disabled, expected=2)
+        assert any("disabled cache cannot report" in item for item in disabled_result["blockers"])
+        checks += 1
+
+        impossible_counts = copy.deepcopy(candidate)
+        impossible_counts["provenance"]["cache"]["observed"]["request_count"] = 17
+        impossible_result = compare_case(tmp, "cache-impossible-counts", baseline, impossible_counts, expected=2)
+        assert any("do not equal request_count" in item for item in impossible_result["blockers"])
+        checks += 1
+
+        zero_requests = copy.deepcopy(candidate)
+        zero_observed = zero_requests["provenance"]["cache"]["observed"]
+        zero_observed.update(
+            request_count=0,
+            cold_request_count=0,
+            warm_request_count=0,
+            hit_status="none-observed",
+            hit_request_count=0,
+            reused_input_tokens=0,
+            cold_latency_ms=None,
+            warm_latency_ms=None,
+        )
+        zero_result = compare_case(tmp, "cache-zero-requests", baseline, zero_requests, expected=2)
+        assert any("request_count must be positive" in item for item in zero_result["blockers"])
+        checks += 1
+
+        # Cached-input pricing is not cache-hit evidence.
+        pricing_only = copy.deepcopy(candidate)
+        pricing_only["provenance"]["cache"]["observed"].pop("hit_proof")
+        pricing_only_result = compare_case(tmp, "cache-pricing-is-not-proof", baseline, pricing_only, expected=2)
+        assert pricing_only["provenance"]["pricing"]["rates"]["cached_input_per_million"] >= 0
+        assert any("cache hit evidence proof is missing" in item for item in pricing_only_result["blockers"])
+        checks += 2
+
+        unavailable_base, unavailable_candidate = copy.deepcopy(baseline), copy.deepcopy(candidate)
+        for envelope in (unavailable_base, unavailable_candidate):
+            observed = envelope["provenance"]["cache"]["observed"]
+            observed.update(
+                hit_status="unavailable",
+                hit_request_count=None,
+                reused_input_tokens=None,
+                hit_metric=None,
+            )
+        unavailable_quality = compare_case(tmp, "cache-unavailable-quality", unavailable_base, unavailable_candidate)
+        unavailable_speed = compare_case(
+            tmp, "cache-unavailable-speed", unavailable_base, unavailable_candidate, objective="speed",
+        )
+        assert unavailable_quality["protocol_status"] == "comparable"
+        assert unavailable_quality["facts"]["cache_speed_comparable"] is False
+        assert unavailable_speed["objective_read"]["leader"] == "unavailable-cache-evidence"
+        checks += 3
+
+        same_route = copy.deepcopy(candidate)
+        same_route["benchmark_result"]["model"] = baseline["benchmark_result"]["model"]
+        same_route["benchmark_result"]["provider"] = baseline["benchmark_result"]["provider"]
+        same_route["provenance"]["route"] = copy.deepcopy(baseline["provenance"]["route"])
+        rehash(same_route)
+        same_route_result = compare_case(tmp, "same-route-cache-drift", baseline, same_route, expected=2)
+        assert any("same exact route has different cache configuration" in item for item in same_route_result["blockers"])
+        checks += 1
+
+        opaque_base, opaque_candidate = copy.deepcopy(baseline), copy.deepcopy(candidate)
+        for envelope in (opaque_base, opaque_candidate):
+            cache = envelope["provenance"]["cache"]
+            cache["runtime"].update(
+                visibility="opaque",
+                kind="opaque-provider-managed",
+                version=None,
+                proof={"kind": "synthetic-provider-doc", "reference": "fixture://cache/runtime/opaque"},
+            )
+            cache["configuration"]["capacity"] = {
+                "visibility": "opaque",
+                "limits": {},
+                "proof": {"kind": "synthetic-provider-doc", "reference": "fixture://cache/capacity/opaque"},
+            }
+            rehash_cache(envelope)
+        opaque_result = compare_case(tmp, "opaque-provider-cache", opaque_base, opaque_candidate)
+        assert opaque_result["protocol_status"] == "comparable"
+        checks += 1
+
+        assert baseline["provenance"]["cache"]["runtime"]["kind"] == "prefix-kv"
+        assert baseline["provenance"]["route"]["routing_mode"] == "direct"
+        checks += 2
+
+        missing_kind = copy.deepcopy(candidate)
+        missing_kind["provenance"]["cache"]["runtime"].pop("kind")
+        rehash_cache(missing_kind)
+        missing_kind_result = compare_case(tmp, "cache-missing-kind", baseline, missing_kind, expected=2)
+        assert any("cache runtime kind" in item for item in missing_kind_result["blockers"])
+        checks += 1
+
+        memo_enabled = copy.deepcopy(candidate)
+        memo_enabled["provenance"]["cache"]["runtime"]["kind"] = "full-response-memoization"
+        rehash_cache(memo_enabled)
+        memo_enabled_result = compare_case(tmp, "cache-full-response-enabled", baseline, memo_enabled, expected=2)
+        assert any("full-response memoization enabled or hit" in item for item in memo_enabled_result["blockers"])
+        checks += 1
+
+        memo_hit = copy.deepcopy(candidate)
+        memo_hit_cache = memo_hit["provenance"]["cache"]
+        memo_hit_cache["runtime"]["kind"] = "full-response-memoization"
+        memo_hit_cache["configuration"].update(
+            enabled=False,
+            persistence="none",
+            capacity={"visibility": "not-applicable", "limits": {}},
+        )
+        rehash_cache(memo_hit)
+        memo_hit_result = compare_case(tmp, "cache-full-response-hit", baseline, memo_hit, expected=2)
+        assert any("full-response memoization enabled or hit" in item for item in memo_hit_result["blockers"])
+        checks += 1
+
+        memo_off = copy.deepcopy(candidate)
+        memo_off_cache = memo_off["provenance"]["cache"]
+        memo_off_cache["runtime"]["kind"] = "full-response-memoization"
+        memo_off_cache["configuration"].update(
+            enabled=False,
+            persistence="none",
+            capacity={"visibility": "not-applicable", "limits": {}},
+        )
+        memo_off_cache["protocol"].update(
+            profile="cold-only",
+            reset_between_task_repetitions=True,
+            within_task_reuse=False,
+            cross_task_reuse=False,
+        )
+        memo_off_cache["lifecycle"].update(reuse_scope="none")
+        memo_off_cache["observed"].update(
+            request_count=6,
+            cold_request_count=6,
+            warm_request_count=0,
+            hit_status="none-observed",
+            hit_request_count=0,
+            reused_input_tokens=0,
+            hit_metric="full_response_cache_hit",
+            warm_latency_ms=None,
+        )
+        rehash_cache(memo_off)
+        memo_off_path, memo_off_summary = tmp / "memo-off.json", tmp / "memo-off-summary.json"
+        write(memo_off_path, memo_off)
+        run(
+            str(SCRIPTS / "summarize_clawbench_result.py"), str(memo_off_path),
+            "--json", str(memo_off_summary),
+        )
+        assert load(memo_off_summary)["artifact_status"] == "complete"
+        checks += 1
+
+        residency_hits = copy.deepcopy(candidate)
+        residency_hits["provenance"]["cache"]["runtime"]["kind"] = "residency-only"
+        rehash_cache(residency_hits)
+        residency_result = compare_case(tmp, "cache-residency-hits", baseline, residency_hits, expected=2)
+        assert any("residency-only cache cannot claim" in item for item in residency_result["blockers"])
+        checks += 1
+
+        embedding_tokens = copy.deepcopy(candidate)
+        embedding_tokens["provenance"]["cache"]["runtime"]["kind"] = "embedding-result"
+        rehash_cache(embedding_tokens)
+        embedding_result = compare_case(tmp, "cache-embedding-input-tokens", baseline, embedding_tokens, expected=2)
+        assert any("embedding-result cache cannot claim reused model input" in item for item in embedding_result["blockers"])
+        checks += 1
+
+        embedding_valid = copy.deepcopy(candidate)
+        embedding_valid_cache = embedding_valid["provenance"]["cache"]
+        embedding_valid_cache["runtime"]["kind"] = "embedding-result"
+        embedding_valid_cache["observed"]["reused_input_tokens"] = 0
+        embedding_valid_cache["observed"]["hit_metric"] = "embedding_cache_hit"
+        rehash_cache(embedding_valid)
+        embedding_valid_path = tmp / "embedding-valid.json"
+        embedding_valid_summary = tmp / "embedding-valid-summary.json"
+        write(embedding_valid_path, embedding_valid)
+        run(
+            str(SCRIPTS / "summarize_clawbench_result.py"), str(embedding_valid_path),
+            "--json", str(embedding_valid_summary),
+        )
+        assert load(embedding_valid_summary)["artifact_status"] == "complete"
+        checks += 1
+
+        missing_mode = copy.deepcopy(candidate)
+        missing_mode["provenance"]["route"].pop("routing_mode")
+        missing_mode_result = compare_case(tmp, "route-missing-mode", baseline, missing_mode, expected=2)
+        assert any("route routing_mode" in item for item in missing_mode_result["blockers"])
+        checks += 1
+
+        missing_downstream = copy.deepcopy(candidate)
+        missing_downstream["provenance"]["route"]["routing_mode"] = "router"
+        missing_downstream_result = compare_case(tmp, "route-missing-downstream", baseline, missing_downstream, expected=2)
+        assert any("requires downstream routing attestation" in item for item in missing_downstream_result["blockers"])
+        checks += 1
+
+        router_base, router_candidate = copy.deepcopy(baseline), copy.deepcopy(candidate)
+        set_router(router_base, "router", [downstream_observation(
+            "local", "downstream-a", rehash_cache(router_base), "router-a",
+        )])
+        set_router(router_candidate, "router", [downstream_observation(
+            "cloud", "downstream-b", rehash_cache(router_candidate), "router-b",
+        )])
+        router_result = compare_case(tmp, "route-valid-router", router_base, router_candidate)
+        assert router_result["protocol_status"] == "comparable"
+        assert router_result["facts"]["baseline_route"]["downstream_count"] == 1
+        checks += 2
+
+        router_no_cache_proof = copy.deepcopy(router_candidate)
+        router_no_cache_proof["provenance"]["route"]["downstream"]["observations"][0].pop("cache_proof")
+        router_no_proof_result = compare_case(tmp, "route-no-cache-proof", router_base, router_no_cache_proof, expected=2)
+        assert any("cache proof is missing" in item for item in router_no_proof_result["blockers"])
+        checks += 1
+
+        router_fallback = copy.deepcopy(router_candidate)
+        router_fallback["provenance"]["route"]["downstream"]["observations"][0]["fallback_used"] = True
+        router_fallback_result = compare_case(tmp, "route-downstream-fallback", router_base, router_fallback, expected=2)
+        assert any("reports fallback use" in item for item in router_fallback_result["blockers"])
+        checks += 1
+
+        mixed_single = copy.deepcopy(router_candidate)
+        mixed_single["provenance"]["route"]["routing_mode"] = "mixed"
+        mixed_single_result = compare_case(tmp, "route-mixed-single", router_base, mixed_single, expected=2)
+        assert any("mixed route requires at least two distinct" in item for item in mixed_single_result["blockers"])
+        checks += 1
+
+        mixed_base, mixed_candidate = copy.deepcopy(baseline), copy.deepcopy(candidate)
+        mixed_observations = [
+            downstream_observation("local", "downstream-a", rehash_cache(mixed_base), "mixed-a"),
+            downstream_observation("cloud", "downstream-b", rehash_cache(mixed_candidate), "mixed-b"),
+        ]
+        set_router(mixed_base, "mixed", copy.deepcopy(mixed_observations))
+        set_router(mixed_candidate, "mixed", copy.deepcopy(mixed_observations))
+        mixed_result = compare_case(tmp, "route-valid-mixed", mixed_base, mixed_candidate)
+        assert mixed_result["protocol_status"] == "comparable"
+        assert mixed_result["facts"]["candidate_route"]["downstream_count"] == 2
+        checks += 2
+
+        drift_base, drift_candidate = copy.deepcopy(baseline), copy.deepcopy(baseline)
+        set_router(drift_base, "router", [downstream_observation(
+            "local", "downstream-a", rehash_cache(drift_base), "drift-a",
+        )])
+        set_router(drift_candidate, "router", [downstream_observation(
+            "local", "downstream-c", rehash_cache(drift_candidate), "drift-c",
+        )])
+        downstream_drift_result = compare_case(tmp, "route-downstream-drift", drift_base, drift_candidate, expected=2)
+        assert any("different downstream routing identity/cache/fallback attribution" in item for item in downstream_drift_result["blockers"])
+        checks += 1
 
         # Fast mode has a tri-state request and a boolean effective state.
         # An omitted request may resolve either way, but the compared routes

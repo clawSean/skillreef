@@ -25,8 +25,8 @@ The manifest must pin:
 - ShellBench version, git commit, release IDs, and task fingerprint
 - model/provider request and observed identity
 - reasoning/thinking and fast/priority state
-- adapter/harness and tool/profile fingerprint
-- fallback/retry policy
+- adapter/harness, tool/profile fingerprint, and cache runtime/config fingerprint
+- fallback/retry policy and normalized cache reset/reuse profile
 - judge model, reasoning, and whether judges affect score
 - task IDs, variants, repetitions, concurrency, and model order
 - pricing source/date and currency
@@ -69,10 +69,10 @@ attestations came from a native result field when they did not.
 ## 5. Task selection
 
 Default ClawPop directional subset is the pinned Standard Mac nine-task set in
-`shellbench-core-v1.md`: two coding tasks, filesystem, config, privacy,
-research, cross-repo migration, delegation recovery, and browser/code work.
-Run n=3 after r0 qualification. This is 27 task runs per route and intentionally
-uses the Mac's greater capacity.
+`shellbench-core-v1.md`; run n=3 after r0 qualification. Controlled cache trials
+start each task repetition fresh, reuse one server within the task, and prevent
+cross-task reuse. Route-native and controlled trials use separate run IDs and
+their latency is never pooled.
 
 Add `t4-memory-recall-continuation` for memory-heavy routing decisions.
 
@@ -164,18 +164,19 @@ non-boolean, unique, and cover every candidate. Treat split judges as
 uncertainty, not a problem to average away. Candidate run failure or missing
 transcript evidence blocks the comparison.
 
-## 10. Cost and speed
+## 10. Cache, cost, and speed
 
 Never infer price from model family. Record exact:
 
+- cache kind/runtime/version/engine/capacity and canonical config fingerprint
+- cache profile, lifecycle/reuse policy, hit counters/proof, cold/warm p50/p95, and router downstream attribution
 - input, cached-input, output, and reasoning token rates
 - pricing source and date
-- currency
-- measured spend when available
+- currency and measured spend when available
 
-If source, date, currency, or exact input/cache/output/reasoning rates are
-missing, cost is `n/a`. Zero is a valid cost only when the route is explicitly
-free. Report p50 and p95 latency; one average hides tails.
+Cache profile/reset/reuse drift blocks; route engines/capacities may differ.
+Full-response memo hits block repeated quality/trust trials; missing cache-hit evidence makes speed `n/a`.
+Missing pricing evidence makes cost `n/a`; zero is valid only when explicitly free.
 
 Value means the cheapest route that clears explicit quality, reliability, and
 worst-of-n floors (and pass^k when required)—not simply the lowest cost/pass in
@@ -208,7 +209,7 @@ for cheap background work but weaker at ambiguous judgment, say
 - [ ] Decision and success rule written before results
 - [ ] Synthetic/public data only
 - [ ] Commits/releases/task fingerprints pinned
-- [ ] Exact observed route identity proven
+- [ ] Exact observed route and downstream router/mixed identity/cache/fallback proven
 - [ ] Same task set, runs, adapter/tools, judge policy, and time window
 - [ ] Fallback off and failures preserved
 - [ ] n and confidence intervals reported

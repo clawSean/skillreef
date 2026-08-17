@@ -32,14 +32,15 @@ explicitly. Never compare raw scores across platform drift.
 
 Track real-world usage separately from evaluation:
 
-- provider/model/runtime tokens and cache counters
+- longitudinal provider/model/runtime tokens and cache-counter trends
 - fallback/retry rate
 - quota windows
 - latency and spend
 - sanitized failure taxonomy
 
 This answers "what are we spending and where is it failing?" rather than "which
-model is capable?"
+model is capable?" Decision-grade cache identity and per-campaign hit evidence
+are already required by the core envelope; this section is ongoing monitoring.
 
 ## 4. External harness adapters
 

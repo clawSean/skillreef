@@ -1,6 +1,6 @@
 ---
 name: "clawgauge"
-description: "Compare exact OpenClaw routes with deterministic capability, QA safety, persona, reliability, latency, and cost evidence."
+description: "Compare OpenClaw routes with cache-safe, attributable quality and performance evidence."
 ---
 
 # ClawGauge
@@ -20,16 +20,17 @@ other references named by the relevant workflow step.
   is not a quality score; preflight is harness evidence only.
 - **Character eval**: blind persona/naturalness evidence for the fixed
   Gollum/C-3PO scenarios. It is not general intent evidence.
-- **ClawGauge evidence envelopes**: explicit route, judge, campaign, release,
-  and optional pricing attestations around untouched native results.
+- **ClawGauge evidence envelopes**: explicit route, cache, judge, campaign,
+  release, and optional pricing attestations around untouched native results.
 
 ## Hard rules
 
 1. Compare exact routes: provider, model ID, adapter, reasoning, requested and
    effective fast/priority state, fallback, tools/profile, OpenClaw commit,
-   ShellBench commit/release/task fingerprint, judge route, and run protocol.
-2. Default to strict single-model execution. Alias substitution, fallback,
-   mixed observed identity, or unproven reasoning blocks decision-grade claims.
+   ShellBench commit/release/task fingerprint, cache treatment, judge route,
+   and run protocol.
+2. Require strict identity. Alias/fallback blocks; router or mixed routes need
+   complete downstream identity/cache/fallback proof. Full-response memo hits block repeated quality/trust trials.
 3. Use only synthetic or intentionally public fixtures. Never use live chats,
    private memory, real secrets, or production delivery.
 4. Never mutate an upstream source tree to make a catalog or verifier pass.
@@ -57,7 +58,7 @@ Different routes may legitimately win different lanes.
 
 Before results, record baseline/candidate exact routes, target lanes,
 unacceptable failures, minimum quality/reliability/worst-of-n floors, optional
-pass^k requirement, maximum spend, and stopping rule.
+pass^k requirement, cache profile, maximum spend, and stopping rule.
 
 If live spend may be material and no budget was given, finish the plan and ask
 once before provider calls. Read-only discovery and provider-free checks may
@@ -132,6 +133,10 @@ browser, privacy, research, and delegation work. Coding claims require
 Report `t5-hallucination-resistant-evidence` separately as a low-SNR trust
 canary.
 
+Pin one normalized cache profile for both routes and classify cache kind. For
+controlled cold-then-warm, reset each repetition, reuse within-task only, and
+never pool route-native latency or full-response memoized quality/trust trials.
+
 Preserve each native ShellBench result unchanged. Build a ClawGauge envelope
 from an independently assembled attestation:
 
@@ -202,7 +207,7 @@ decision-grade.
 
 Start with verdict, confidence, and strongest limitation. Then provide the lane
 matrix, comparable task deltas, QA status, persona disagreement, cost source,
-failures/exclusions, artifacts, and next action. Use
+cache evidence, failures/exclusions, artifacts, and next action. Use
 `templates/model-quality-report.md`.
 
 Provider-free regression check:

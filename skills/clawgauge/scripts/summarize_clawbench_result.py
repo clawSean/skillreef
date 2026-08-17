@@ -46,7 +46,7 @@ def failure_evidence(result: dict[str, Any]) -> dict[str, Any] | None:
 
 def summary_object(envelope: dict[str, Any], source: Path) -> dict[str, Any]:
     result, prov = result_of(envelope), provenance_of(envelope)
-    blockers, _facts = validate_envelope(envelope, "evidence")
+    blockers, facts = validate_envelope(envelope, "evidence")
     rows = task_rows(result)
     priced = pricing_valid(prov)
     metric_keys = (
@@ -94,6 +94,7 @@ def summary_object(envelope: dict[str, Any], source: Path) -> dict[str, Any]:
         "campaign_id": get(prov, "campaign", "id"),
         "route_requested": get(prov, "route", "requested"),
         "route_observed": get(prov, "route", "observed"),
+        "route_attribution": facts.get("route", {}),
         "judge_requested": get(prov, "judge", "requested"),
         "judge_observed": get(prov, "judge", "observed"),
         "release_id": get(prov, "release", "id"),
@@ -101,6 +102,7 @@ def summary_object(envelope: dict[str, Any], source: Path) -> dict[str, Any]:
         "pricing_source": get(prov, "pricing", "source") if priced else None,
         "pricing_as_of": get(prov, "pricing", "as_of") if priced else None,
         "pricing_currency": get(prov, "pricing", "currency") if priced else None,
+        "cache": facts.get("cache", {}),
         "task_count": len(tasks),
         "min_runs_per_task": min([int(number(item["runs"]) or 0) for item in tasks] or [0]),
         "metrics": metrics,
@@ -121,6 +123,7 @@ def render(summary: dict[str, Any]) -> str:
         f"- OpenClaw: {summary['openclaw_version'] or 'n/a'} at {summary['openclaw_commit'] or 'n/a'}",
         f"- ShellBench commit: {summary['shellbench_commit'] or 'n/a'}",
         f"- Host / campaign: {summary['host_class'] or 'n/a'} / {summary['campaign_id'] or 'n/a'}",
+        f"- Routing / downstream evidence: {summary['route_attribution'].get('routing_mode') or 'n/a'} / {summary['route_attribution'].get('downstream_count', 0)} observations / {summary['route_attribution'].get('downstream_fingerprint') or 'n/a'}",
         f"- Release / fingerprint: {summary['release_id'] or 'n/a'} / {summary['task_ids_fingerprint'] or 'n/a'}",
         f"- Tasks / minimum runs: {summary['task_count']} / {summary['min_runs_per_task']}", "",
     ]
@@ -137,6 +140,25 @@ def render(summary: dict[str, Any]) -> str:
         f"- Tokens/pass: {fmt(metrics['overall_tokens_per_pass'], 0)}",
         f"- Cost/pass: {'n/a' if metrics['overall_cost_per_pass'] is None else 'USD ' + format(metrics['overall_cost_per_pass'], '.4f')}",
         f"- Pricing: {summary['pricing_source'] or 'n/a'} / {summary['pricing_as_of'] or 'n/a'} / {summary['pricing_currency'] or 'n/a'}", "",
+        "## Cache Evidence", "",
+    ])
+    cache = summary["cache"]
+    runtime, capacity, protocol, lifecycle, observed = (
+        cache.get("runtime", {}), cache.get("capacity", {}),
+        cache.get("protocol", {}), cache.get("lifecycle", {}), cache.get("observed", {}),
+    )
+    cold, warm = observed.get("cold_latency_ms"), observed.get("warm_latency_ms")
+    lines.extend([
+        f"- Kind / runtime / engine: {runtime.get('kind') or 'n/a'} / {runtime.get('name') or 'n/a'} {runtime.get('version') or 'opaque'} / {runtime.get('engine') or 'n/a'}",
+        f"- Capacity: {capacity.get('visibility') or 'n/a'} / {json.dumps(capacity.get('limits', {}), sort_keys=True)}",
+        f"- Configuration fingerprint: {cache.get('configuration_fingerprint') or 'n/a'}",
+        f"- Protocol: {protocol.get('profile') or 'n/a'}; reset repetitions={protocol.get('reset_between_task_repetitions')}; within-task={protocol.get('within_task_reuse')}; cross-task={protocol.get('cross_task_reuse')}",
+        f"- Lifecycle: {lifecycle.get('server_scope') or 'n/a'} / {lifecycle.get('reset_mechanism') or 'n/a'} / {lifecycle.get('reuse_scope') or 'n/a'}",
+        f"- Requests cold / warm / hits: {observed.get('cold_request_count')} / {observed.get('warm_request_count')} / {observed.get('hit_request_count') if observed.get('hit_request_count') is not None else 'n/a'}",
+        f"- Reused input / metric: {observed.get('reused_input_tokens') if observed.get('reused_input_tokens') is not None else 'n/a'} / {observed.get('hit_metric') or 'n/a'}",
+        f"- Cold p50/p95: {'n/a' if not cold else format(cold['p50'], '.0f') + '/' + format(cold['p95'], '.0f') + 'ms'}",
+        f"- Warm p50/p95: {'n/a' if not warm else format(warm['p50'], '.0f') + '/' + format(warm['p95'], '.0f') + 'ms'}",
+        f"- Speed evidence usable: {'yes' if cache.get('speed_usable') else 'no'}", "",
         "## Tasks", "",
         "| Task | Runs | Score | Reliability | pass^k | Worst | Cost/pass |",
         "|---|---:|---:|---:|---:|---:|---:|",
