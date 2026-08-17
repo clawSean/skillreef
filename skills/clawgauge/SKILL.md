@@ -148,6 +148,23 @@ before/after and requires APC health, exact hit/store deltas, and zero disk
 activity/configuration. This qualification is a route screen, not the
 source-bound cache trace required for speed claims.
 
+Before calling a local route cache-qualified, read
+`references/local-cache-admission.md` and build its architecture-aware plan:
+
+```bash
+python3 skills/clawgauge/scripts/build_local_cache_admission_plan.py \
+  --runtime <mlx-vlm|mlx-lm> --runtime-version <version> \
+  --model <exact-api-id> --model-revision <immutable-revision> \
+  --openclaw-commit <commit> --cache-layout-fingerprint <sha256:...> \
+  --feature <standard-kv|hybrid-recurrent|rotating-or-conv|multimodal|shared-service> \
+  --out <run-dir>/local-cache-admission-plan.json
+```
+
+The generic qualifier cannot prove auxiliary recurrent/GDN/conv state, rotating
+cache restoration, media-key isolation, tenant separation, or bounded memory.
+Run every conditional cell emitted by the plan and bind its artifact before a
+cache-qualified claim. Speedup alone never satisfies these gates.
+
 Estimate the full matching-profile campaign:
 
 ```bash
@@ -283,10 +300,11 @@ matrix, comparable task deltas, QA status, persona disagreement, cost source,
 cache evidence, failures/exclusions, artifacts, and next action. Use
 `templates/model-quality-report.md`.
 
-Provider-free regression check:
+Provider-free regression checks:
 
 ```bash
 python3 skills/clawgauge/scripts/self_test.py
+python3 skills/clawgauge/scripts/test_local_cache_admission_plan.py
 ```
 
 Keep run artifacts under `skills/clawgauge/runs/<run-id>/`; publish only
