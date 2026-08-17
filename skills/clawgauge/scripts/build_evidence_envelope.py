@@ -64,7 +64,10 @@ def main() -> int:
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    blockers, _facts = validate_envelope(envelope, "evidence")
+    artifact_root = (
+        args.attestation.parent if args.attestation is not None else args.input.parent
+    )
+    blockers, _facts = validate_envelope(envelope, "evidence", artifact_root)
     if blockers:
         for blocker in blockers:
             print(f"error: {blocker}", file=sys.stderr)

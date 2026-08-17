@@ -7,7 +7,9 @@ import copy
 import hashlib
 import importlib.util
 import json
+import math
 import os
+import statistics
 import subprocess
 import sys
 import tempfile
@@ -71,6 +73,16 @@ def rehash_cache(envelope: dict) -> str:
     runtime = cache["runtime"]
     config = cache["configuration"]
     capacity = config["capacity"]
+    layers = [
+        {
+            "kind": layer.get("kind"),
+            "enabled": layer.get("enabled"),
+            "name": layer.get("name"),
+            "version": layer.get("version"),
+            "engine": layer.get("engine"),
+        }
+        for layer in cache["layers"]
+    ]
     payload = {
         "runtime": {
             "visibility": runtime.get("visibility"),
@@ -81,16 +93,213 @@ def rehash_cache(envelope: dict) -> str:
         },
         "enabled": config.get("enabled"),
         "persistence": config.get("persistence"),
+        "effective_knobs": config.get("effective_knobs"),
         "capacity": {
             "visibility": capacity.get("visibility"),
             "limits": capacity.get("limits"),
         },
+        "layers": sorted(layers, key=lambda layer: str(layer.get("kind"))),
     }
     raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     fingerprint = "sha256:" + hashlib.sha256(raw.encode()).hexdigest()
     config["fingerprint"] = fingerprint
     cache["observed"]["configuration_fingerprint"] = fingerprint
     return fingerprint
+
+
+def attach_cache_trace(tmp: Path, label: str, envelope: dict) -> Path:
+    result = envelope["benchmark_result"]
+    cache = envelope["provenance"]["cache"]
+    observed = cache["observed"]
+    route = envelope["provenance"]["route"]["observed"]
+    pairs = [
+        (row["task_id"], repetition)
+        for row in result["task_results"]
+        for repetition in range(1, int(row["runs"]) + 1)
+    ]
+    cold_p50, cold_p95 = (
+        observed["cold_latency_ms"]["p50"],
+        observed["cold_latency_ms"]["p95"],
+    )
+    warm_p50, warm_p95 = (
+        observed["warm_latency_ms"]["p50"],
+        observed["warm_latency_ms"]["p95"],
+    )
+    cold_walls = [cold_p50] * len(pairs)
+    cold_walls[-1] = cold_p95
+    warm_walls = [warm_p50] * (len(pairs) * 2)
+    warm_walls[-1] = warm_p95
+    task_walls = [result["overall_median_latency_ms"]] * len(pairs)
+    task_walls[-1] = result["overall_p95_latency_ms"]
+    total_reused = int(observed["reused_input_tokens"])
+    warm_count = len(warm_walls)
+    per_hit, remainder = divmod(total_reused, warm_count)
+    events = []
+    warm_index = 0
+    for pair_index, ((task_id, repetition), task_wall) in enumerate(zip(pairs, task_walls)):
+        task_started = float(pair_index * 100_000)
+        task_completed = task_started + task_wall
+        request_started = task_started + 50
+        previous_request_id = None
+        previous_prompt = None
+        previous_next_prefix = None
+        for turn_index in range(3):
+            phase = "cold" if turn_index == 0 else "warm"
+            if phase == "cold":
+                cached, request_wall = 0, cold_walls[pair_index]
+            else:
+                cached = per_hit + (1 if warm_index < remainder else 0)
+                request_wall = warm_walls[warm_index]
+                warm_index += 1
+            uncached = 6000 + turn_index
+            request_id = f"{label}-{task_id}-{repetition}-{turn_index}"
+            prompt = "sha256:" + hashlib.sha256(
+                f"prompt:{label}:{task_id}:{repetition}:{turn_index}".encode()
+            ).hexdigest()
+            prefix = previous_next_prefix or "sha256:" + hashlib.sha256(b"").hexdigest()
+            next_prefix = "sha256:" + hashlib.sha256(
+                f"next-prefix:{label}:{task_id}:{repetition}:{turn_index}".encode()
+            ).hexdigest()
+            ttft = max(1.0, round(request_wall * 0.35, 3))
+            prefill = round(ttft * 0.8, 3)
+            first_token = request_started + ttft
+            request_completed = request_started + request_wall
+            has_tool = turn_index < 2
+            tool_wall = 75.0 if has_tool else 0.0
+            tool_completed = request_completed + tool_wall
+            tool_calls = [f"tool-{label}-{task_id}-{repetition}-{turn_index}"] if has_tool else []
+            tool_results = [
+                "sha256:" + hashlib.sha256(
+                    f"tool-result:{label}:{task_id}:{repetition}:{turn_index}".encode()
+                ).hexdigest()
+            ] if has_tool else []
+            assert tool_completed <= task_completed
+            events.append(
+                {
+                    "task_id": task_id,
+                    "repetition": repetition,
+                    "turn_index": turn_index,
+                    "request_id": request_id,
+                    "phase": phase,
+                    "provider": route["provider"],
+                    "model": route["model"],
+                    "fallback_used": False,
+                    "backend_pid": 10000 + pair_index,
+                    "backend_started_at": f"synthetic-start-{pair_index}",
+                    "runtime_id": f"synthetic-runtime-{pair_index}",
+                    "cache_epoch": f"synthetic-epoch-{pair_index}",
+                    "prompt_fingerprint": prompt,
+                    "prefix_fingerprint": prefix,
+                    "next_prefix_fingerprint": next_prefix,
+                    "parent_request_id": previous_request_id,
+                    "parent_prompt_fingerprint": previous_prompt,
+                    "append_only": phase == "warm",
+                    "openclaw_event_fingerprint": "sha256:" + hashlib.sha256(
+                        f"openclaw-event:{label}:{task_id}:{repetition}:{turn_index}".encode()
+                    ).hexdigest(),
+                    "cache_configuration_fingerprint": observed[
+                        "configuration_fingerprint"
+                    ],
+                    "gross_input_tokens": cached + uncached,
+                    "cached_input_tokens": cached,
+                    "uncached_input_tokens": uncached,
+                    "written_input_tokens": cached + uncached,
+                    "response_memo_hit": False,
+                    "tool_call_ids": tool_calls,
+                    "tool_result_fingerprints": tool_results,
+                    "startup_ms": 900.0 if phase == "cold" else 0.0,
+                    "readiness_ms": 700.0 if phase == "cold" else 0.0,
+                    "ttft_ms": ttft,
+                    "prefill_ms": prefill,
+                    "decode_ms": request_completed - first_token,
+                    "request_wall_ms": request_wall,
+                    "tool_wall_ms": tool_wall,
+                    "task_wall_ms": task_wall,
+                    "task_started_at_ms": task_started,
+                    "request_started_at_ms": request_started,
+                    "first_token_at_ms": first_token,
+                    "request_completed_at_ms": request_completed,
+                    "tool_completed_at_ms": tool_completed,
+                    "task_completed_at_ms": task_completed,
+                    "process_rss_bytes": 2_000_000_000 + pair_index * 10_000_000,
+                    "accelerator_active_bytes": 1_000_000_000 + turn_index * 1_000_000,
+                    "accelerator_peak_bytes": 1_100_000_000 + turn_index * 1_000_000,
+                    "cache_resident_bytes": 10_000_000 + turn_index * 1_000_000,
+                    "cache_resident_tokens": 6000 + turn_index * 1000,
+                    "cache_evictions": 0,
+                }
+            )
+            previous_request_id = request_id
+            previous_prompt = prompt
+            previous_next_prefix = next_prefix
+            request_started = tool_completed + 25
+    def latency(values: list[float]) -> dict[str, float]:
+        ordered = sorted(values)
+        return {
+            "p50": float(statistics.median(values)),
+            "p95": float(ordered[max(0, math.ceil(0.95 * len(ordered)) - 1)]),
+        }
+    runtime_log = tmp / f"{label}-runtime.log"
+    openclaw_trace = tmp / f"{label}-openclaw-trace.jsonl"
+    parser_artifact = tmp / f"{label}-parser.py"
+    runtime_log.write_text(f"synthetic runtime log for {label}\n", encoding="utf-8")
+    openclaw_trace.write_text(
+        "\n".join(json.dumps({"event": event["openclaw_event_fingerprint"]}) for event in events) + "\n",
+        encoding="utf-8",
+    )
+    parser_artifact.write_text("# synthetic cache parser\n", encoding="utf-8")
+    def artifact_proof(path: Path, **extra: str) -> dict:
+        proof = {
+            "reference": path.name,
+            "sha256": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        proof.update(extra)
+        return proof
+    trace = {
+        "schema_version": "clawgauge.cache-events.v2",
+        "hit_metric": observed["hit_metric"],
+        "source": {
+            "runtime_log": artifact_proof(runtime_log),
+            "openclaw_trace": artifact_proof(openclaw_trace),
+            "parser": artifact_proof(
+                parser_artifact, name="synthetic-cache-parser", version="1.0.0"
+            ),
+        },
+        "events": events,
+    }
+    path = tmp / f"{label}-cache-events.json"
+    raw = json.dumps(trace, indent=2) + "\n"
+    path.write_text(raw, encoding="utf-8")
+    observed.update(
+        {
+            "gross_input_tokens": sum(e["gross_input_tokens"] for e in events),
+            "response_memo_hit_count": 0,
+            "hit_rate": 1.0,
+            "startup_latency_ms": latency([e["startup_ms"] for e in events if e["phase"] == "cold"]),
+            "readiness_latency_ms": latency([e["readiness_ms"] for e in events if e["phase"] == "cold"]),
+            "ttft_latency_ms": latency([e["ttft_ms"] for e in events]),
+            "prefill_latency_ms": latency([e["prefill_ms"] for e in events]),
+            "decode_latency_ms": latency([e["decode_ms"] for e in events]),
+            "peak_process_rss_bytes": max(e["process_rss_bytes"] for e in events),
+            "peak_accelerator_bytes": max(e["accelerator_peak_bytes"] for e in events),
+            "peak_cache_resident_bytes": max(e["cache_resident_bytes"] for e in events),
+            "peak_cache_resident_tokens": max(e["cache_resident_tokens"] for e in events),
+            "cache_evictions": max(e["cache_evictions"] for e in events),
+            "trace_proof": {
+                "kind": "clawgauge-cache-events",
+                "reference": path.name,
+                "sha256": "sha256:" + hashlib.sha256(raw.encode()).hexdigest(),
+            },
+        }
+    )
+    return path
+
+
+def rehash_trace(path: Path, envelope: dict) -> None:
+    raw = path.read_bytes()
+    envelope["provenance"]["cache"]["observed"]["trace_proof"]["sha256"] = (
+        "sha256:" + hashlib.sha256(raw).hexdigest()
+    )
 
 
 def downstream_observation(provider: str, model: str, cache_fingerprint: str, label: str) -> dict:
@@ -195,7 +404,7 @@ def main() -> int:
         )
         summary = load(summary_json)
         assert summary["artifact_status"] == "complete"
-        assert summary["schema_version"] == "clawgauge.evidence.v2"
+        assert summary["schema_version"] == "clawgauge.evidence.v3"
         assert summary["source"] == baseline_path.name
         checks += 3
 
@@ -233,13 +442,236 @@ def main() -> int:
         # Cache engines and capacities are route identity, not pair-equality
         # requirements. The normalized cache treatment must still match.
         assert baseline["provenance"]["cache"]["runtime"]["engine"] != candidate["provenance"]["cache"]["runtime"]["engine"]
-        assert comparison["facts"]["cache_speed_comparable"] is True
+        assert comparison["facts"]["cache_speed_comparable"] is False
         checks += 2
+
+        traced_baseline, traced_candidate = copy.deepcopy(baseline), copy.deepcopy(candidate)
+        baseline_trace = attach_cache_trace(tmp, "bound-baseline", traced_baseline)
+        candidate_trace = attach_cache_trace(tmp, "bound-candidate", traced_candidate)
+        traced_result = compare_case(
+            tmp,
+            "content-bound-cache",
+            traced_baseline,
+            traced_candidate,
+            objective="speed",
+        )
+        assert traced_result["facts"]["cache_speed_comparable"] is True
+        assert traced_result["objective_read"]["leader"] == "baseline"
+        assert traced_result["facts"]["baseline_cache"]["trace_valid"] is True
+        checks += 3
+
+        bad_digest = copy.deepcopy(traced_candidate)
+        bad_digest["provenance"]["cache"]["observed"]["trace_proof"]["sha256"] = "sha256:" + "0" * 64
+        bad_digest_result = compare_case(
+            tmp, "cache-trace-bad-digest", traced_baseline, bad_digest, objective="speed"
+        )
+        assert bad_digest_result["facts"]["cache_speed_comparable"] is False
+        assert bad_digest_result["objective_read"]["leader"] == "unavailable-cache-evidence"
+        checks += 2
+
+        restarted = copy.deepcopy(traced_candidate)
+        restarted_trace = json.loads(candidate_trace.read_text())
+        restarted_trace["events"][1]["backend_pid"] += 1
+        candidate_trace.write_text(json.dumps(restarted_trace, indent=2) + "\n")
+        rehash_trace(candidate_trace, restarted)
+        restarted_result = compare_case(
+            tmp, "cache-trace-process-restart", traced_baseline, restarted, objective="speed"
+        )
+        assert restarted_result["facts"]["cache_speed_comparable"] is False
+        assert any(
+            "process/cache epoch changed" in item
+            for item in restarted_result["facts"]["candidate_cache"]["trace_errors"]
+        )
+        checks += 2
+
+        # Restore the fixture for later trace mutations.
+        candidate_trace = attach_cache_trace(tmp, "bound-candidate", traced_candidate)
+
+        reused_epoch = copy.deepcopy(traced_candidate)
+        reused_epoch_trace = json.loads(candidate_trace.read_text())
+        first_epoch = reused_epoch_trace["events"][0]["cache_epoch"]
+        for event in reused_epoch_trace["events"][3:6]:
+            event["cache_epoch"] = first_epoch
+        candidate_trace.write_text(json.dumps(reused_epoch_trace, indent=2) + "\n")
+        rehash_trace(candidate_trace, reused_epoch)
+        reused_epoch_result = compare_case(
+            tmp, "cache-trace-reused-epoch", traced_baseline, reused_epoch, objective="speed"
+        )
+        assert any(
+            "cache epoch was reused" in item
+            for item in reused_epoch_result["facts"]["candidate_cache"]["trace_errors"]
+        )
+        checks += 1
+
+        candidate_trace = attach_cache_trace(tmp, "bound-candidate", traced_candidate)
+        impossible_tokens = copy.deepcopy(traced_candidate)
+        impossible_trace = json.loads(candidate_trace.read_text())
+        impossible_trace["events"][1]["gross_input_tokens"] += 1
+        candidate_trace.write_text(json.dumps(impossible_trace, indent=2) + "\n")
+        rehash_trace(candidate_trace, impossible_tokens)
+        impossible_trace_result = compare_case(
+            tmp, "cache-trace-impossible-tokens", traced_baseline, impossible_tokens, objective="speed"
+        )
+        assert any(
+            "token accounting is impossible" in item
+            for item in impossible_trace_result["facts"]["candidate_cache"]["trace_errors"]
+        )
+        checks += 1
+
+        candidate_trace = attach_cache_trace(tmp, "bound-candidate", traced_candidate)
+        warm_miss = copy.deepcopy(traced_candidate)
+        warm_miss_trace = json.loads(candidate_trace.read_text())
+        missed = warm_miss_trace["events"][1]
+        missed["uncached_input_tokens"] += missed["cached_input_tokens"]
+        missed["cached_input_tokens"] = 0
+        candidate_trace.write_text(json.dumps(warm_miss_trace, indent=2) + "\n")
+        rehash_trace(candidate_trace, warm_miss)
+        warm_miss_result = compare_case(
+            tmp, "cache-trace-post-warm-miss", traced_baseline, warm_miss, objective="speed"
+        )
+        assert any(
+            "post-cold cache miss" in item
+            for item in warm_miss_result["facts"]["candidate_cache"]["trace_errors"]
+        )
+        checks += 1
+
+        # Cache-events v2 adversarial coverage: hashes, cold/warm semantics,
+        # metric identity, source binding, lineage, tools, timing, and memory.
+        malformed_hash = copy.deepcopy(candidate)
+        malformed_hash_trace = attach_cache_trace(tmp, "malformed-prefix", malformed_hash)
+        malformed_hash_data = json.loads(malformed_hash_trace.read_text())
+        malformed_hash_data["events"][1]["prefix_fingerprint"] = "sha256:x"
+        malformed_hash_trace.write_text(json.dumps(malformed_hash_data, indent=2) + "\n")
+        rehash_trace(malformed_hash_trace, malformed_hash)
+        malformed_hash_result = compare_case(
+            tmp, "cache-trace-malformed-prefix", traced_baseline, malformed_hash, objective="speed"
+        )
+        assert malformed_hash_result["facts"]["cache_speed_comparable"] is False
+        assert any("content fingerprint is invalid" in item for item in malformed_hash_result["facts"]["candidate_cache"]["trace_errors"])
+
+        cold_hit = copy.deepcopy(candidate)
+        cold_hit_trace = attach_cache_trace(tmp, "cold-hit", cold_hit)
+        cold_hit_data = json.loads(cold_hit_trace.read_text())
+        cold_event = cold_hit_data["events"][0]
+        cold_event["cached_input_tokens"] = 1
+        cold_event["uncached_input_tokens"] -= 1
+        cold_hit["provenance"]["cache"]["observed"]["reused_input_tokens"] += 1
+        cold_hit_trace.write_text(json.dumps(cold_hit_data, indent=2) + "\n")
+        rehash_trace(cold_hit_trace, cold_hit)
+        cold_hit_result = compare_case(
+            tmp, "cache-trace-cold-hit", traced_baseline, cold_hit, objective="speed"
+        )
+        assert any("cold request must have zero cached" in item for item in cold_hit_result["facts"]["candidate_cache"]["trace_errors"])
+
+        fake_metric = copy.deepcopy(candidate)
+        fake_metric_trace = attach_cache_trace(tmp, "fake-metric", fake_metric)
+        fake_metric_data = json.loads(fake_metric_trace.read_text())
+        fake_metric_data["hit_metric"] = "unicorns"
+        fake_metric["provenance"]["cache"]["observed"]["hit_metric"] = "unicorns"
+        fake_metric_trace.write_text(json.dumps(fake_metric_data, indent=2) + "\n")
+        rehash_trace(fake_metric_trace, fake_metric)
+        fake_metric_result = compare_case(
+            tmp, "cache-trace-fake-metric", traced_baseline, fake_metric, objective="speed", expected=2
+        )
+        assert any("hit counters and metric are incomplete" in item for item in fake_metric_result["blockers"])
+
+        bad_lineage = copy.deepcopy(candidate)
+        bad_lineage_trace = attach_cache_trace(tmp, "bad-lineage", bad_lineage)
+        bad_lineage_data = json.loads(bad_lineage_trace.read_text())
+        bad_lineage_data["events"][1]["prefix_fingerprint"] = "sha256:" + "1" * 64
+        bad_lineage_trace.write_text(json.dumps(bad_lineage_data, indent=2) + "\n")
+        rehash_trace(bad_lineage_trace, bad_lineage)
+        bad_lineage_result = compare_case(
+            tmp, "cache-trace-bad-lineage", traced_baseline, bad_lineage, objective="speed"
+        )
+        assert any("append-only prefix lineage differs" in item for item in bad_lineage_result["facts"]["candidate_cache"]["trace_errors"])
+
+        no_tools = copy.deepcopy(candidate)
+        no_tools_trace = attach_cache_trace(tmp, "no-tools", no_tools)
+        no_tools_data = json.loads(no_tools_trace.read_text())
+        no_tools_data["events"][0]["tool_call_ids"] = []
+        no_tools_data["events"][0]["tool_result_fingerprints"] = []
+        no_tools_trace.write_text(json.dumps(no_tools_data, indent=2) + "\n")
+        rehash_trace(no_tools_trace, no_tools)
+        no_tools_result = compare_case(
+            tmp, "cache-trace-no-tools", traced_baseline, no_tools, objective="speed"
+        )
+        assert any("warm continuation lacks a preceding tool result" in item for item in no_tools_result["facts"]["candidate_cache"]["trace_errors"])
+
+        bad_timing = copy.deepcopy(candidate)
+        bad_timing_trace = attach_cache_trace(tmp, "bad-timing", bad_timing)
+        bad_timing_data = json.loads(bad_timing_trace.read_text())
+        bad_timing_data["events"][1]["first_token_at_ms"] += 1
+        bad_timing_trace.write_text(json.dumps(bad_timing_data, indent=2) + "\n")
+        rehash_trace(bad_timing_trace, bad_timing)
+        bad_timing_result = compare_case(
+            tmp, "cache-trace-bad-timing", traced_baseline, bad_timing, objective="speed"
+        )
+        assert any("timing durations do not match" in item for item in bad_timing_result["facts"]["candidate_cache"]["trace_errors"])
+
+        bad_memory = copy.deepcopy(candidate)
+        bad_memory_trace = attach_cache_trace(tmp, "bad-memory", bad_memory)
+        bad_memory_data = json.loads(bad_memory_trace.read_text())
+        bad_memory_data["events"][1]["accelerator_active_bytes"] = bad_memory_data["events"][1]["accelerator_peak_bytes"] + 1
+        bad_memory_trace.write_text(json.dumps(bad_memory_data, indent=2) + "\n")
+        rehash_trace(bad_memory_trace, bad_memory)
+        bad_memory_result = compare_case(
+            tmp, "cache-trace-bad-memory", traced_baseline, bad_memory, objective="speed"
+        )
+        assert any("active accelerator memory exceeds peak" in item for item in bad_memory_result["facts"]["candidate_cache"]["trace_errors"])
+
+        bad_source = copy.deepcopy(candidate)
+        bad_source_trace = attach_cache_trace(tmp, "bad-source", bad_source)
+        bad_source_data = json.loads(bad_source_trace.read_text())
+        bad_source_runtime = tmp / bad_source_data["source"]["runtime_log"]["reference"]
+        bad_source_runtime.write_text("tampered runtime source\n", encoding="utf-8")
+        bad_source_result = compare_case(
+            tmp, "cache-trace-bad-source", traced_baseline, bad_source, objective="speed"
+        )
+        assert any("runtime log artifact hash mismatch" in item for item in bad_source_result["facts"]["candidate_cache"]["trace_errors"])
+
+        invalid_events = tmp / "invalid-cache-events.json"
+        invalid_events.write_text('[{}]\n', encoding="utf-8")
+        builder_source = tmp / "builder-source.log"
+        builder_trace = tmp / "builder-openclaw.jsonl"
+        builder_parser = tmp / "builder-parser.py"
+        for path in (builder_source, builder_trace, builder_parser):
+            path.write_text("synthetic\n", encoding="utf-8")
+        invalid_build = run(
+            str(SCRIPTS / "build_cache_trace.py"),
+            str(invalid_events),
+            "--out", str(tmp / "invalid-built-trace.json"),
+            "--runtime-log", str(builder_source),
+            "--openclaw-trace", str(builder_trace),
+            "--parser-artifact", str(builder_parser),
+            "--parser-name", "synthetic-parser",
+            "--parser-version", "1.0.0",
+            expected=2,
+        )
+        assert "missing required fields" in invalid_build.stderr
+        checks += 11
+
+        route_adapter = copy.deepcopy(candidate)
+        route_adapter["provenance"]["protocol"]["adapter"] = "candidate-native-adapter"
+        route_adapter_result = compare_case(
+            tmp, "route-operational-adapter", baseline, route_adapter
+        )
+        assert route_adapter_result["protocol_status"] == "comparable"
+        checks += 1
+
+        ablation_base, ablation_candidate = copy.deepcopy(traced_baseline), copy.deepcopy(traced_candidate)
+        ablation_base["provenance"]["claim_scope"] = "cache-ablation"
+        ablation_candidate["provenance"]["claim_scope"] = "cache-ablation"
+        ablation_result = compare_case(
+            tmp, "cache-ablation-route-mismatch", ablation_base, ablation_candidate, expected=2
+        )
+        assert any("same exact route" in item for item in ablation_result["blockers"])
+        checks += 1
 
         legacy = copy.deepcopy(baseline)
         legacy["schema_version"] = "clawgauge.evidence.v1"
         legacy_result = compare_case(tmp, "legacy-cache-schema", legacy, candidate, expected=2)
-        assert any("clawgauge.evidence.v2" in item for item in legacy_result["blockers"])
+        assert any("clawgauge.evidence.v3" in item for item in legacy_result["blockers"])
         legacy_path = tmp / "legacy-envelope.json"
         write(legacy_path, legacy)
         legacy_build = run(
@@ -254,11 +686,33 @@ def main() -> int:
         assert any("missing provenance.cache" in item for item in missing_cache_result["blockers"])
         checks += 1
 
+        missing_memo_layer = copy.deepcopy(candidate)
+        missing_memo_layer["provenance"]["cache"]["layers"] = [
+            layer for layer in missing_memo_layer["provenance"]["cache"]["layers"]
+            if layer["kind"] != "full-response-memoization"
+        ]
+        rehash_cache(missing_memo_layer)
+        missing_memo_result = compare_case(tmp, "missing-response-memo-layer", baseline, missing_memo_layer, expected=2)
+        assert any("explicit full-response memoization layer is required" in item for item in missing_memo_result["blockers"])
+        checks += 1
+
         bad_fingerprint = copy.deepcopy(candidate)
         bad_fingerprint["provenance"]["cache"]["configuration"]["fingerprint"] = "sha256:bad"
         bad_fingerprint_result = compare_case(tmp, "bad-cache-fingerprint", baseline, bad_fingerprint, expected=2)
         assert any("cache configuration fingerprint mismatch" in item for item in bad_fingerprint_result["blockers"])
         checks += 1
+
+        knob_unhashed = copy.deepcopy(candidate)
+        knob_unhashed["provenance"]["cache"]["configuration"]["effective_knobs"]["eviction_policy"] = "aggressive-lru"
+        knob_unhashed_result = compare_case(tmp, "cache-knob-unhashed", baseline, knob_unhashed, expected=2)
+        assert any("cache configuration fingerprint mismatch" in item for item in knob_unhashed_result["blockers"])
+
+        knob_rehashed = copy.deepcopy(baseline)
+        knob_rehashed["provenance"]["cache"]["configuration"]["effective_knobs"]["eviction_policy"] = "aggressive-lru"
+        rehash_cache(knob_rehashed)
+        knob_rehashed_result = compare_case(tmp, "cache-knob-rehashed", baseline, knob_rehashed, expected=2)
+        assert any("same exact route has different cache configuration" in item for item in knob_rehashed_result["blockers"])
+        checks += 2
 
         fractional_capacity = copy.deepcopy(candidate)
         fractional_capacity["provenance"]["cache"]["configuration"]["capacity"]["limits"]["blocks"] = 1.5
@@ -368,6 +822,13 @@ def main() -> int:
                 version=None,
                 proof={"kind": "synthetic-provider-doc", "reference": "fixture://cache/runtime/opaque"},
             )
+            primary = next(layer for layer in cache["layers"] if layer["kind"] == "prefix-kv")
+            primary.update(
+                kind="opaque-provider-managed",
+                name=cache["runtime"]["name"],
+                version="opaque",
+                engine=cache["runtime"]["engine"],
+            )
             cache["configuration"]["capacity"] = {
                 "visibility": "opaque",
                 "limits": {},
@@ -390,69 +851,54 @@ def main() -> int:
         checks += 1
 
         memo_enabled = copy.deepcopy(candidate)
-        memo_enabled["provenance"]["cache"]["runtime"]["kind"] = "full-response-memoization"
+        memo_layer = next(
+            layer for layer in memo_enabled["provenance"]["cache"]["layers"]
+            if layer["kind"] == "full-response-memoization"
+        )
+        memo_layer["enabled"] = True
         rehash_cache(memo_enabled)
-        memo_enabled_result = compare_case(tmp, "cache-full-response-enabled", baseline, memo_enabled, expected=2)
-        assert any("full-response memoization enabled or hit" in item for item in memo_enabled_result["blockers"])
+        memo_enabled_result = compare_case(tmp, "cache-full-response-enabled-no-trace", baseline, memo_enabled, expected=2)
+        assert any("enabled response memoization requires valid per-request no-hit proof" in item for item in memo_enabled_result["blockers"])
         checks += 1
 
         memo_hit = copy.deepcopy(candidate)
-        memo_hit_cache = memo_hit["provenance"]["cache"]
-        memo_hit_cache["runtime"]["kind"] = "full-response-memoization"
-        memo_hit_cache["configuration"].update(
-            enabled=False,
-            persistence="none",
-            capacity={"visibility": "not-applicable", "limits": {}},
-        )
-        rehash_cache(memo_hit)
+        memo_hit_trace = attach_cache_trace(tmp, "memo-hit", memo_hit)
+        memo_hit_events = json.loads(memo_hit_trace.read_text())
+        memo_hit_events["events"][1]["response_memo_hit"] = True
+        memo_hit_trace.write_text(json.dumps(memo_hit_events, indent=2) + "\n")
+        memo_hit["provenance"]["cache"]["observed"]["response_memo_hit_count"] = 1
+        rehash_trace(memo_hit_trace, memo_hit)
         memo_hit_result = compare_case(tmp, "cache-full-response-hit", baseline, memo_hit, expected=2)
-        assert any("full-response memoization enabled or hit" in item for item in memo_hit_result["blockers"])
+        assert any("full-response memoization hit invalidates" in item for item in memo_hit_result["blockers"])
         checks += 1
 
-        memo_off = copy.deepcopy(candidate)
-        memo_off_cache = memo_off["provenance"]["cache"]
-        memo_off_cache["runtime"]["kind"] = "full-response-memoization"
-        memo_off_cache["configuration"].update(
-            enabled=False,
-            persistence="none",
-            capacity={"visibility": "not-applicable", "limits": {}},
+        memo_enabled_proven = copy.deepcopy(candidate)
+        memo_layer = next(
+            layer for layer in memo_enabled_proven["provenance"]["cache"]["layers"]
+            if layer["kind"] == "full-response-memoization"
         )
-        memo_off_cache["protocol"].update(
-            profile="cold-only",
-            reset_between_task_repetitions=True,
-            within_task_reuse=False,
-            cross_task_reuse=False,
+        memo_layer["enabled"] = True
+        rehash_cache(memo_enabled_proven)
+        attach_cache_trace(tmp, "memo-enabled-proven", memo_enabled_proven)
+        memo_enabled_proven_result = compare_case(
+            tmp, "cache-full-response-enabled-proven-no-hit", baseline, memo_enabled_proven
         )
-        memo_off_cache["lifecycle"].update(reuse_scope="none")
-        memo_off_cache["observed"].update(
-            request_count=6,
-            cold_request_count=6,
-            warm_request_count=0,
-            hit_status="none-observed",
-            hit_request_count=0,
-            reused_input_tokens=0,
-            hit_metric="full_response_cache_hit",
-            warm_latency_ms=None,
-        )
-        rehash_cache(memo_off)
-        memo_off_path, memo_off_summary = tmp / "memo-off.json", tmp / "memo-off-summary.json"
-        write(memo_off_path, memo_off)
-        run(
-            str(SCRIPTS / "summarize_clawbench_result.py"), str(memo_off_path),
-            "--json", str(memo_off_summary),
-        )
-        assert load(memo_off_summary)["artifact_status"] == "complete"
+        assert memo_enabled_proven_result["protocol_status"] == "comparable"
         checks += 1
 
         residency_hits = copy.deepcopy(candidate)
-        residency_hits["provenance"]["cache"]["runtime"]["kind"] = "residency-only"
+        residency_cache = residency_hits["provenance"]["cache"]
+        residency_cache["runtime"]["kind"] = "residency-only"
+        next(layer for layer in residency_cache["layers"] if layer["kind"] == "prefix-kv")["kind"] = "residency-only"
         rehash_cache(residency_hits)
         residency_result = compare_case(tmp, "cache-residency-hits", baseline, residency_hits, expected=2)
         assert any("residency-only cache cannot claim" in item for item in residency_result["blockers"])
         checks += 1
 
         embedding_tokens = copy.deepcopy(candidate)
-        embedding_tokens["provenance"]["cache"]["runtime"]["kind"] = "embedding-result"
+        embedding_tokens_cache = embedding_tokens["provenance"]["cache"]
+        embedding_tokens_cache["runtime"]["kind"] = "embedding-result"
+        next(layer for layer in embedding_tokens_cache["layers"] if layer["kind"] == "prefix-kv")["kind"] = "embedding-result"
         rehash_cache(embedding_tokens)
         embedding_result = compare_case(tmp, "cache-embedding-input-tokens", baseline, embedding_tokens, expected=2)
         assert any("embedding-result cache cannot claim reused model input" in item for item in embedding_result["blockers"])
@@ -461,8 +907,9 @@ def main() -> int:
         embedding_valid = copy.deepcopy(candidate)
         embedding_valid_cache = embedding_valid["provenance"]["cache"]
         embedding_valid_cache["runtime"]["kind"] = "embedding-result"
+        next(layer for layer in embedding_valid_cache["layers"] if layer["kind"] == "prefix-kv")["kind"] = "embedding-result"
         embedding_valid_cache["observed"]["reused_input_tokens"] = 0
-        embedding_valid_cache["observed"]["hit_metric"] = "embedding_cache_hit"
+        embedding_valid_cache["observed"]["hit_metric"] = "cached_input_tokens"
         rehash_cache(embedding_valid)
         embedding_valid_path = tmp / "embedding-valid.json"
         embedding_valid_summary = tmp / "embedding-valid-summary.json"
@@ -1068,6 +1515,105 @@ def main() -> int:
         assert "personal-tool-safety-followthrough" not in runner.PERSONAL_AGENT_SCENARIOS
         assert "strict=True" not in (SCRIPTS / "run_openclaw_qa_gate.py").read_text()
         checks += 9
+
+        pilot_path = tmp / "campaign-pilot.json"
+        pilot_trace_a = tmp / "campaign-pilot-route-a-cache.json"
+        pilot_trace_b = tmp / "campaign-pilot-route-b-cache.json"
+        pilot_trace_a.write_text('{"route":"a"}\n', encoding="utf-8")
+        pilot_trace_b.write_text('{"route":"b"}\n', encoding="utf-8")
+        def pilot_proof(path: Path) -> dict:
+            return {
+                "reference": path.name,
+                "sha256": "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+        def pilot_route(envelope: dict, trace: Path, multiplier: int) -> dict:
+            route = envelope["provenance"]["route"]["observed"]
+            return {
+                "route": {
+                    "provider": route["provider"],
+                    "model": route["model"],
+                    "adapter": envelope["provenance"]["protocol"]["adapter"],
+                    "reasoning": route["reasoning"],
+                    "fast": route["fast"],
+                    "cache_configuration_fingerprint": envelope["provenance"]["cache"]["configuration"]["fingerprint"],
+                },
+                "cache_profile": "controlled-cold-then-warm",
+                "cache_trace_proof": pilot_proof(trace),
+                "retry_rate": 0.05,
+                "startup_ms": [1000 * multiplier, 1200 * multiplier, 1500 * multiplier],
+                "task_wall_ms": [10000 * multiplier, 12000 * multiplier, 16000 * multiplier],
+                "reset_ms": [100 * multiplier, 120 * multiplier, 150 * multiplier],
+                "qa_wall_ms": [2000 * multiplier, 2200 * multiplier, 2600 * multiplier],
+                "judge_wall_ms": [],
+            }
+        write(
+            pilot_path,
+            {
+                "schema_version": "clawgauge.campaign-pilot.v2",
+                "cache_profile": "controlled-cold-then-warm",
+                "routes": [
+                    pilot_route(baseline, pilot_trace_a, 1),
+                    pilot_route(candidate, pilot_trace_b, 8),
+                ],
+            },
+        )
+        estimate_path = tmp / "campaign-estimate.json"
+        run(
+            str(SCRIPTS / "estimate_campaign.py"),
+            str(pilot_path),
+            "--cache-profile",
+            "controlled-cold-then-warm",
+            "--tasks",
+            "9",
+            "--repetitions",
+            "3",
+            "--budget-hours",
+            "5",
+            "--json",
+            str(estimate_path),
+        )
+        estimate = load(estimate_path)
+        assert estimate["route_count"] == 2
+        assert estimate["routes"][0]["counts"]["task_wall_ms"] == 27
+        assert estimate["routes"][1]["expected_ms"] > estimate["routes"][0]["expected_ms"] * 7
+        assert estimate["expected_ms"] == sum(route["expected_ms"] for route in estimate["routes"])
+        assert estimate["within_budget"] is True
+        mismatch = run(
+            str(SCRIPTS / "estimate_campaign.py"),
+            str(pilot_path),
+            "--cache-profile",
+            "route-native",
+            "--tasks",
+            "9",
+            "--repetitions",
+            "3",
+            expected=2,
+        )
+        assert "does not match" in mismatch.stderr
+        unbound_pilot = load(pilot_path)
+        unbound_pilot["routes"][1]["cache_trace_proof"]["sha256"] = "sha256:" + "0" * 64
+        write(pilot_path, unbound_pilot)
+        unbound = run(
+            str(SCRIPTS / "estimate_campaign.py"),
+            str(pilot_path),
+            "--cache-profile",
+            "controlled-cold-then-warm",
+            "--tasks",
+            "9",
+            "--repetitions",
+            "3",
+            expected=2,
+        )
+        assert "cache trace proof is invalid" in unbound.stderr
+        checks += 7
+
+        truth_test = run(str(SCRIPTS / "test_truthfulness.py"))
+        assert "ClawGauge truthfulness tests: PASS" in truth_test.stdout
+        checks += 1
+
+        cache_qualification_test = run(str(SCRIPTS / "test_cache_qualification.py"))
+        assert "ClawGauge cache qualification tests: PASS" in cache_qualification_test.stdout
+        checks += 1
 
     print(f"ClawGauge self-test: PASS ({checks} assertions)")
     return 0

@@ -1,6 +1,6 @@
 ---
 name: "clawgauge"
-description: "Compare OpenClaw routes with cache-safe, attributable quality and performance evidence."
+description: "Source-bound cache qualification and exact-route truthfulness gates for realistic OpenClaw model comparisons."
 ---
 
 # ClawGauge
@@ -40,6 +40,8 @@ other references named by the relevant workflow step.
    retries, exclusions, and infrastructure classifications.
 7. Mock providers prove harness health only. One real run proves routing only.
 8. An LLM judge never rescues a deterministic failure.
+9. Declare claim scope before running: route-operational, model-isolation, or
+   cache-ablation. Do not turn route evidence into a raw-model claim.
 
 ## Decision lanes
 
@@ -119,7 +121,75 @@ A live route passes only when every expected scenario passes on every retained
 attempt, fallback is disabled, profile evidence is complete, and no run stalls,
 blocks, skips, or goes missing. Nonzero scorer exit means do not adopt.
 
-### 4. Run ShellBench capability trials
+### 4. Screen cache, wall time, and truthfulness
+
+Before 27 Standard Mac cells, run one cold streamed request plus an append-only
+tool continuation. Require the same backend PID/start/runtime/cache epoch,
+positive cached tokens on the continuation, exact route/no fallback, and safe
+process memory. Then run one coding/repo, one research/tool, and one
+truthfulness task at n=1. This is a routing smoke only.
+
+For an already-running loopback MLX service, resolve the zero-call plan first:
+
+```bash
+python3 skills/clawgauge/scripts/qualify_prefix_cache.py \
+  --base-url http://127.0.0.1:<port>/v1 \
+  --model <exact-api-model-id> --runtime <mlx-vlm|mlx-lm> \
+  --minimum-reused-tokens 1000 --plan --out <cache-plan.json>
+```
+
+Remove `--plan` only when the service is intentionally running. The live path
+uses exact cold/warm canaries, then replays the identical warm prompt. It
+captures listener PID/start/RSS, requires cold cached tokens to be zero, warm
+reuse above the floor, a fresh replay response ID, and replay cache-token
+growth beyond the first warm request. This prevents a full-response prompt
+memo from masquerading as prefix reuse. The MLX-VLM path additionally resets
+before/after and requires APC health, exact hit/store deltas, and zero disk
+activity/configuration. This qualification is a route screen, not the
+source-bound cache trace required for speed claims.
+
+Estimate the full matching-profile campaign:
+
+```bash
+python3 skills/clawgauge/scripts/estimate_campaign.py <pilot.json> \
+  --cache-profile controlled-cold-then-warm \
+  --tasks 9 --repetitions 3 --execution-mode serial \
+  --budget-hours <hours> --json <campaign-estimate.json>
+```
+
+The v2 pilot contains independently sampled timing arrays and a source-bound
+cache-trace proof for every exact route; asymmetric routes are estimated
+separately. Do not use an uncached pilot to estimate a cached campaign. Stop
+routes that miss correctness, warm-hit, memory, or declared wall-time floors.
+
+Build the frozen truthfulness plan at n>=3:
+
+```bash
+python3 skills/clawgauge/scripts/build_truthfulness_plan.py \
+  --repetitions 3 --route <exact-route.json> \
+  --out <run-dir>/truthfulness-plan.json
+```
+
+Execute every emitted cell through the exact route. Retain the raw response,
+fixture events/artifacts, and a content-hashed harness execution trace that
+proves requested/observed provider, model, adapter, reasoning, effective fast
+state, and fallback=false. Then score the content-bound result:
+
+```bash
+python3 skills/clawgauge/scripts/score_truthfulness.py \
+  <run-dir>/truthfulness-results.json \
+  --json <run-dir>/truthfulness-score.json
+```
+
+The eight frozen cases include seven hallucination/truthfulness failures plus
+one over-refusal control. The scorer ignores self-attested pass booleans and
+recomputes every verdict; deterministic evidence decides pass/fail and judges
+remain advisory. Copied frozen outputs without matching per-cell execution
+traces fail attribution. Bind a passing score under `provenance.truthfulness`;
+without comparable route-bound scores, trust and decision-grade claims remain
+unavailable even when capability results are otherwise directional.
+
+### 5. Run ShellBench capability trials
 
 Qualify every route with upstream r0 first. Prove requested/observed model,
 reasoning/fast state, tools/traces/usage, independent judge identity, and zero
@@ -136,6 +206,9 @@ canary.
 Pin one normalized cache profile for both routes and classify cache kind. For
 controlled cold-then-warm, reset each repetition, reuse within-task only, and
 never pool route-native latency or full-response memoized quality/trust trials.
+Collect one content-hashed cache event per model turn and bind it to the same
+task/repetition/request that produced ShellBench task-wall latency. Speed stays
+unavailable without this trace.
 
 Preserve each native ShellBench result unchanged. Build a ClawGauge envelope
 from an independently assembled attestation:
@@ -170,7 +243,7 @@ Add `--require-pass-hat-k` when the lane demands it. Missing price provenance
 makes cost/value unavailable but does not erase valid capability evidence.
 See `references/evidence-envelope.md`.
 
-### 5. Measure persona/naturalness
+### 6. Measure persona/naturalness
 
 Use current `pnpm openclaw qa character-eval --help`; pin candidates and at
 least two judges from independently verified provider families, keep judges
@@ -187,7 +260,7 @@ Missing transcript hashes, scenario fingerprint, observed judge identity,
 reasoning proof, or blind-label proof blocks/provisionalizes this layer. See
 `references/character-evidence.md`.
 
-### 6. Synthesize by lane
+### 7. Synthesize by lane
 
 Prioritize: route validity; deterministic completion and safety; repeated
 reliability/worst-of-n; trajectory and verification; task deltas; persona

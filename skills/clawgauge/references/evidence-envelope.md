@@ -1,6 +1,6 @@
-# ClawGauge Evidence Envelope v2
+# ClawGauge Evidence Envelope v3
 
-ClawGauge compares `clawgauge.evidence.v2` envelopes, not naked ShellBench JSON.
+ClawGauge compares `clawgauge.evidence.v3` envelopes, not naked ShellBench JSON.
 The embedded benchmark_result is the unmodified classic
 shellbench.BenchmarkResult. ClawGauge-owned claims live only under provenance;
 they are not upstream ShellBench fields.
@@ -23,7 +23,9 @@ hash. It never copies a local input path into the artifact.
 ## Required provenance
 
 An attestation is either the provenance object itself or an object containing
-that key. Version 2 requires:
+that key. Version 3 requires:
+
+- `claim_scope`: `route-operational`, `model-isolation`, or `cache-ablation`;
 
 - exact OpenClaw and ShellBench commits;
 - host class;
@@ -48,13 +50,44 @@ that key. Version 2 requires:
 - pinned release ID, exact sorted-task-ID fingerprint, full release task count,
   and complete true.
 
-Each proof is an object with non-empty kind and reference strings. A boolean
-alone is not evidence. References should be stable artifact IDs or
-content-addressed records, never secrets or absolute local paths.
+Ordinary proofs are objects with non-empty kind and reference strings. Cache
+speed claims additionally require a relative, content-hashed
+`clawgauge-cache-events` artifact. A boolean or handwritten cache summary is
+not speed evidence. References never contain secrets or absolute local paths.
+
+## Truthfulness provenance
+
+`provenance.truthfulness` is optional for a capability-only comparison but
+required for any trust or decision-grade claim. It binds a content-hashed
+`clawgauge.truthfulness-score.v1` artifact:
+
+```json
+{
+  "passed": true,
+  "suite_sha256": "sha256:...",
+  "route_sha256": "sha256:...",
+  "repetitions": 3,
+  "case_count": 8,
+  "expected_cells": 24,
+  "score_proof": {
+    "kind": "clawgauge-truthfulness-score",
+    "reference": "truthfulness-score.json",
+    "sha256": "sha256:..."
+  }
+}
+```
+
+The score must pass with complete per-cell execution attribution and its exact
+requested/observed provider, model, adapter, reasoning, fast, and fallback
+state must match the envelope route. The compared routes must use the same
+suite, repetitions, case count, and cell count. Missing evidence does not erase
+valid capability measurements, but it makes trust/decision-grade status false.
+An invalid supplied truthfulness block fails envelope validation.
 
 ## Cache provenance
 
-`provenance.cache` has five required blocks:
+`provenance.cache` has six required blocks: `runtime`, `layers`,
+`configuration`, `protocol`, `lifecycle`, and `observed`.
 
 ```json
 {
@@ -65,12 +98,33 @@ content-addressed records, never secrets or absolute local paths.
     "version": "0.6.13",
     "engine": "automatic-prefix-cache"
   },
+  "layers": [
+    {
+      "kind": "prefix-kv",
+      "enabled": true,
+      "name": "mlx-vlm",
+      "version": "0.6.13",
+      "engine": "automatic-prefix-cache"
+    },
+    {
+      "kind": "full-response-memoization",
+      "enabled": false,
+      "name": "response-memo",
+      "version": "1.0.0",
+      "engine": "disabled"
+    }
+  ],
   "configuration": {
     "enabled": true,
     "persistence": "process-memory",
+    "effective_knobs": {
+      "eviction_policy": "lru",
+      "max_prefix_tokens": 32768,
+      "minimum_prefix_tokens": 1
+    },
     "capacity": {
       "visibility": "known",
-      "limits": {"blocks": 2048, "block_size_tokens": 16}
+      "limits": {"tokens": 32768, "entries": 2048}
     },
     "fingerprint": "sha256:...",
     "proof": {"kind": "runtime-config", "reference": "artifact://..."}
@@ -96,25 +150,69 @@ content-addressed records, never secrets or absolute local paths.
     "hit_status": "observed",
     "hit_request_count": 12,
     "reused_input_tokens": 48000,
-    "hit_metric": "cache_n",
+    "gross_input_tokens": 156000,
+    "response_memo_hit_count": 0,
+    "hit_metric": "cached_input_tokens",
+    "hit_rate": 1.0,
     "cold_latency_ms": {"p50": 3400, "p95": 6100},
     "warm_latency_ms": {"p50": 700, "p95": 1200},
-    "hit_proof": {"kind": "request-telemetry", "reference": "artifact://..."}
+    "startup_latency_ms": {"p50": 900, "p95": 1100},
+    "readiness_latency_ms": {"p50": 100, "p95": 150},
+    "ttft_latency_ms": {"p50": 500, "p95": 900},
+    "prefill_latency_ms": {"p50": 400, "p95": 800},
+    "decode_latency_ms": {"p50": 200, "p95": 400},
+    "peak_process_rss_bytes": 17179869184,
+    "peak_accelerator_bytes": 12884901888,
+    "peak_cache_resident_bytes": 2147483648,
+    "peak_cache_resident_tokens": 32768,
+    "cache_evictions": 0,
+    "hit_proof": {"kind": "request-telemetry", "reference": "artifact://..."},
+    "trace_proof": {
+      "kind": "clawgauge-cache-events",
+      "reference": "route-a-cache-events.json",
+      "sha256": "sha256:..."
+    }
   }
 }
 ```
 
-The configuration fingerprint is the canonical digest of runtime visibility,
-kind, name, version, engine, enabled state, persistence, and capacity visibility and
-limits. Proof references are excluded from the digest.
+Every layer has a unique supported `kind`, a boolean `enabled`, and non-empty
+`name`, `version`, and `engine`. Exactly one
+`full-response-memoization` layer is mandatory even when disabled. Exactly one
+layer must match `runtime.kind`, and that layer's enabled state must equal
+`configuration.enabled`.
+
+`configuration.effective_knobs` is a non-empty JSON object containing the
+effective runtime values, not merely requested flags. Keys are non-empty
+strings; nested objects and arrays are allowed; numeric values must be finite.
+The configuration fingerprint is:
+
+```text
+sha256(UTF8(canonical_json({
+  "runtime": {"visibility", "kind", "name", "version", "engine"},
+  "enabled": configuration.enabled,
+  "persistence": configuration.persistence,
+  "effective_knobs": configuration.effective_knobs,
+  "capacity": {"visibility", "limits"},
+  "layers": layers_sorted_by_kind[{"kind", "enabled", "name", "version", "engine"}]
+})))
+```
+
+Canonical JSON uses sorted keys, compact separators, and UTF-8. Proofs are
+excluded. Both `configuration.fingerprint` and
+`observed.configuration_fingerprint` must equal this exact digest; changing an
+effective knob or layer identity without recomputing it blocks the envelope.
 
 Cache kind is mandatory: `prefix-kv`, `residency-only`,
 `full-response-memoization`, `embedding-result`, or
-`opaque-provider-managed`. Opaque runtime visibility requires the opaque kind
-and proof. Residency-only may not claim request hits or reused input tokens;
-embedding-result may not claim reused model-input tokens. Repeated agent
-quality/trust trials fail closed when full-response memoization is enabled or a
-full-response hit is observed; disabled/no-hit memoization may be attested.
+`opaque-provider-managed`. Opaque runtime visibility requires the opaque kind,
+a null runtime version, and proof. Known runtimes require a version.
+Residency-only may not claim request hits or reused input tokens;
+embedding-result may not claim reused model-input tokens. Every envelope must
+report a non-negative `response_memo_hit_count`, and it must be zero. When the
+response-memo layer is enabled, a valid cache-events v2 trace with
+`response_memo_hit: false` on every request is also mandatory. Distinct outputs
+alone do not disprove response memoization.
 
 Allowed profiles are `route-native`, `controlled-cold-then-warm`, and
 `cold-only`. Controlled trials require a fresh cache for each task repetition,
@@ -123,8 +221,90 @@ run ID for route-native behavior.
 
 Known capacities require at least one numeric limit. Opaque provider-managed
 runtime/capacity is valid only when explicitly labeled opaque and supported by
-a proof; it never becomes zero. `hit_status` is `observed`, `none-observed`, or
-`unavailable`. Unavailable counters remain null and make speed unavailable.
+a proof; it never becomes zero. Disabled cache uses capacity visibility
+`not-applicable` with empty limits. `hit_status` is `observed`,
+`none-observed`, or `unavailable`. The only accepted hit metrics are `cache_n`,
+`cached_input_tokens`, `prompt_tokens_cached`, and
+`prompt_tokens_details.cached_tokens`. Unavailable counters and metric remain
+null and make speed unavailable. Otherwise, hit count, reused tokens, and the
+metric are required; `hit_proof` is required in every state. Cold/warm request
+counts must sum to the positive total; latency is null only when its
+corresponding count is zero. `cold-only` requires reset=true,
+within-task-reuse=false, and cross-task-reuse=false.
+
+## Cache-events v2 speed proof
+
+Speed and cache-ablation claims require a relative, content-hashed
+`clawgauge.cache-events.v2` artifact. Build it from normalized events and the
+three independent source artifacts:
+
+```bash
+python3 scripts/build_cache_trace.py normalized-events.json \
+  --out <artifact-root>/route-a-cache-events.json \
+  --proof-out <artifact-root>/route-a-cache-proof.json \
+  --hit-metric cached_input_tokens \
+  --runtime-log <artifact-root>/runtime.jsonl \
+  --openclaw-trace <artifact-root>/openclaw-trace.jsonl \
+  --parser-artifact <artifact-root>/cache-parser.py \
+  --parser-name <parser-name> --parser-version <parser-version>
+```
+
+The runtime log, OpenClaw trace, and parser must reside under the output
+artifact root. The trace's `source.runtime_log` and `source.openclaw_trace`
+contain relative `reference` plus exact `sha256`; `source.parser` additionally
+contains non-empty `name` and `version`. The outer `trace_proof` hashes the
+entire cache-events artifact. Every hash is exactly `sha256:` followed by 64
+lowercase hexadecimal characters.
+
+The artifact has top-level `schema_version`, one allowlisted `hit_metric`, the
+source block, and a non-empty `events` array. Every request event requires:
+
+- identity and phase: `task_id`, positive `repetition`, zero-based
+  `turn_index`, unique `request_id`, and `phase` (`cold` or `warm`);
+- exact route/lifecycle: `provider`, `model`, `fallback_used: false`, positive
+  `backend_pid`, `backend_started_at`, `runtime_id`, `cache_epoch`, and the
+  exact `cache_configuration_fingerprint`;
+- content and lineage: exact-SHA `prompt_fingerprint`, `prefix_fingerprint`,
+  `next_prefix_fingerprint`, and unique `openclaw_event_fingerprint`; cold
+  events have no parent and set `append_only: false`; warm events require
+  `parent_request_id`, exact-SHA `parent_prompt_fingerprint`, and
+  `append_only: true`;
+- token and memo telemetry: non-negative `gross_input_tokens`,
+  `cached_input_tokens`, `uncached_input_tokens`, and `written_input_tokens`,
+  plus `response_memo_hit: false`; gross must equal cached plus uncached,
+  written cannot exceed gross, and cold cached input must be zero;
+- tool binding: `tool_call_ids` and exact-SHA
+  `tool_result_fingerprints` arrays of equal length; arrays may be empty, but
+  every present ID is non-empty and unique across the trace;
+- durations: non-negative `startup_ms`, `readiness_ms`, `ttft_ms`,
+  `prefill_ms`, `decode_ms`, `request_wall_ms`, `tool_wall_ms`, and
+  `task_wall_ms`;
+- timestamps: monotonic `task_started_at_ms`, `request_started_at_ms`,
+  `first_token_at_ms`, `request_completed_at_ms`, `tool_completed_at_ms`, and
+  `task_completed_at_ms`; TTFT, decode, request, tool, and task durations must
+  equal their timestamp deltas, and prefill cannot exceed TTFT;
+- memory: positive `process_rss_bytes` plus non-negative
+  `accelerator_active_bytes`, `accelerator_peak_bytes`,
+  `cache_resident_bytes`, `cache_resident_tokens`, and `cache_evictions`;
+  active accelerator memory cannot exceed peak.
+
+Coverage must equal every BenchmarkResult task/repetition pair. Within each
+pair, turns are contiguous, exactly one cold turn leads, every subsequent warm
+turn links to the immediately preceding request and prompt, its prefix equals
+the preceding `next_prefix_fingerprint`, and the preceding event contains a
+tool result. The backend process/runtime/cache epoch and task span stay stable
+inside the pair; model/tool spans cannot overlap; prompt fingerprints do not
+repeat. Controlled prefix-KV trials require a positive cached-token count on
+every warm turn. Reset boundaries require distinct cache epochs.
+
+The comparator derives and cross-checks request/cold/warm/hit counts, reused
+and gross input tokens, response-memo hits, hit status/metric/rate,
+cold/warm/startup/readiness/TTFT/prefill/decode p50/p95, peak process and
+accelerator memory, peak cache bytes/tokens, and evictions. All corresponding
+`observed` aggregates must match. Derived end-to-end task-wall p50/p95 must
+equal the native BenchmarkResult median/p95 latency. Handwritten summaries,
+cached-input billing, or the lightweight prefix qualifier are not substitutes
+for this trace.
 
 The task fingerprint is:
 
@@ -147,7 +327,11 @@ repeats. Directional evidence begins at three runs per task.
 
 Cache profile, reset boundary, and reuse-scope drift blocks comparability.
 Runtime, cache engine, and capacity may differ across exact routes because they
-are route identity. If the same exact route has different cache configuration
+are route identity. Route-operational comparisons may use the actual adapters
+of each exact route but make route-level claims only. Model-isolation requires
+matching runtime/prompt/tool/adapter controls. Cache-ablation additionally
+requires the same exact route and valid raw cache events. If the same exact
+route has different cache configuration outside cache-ablation,
 or downstream-attribution fingerprints, comparison blocks. Cached-input pricing
 is never cache-hit proof.
 

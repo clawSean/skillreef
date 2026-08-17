@@ -1,10 +1,11 @@
 {
-  "schema_version": "clawgauge.evidence.v2",
+  "schema_version": "clawgauge.evidence.v3",
   "source_artifact": {
     "schema": "shellbench.BenchmarkResult",
     "sha256": "sha256:99c93c9ef4c363ef7f16a7a3d814f268a93e9a61740618f8de1ae32577909233"
   },
   "provenance": {
+    "claim_scope": "route-operational",
     "openclaw": {
       "commit": "8277cb24a16ca783c841a3af9bc761fc4103600b"
     },
@@ -64,17 +65,38 @@
         "reference": "fixture://fallback/test-candidate"
       }
     },
-    "cache": {
-      "runtime": {
+  "cache": {
+    "runtime": {
         "visibility": "known",
         "kind": "prefix-kv",
         "name": "synthetic-runtime-b",
         "version": "2.0.0",
+      "engine": "block-prefix-cache"
+    },
+    "layers": [
+      {
+        "kind": "prefix-kv",
+        "enabled": true,
+        "name": "synthetic-runtime-b",
+        "version": "2.0.0",
         "engine": "block-prefix-cache"
       },
-      "configuration": {
-        "enabled": true,
-        "persistence": "process-memory",
+      {
+        "kind": "full-response-memoization",
+        "enabled": false,
+        "name": "synthetic-response-memo-b",
+        "version": "1.0.0",
+        "engine": "disabled"
+      }
+    ],
+    "configuration": {
+      "enabled": true,
+      "persistence": "process-memory",
+      "effective_knobs": {
+        "block_size_tokens": 16,
+        "eviction_policy": "lru",
+        "max_blocks": 2048
+      },
         "capacity": {
           "visibility": "known",
           "limits": {
@@ -82,7 +104,7 @@
             "block_size_tokens": 16
           }
         },
-        "fingerprint": "sha256:4f0a6cc58344feb51a56058b8723c5f205562241a8f074f4dd5e795bb7634cb4",
+      "fingerprint": "sha256:ffa92c864df1990ac880aed831ad3250f1a4f52c9ac955ba35ee47239dc54cb7",
         "proof": {
           "kind": "synthetic-runtime-config",
           "reference": "fixture://cache/config/candidate"
@@ -105,22 +127,23 @@
         }
       },
       "observed": {
-        "configuration_fingerprint": "sha256:4f0a6cc58344feb51a56058b8723c5f205562241a8f074f4dd5e795bb7634cb4",
+      "configuration_fingerprint": "sha256:ffa92c864df1990ac880aed831ad3250f1a4f52c9ac955ba35ee47239dc54cb7",
         "request_count": 18,
         "cold_request_count": 6,
         "warm_request_count": 12,
         "hit_status": "observed",
         "hit_request_count": 12,
-        "reused_input_tokens": 60000,
+      "reused_input_tokens": 60000,
+      "response_memo_hit_count": 0,
         "hit_metric": "cache_n",
-        "cold_latency_ms": {
-          "p50": 3000,
-          "p95": 5500
-        },
-        "warm_latency_ms": {
-          "p50": 500,
-          "p95": 900
-        },
+      "cold_latency_ms": {
+        "p50": 900,
+        "p95": 1300
+      },
+      "warm_latency_ms": {
+        "p50": 250,
+        "p95": 450
+      },
         "hit_proof": {
           "kind": "synthetic-request-telemetry",
           "reference": "fixture://cache/hits/candidate"

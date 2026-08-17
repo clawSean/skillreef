@@ -24,9 +24,10 @@ qualification. It deliberately includes deterministic coding and repo work:
 8. `t4-delegation-repair`
 9. `t4-browser-research-and-code`
 
-Use a smaller subset only for budgeted screening and label its reduced
-coverage. Coding-lane claims require both coding tasks plus at least one repo
-task.
+The pre-campaign quick screen uses three representatives at n=1: one coding/
+repo task, one research/tool task, and one deterministic truthfulness case.
+Label it routing smoke; it cannot support a lane verdict. Coding-lane claims
+still require both coding tasks plus at least one repo task in the n=3 suite.
 
 The task set and n=3 confidence rule do not change for cache-aware trials.
 Declare one cache profile before the campaign; collect cold and warm request

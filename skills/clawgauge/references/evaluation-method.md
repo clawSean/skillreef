@@ -52,7 +52,8 @@ Provider behavior and load change over time.
 | ShellBench r0 | Exact route, model, reasoning, tools, traces, usage | 1 non-scoring qualification per route |
 | Personal Agent QA | Selected regression/safety scenarios pass | Every candidate and baseline |
 | Character eval | Persona/naturalness preference | Blind, >=2 verified provider-family judges |
-| ShellBench smoke | Directional capability and reliability | 5 high-signal tasks, n=3 |
+| Cache-aware quick screen | Reject unusable routes before a full campaign | cold/warm tool loop + 3 tasks, n=1 |
+| ShellBench Standard Mac | Directional capability and reliability | 9 pinned tasks, n=3 |
 | Core-19 | Broad local OpenClaw capability | When close or consequential |
 | Research campaign | Reproducible external claim | Upstream runbook, n=6 |
 
@@ -68,8 +69,14 @@ attestations came from a native result field when they did not.
 
 ## 5. Task selection
 
-Default ClawPop directional subset is the pinned Standard Mac nine-task set in
-`shellbench-core-v1.md`; run n=3 after r0 qualification. Controlled cache trials
+After r0, run a cache-aware quick screen: one cold streamed request followed by
+a realistic append-only tool continuation, then coding/repo, research/tool, and
+truthfulness tasks at n=1. Reject routes that miss identity, correctness,
+warm-hit, memory, or interactive/background latency floors. Estimate the full
+campaign from that matching cache-profile pilot with `estimate_campaign.py`.
+
+Survivors run the pinned Standard Mac nine-task set in
+`shellbench-core-v1.md` at n=3. Controlled cache trials
 start each task repetition fresh, reuse one server within the task, and prevent
 cross-task reuse. Route-native and controlled trials use separate run IDs and
 their latency is never pooled.
@@ -79,6 +86,18 @@ Add `t4-memory-recall-continuation` for memory-heavy routing decisions.
 `t5-hallucination-resistant-evidence` is a separate trust canary. The
 2026-08-16 ShellBench manifest reports cross-model SNR around 0.25, so it should
 not influence rank until a newer signal study says otherwise.
+
+Run the deterministic eight-case truthfulness suite in
+`truthfulness-suite-v1.json` at n>=3. Seven cases cover nonexistent-file bait,
+failed-tool completion claims, unsupported citations, false-memory premises,
+conflicting evidence, and correct abstention; the eighth controls for
+over-refusal. Its content-bound deterministic gates decide pass/fail; judge
+scores are advisory. The immutable plan, results, attempt evidence, and every
+cell execution trace bind the exact requested/observed
+provider/model/adapter/reasoning/fast route and fallback=false. A copied frozen
+response or fixture event list without that independent trace cannot earn route
+attribution. Bind passing scores into each envelope; missing or mismatched
+scores leave trust and decision-grade comparison unavailable.
 
 For a coding-specific decision, require `t1-bugfix-discount`,
 `t2-add-tests-normalizer`, and at least one pinned repo task rather than
@@ -169,12 +188,17 @@ transcript evidence blocks the comparison.
 Never infer price from model family. Record exact:
 
 - cache kind/runtime/version/engine/capacity and canonical config fingerprint
-- cache profile, lifecycle/reuse policy, hit counters/proof, cold/warm p50/p95, and router downstream attribution
+- per-request content-hashed cache events joined to task/repetition/turn IDs
+- PID/start/runtime/cache epoch, gross/cached/uncached/written tokens, and post-warm misses
+- startup/readiness, cold/warm request, TTFT/prefill/decode, tool, and end-to-end task timing kept separate
 - input, cached-input, output, and reasoning token rates
 - pricing source and date
 - currency and measured spend when available
 
-Cache profile/reset/reuse drift blocks; route engines/capacities may differ.
+Operational routing uses end-to-end task wall time; request timing diagnoses
+cache behavior and never substitutes for task latency. Route-native and
+controlled traces are never pooled. Cache profile/reset/reuse drift blocks;
+route engines/capacities may differ.
 Full-response memo hits block repeated quality/trust trials; missing cache-hit evidence makes speed `n/a`.
 Missing pricing evidence makes cost `n/a`; zero is valid only when explicitly free.
 

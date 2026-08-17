@@ -1,10 +1,11 @@
 {
-  "schema_version": "clawgauge.evidence.v2",
+  "schema_version": "clawgauge.evidence.v3",
   "source_artifact": {
     "schema": "shellbench.BenchmarkResult",
     "sha256": "sha256:71e00c16090cd444bfb849b786bded4b412786f10a67b2f504751a61e7f0653b"
   },
   "provenance": {
+    "claim_scope": "route-operational",
     "openclaw": {
       "commit": "8277cb24a16ca783c841a3af9bc761fc4103600b"
     },
@@ -64,17 +65,38 @@
         "reference": "fixture://fallback/test-baseline"
       }
     },
-    "cache": {
-      "runtime": {
+  "cache": {
+    "runtime": {
         "visibility": "known",
         "kind": "prefix-kv",
         "name": "synthetic-runtime-a",
         "version": "1.0.0",
+      "engine": "exact-prefix-cache"
+    },
+    "layers": [
+      {
+        "kind": "prefix-kv",
+        "enabled": true,
+        "name": "synthetic-runtime-a",
+        "version": "1.0.0",
         "engine": "exact-prefix-cache"
       },
-      "configuration": {
-        "enabled": true,
-        "persistence": "process-memory",
+      {
+        "kind": "full-response-memoization",
+        "enabled": false,
+        "name": "synthetic-response-memo-a",
+        "version": "1.0.0",
+        "engine": "disabled"
+      }
+    ],
+    "configuration": {
+      "enabled": true,
+      "persistence": "process-memory",
+      "effective_knobs": {
+        "eviction_policy": "lru",
+        "max_prefix_tokens": 32768,
+        "minimum_prefix_tokens": 1
+      },
         "capacity": {
           "visibility": "known",
           "limits": {
@@ -82,7 +104,7 @@
             "tokens": 32768
           }
         },
-        "fingerprint": "sha256:2165488176be959e2bd15e39d31c8c3a60e36167197dab6d747cb15ffa446a4f",
+      "fingerprint": "sha256:57532efe6f5005cf3493168176d3a70235af7c1f0656b50b6e5156a2e6ddaac2",
         "proof": {
           "kind": "synthetic-runtime-config",
           "reference": "fixture://cache/config/baseline"
@@ -105,22 +127,23 @@
         }
       },
       "observed": {
-        "configuration_fingerprint": "sha256:2165488176be959e2bd15e39d31c8c3a60e36167197dab6d747cb15ffa446a4f",
+      "configuration_fingerprint": "sha256:57532efe6f5005cf3493168176d3a70235af7c1f0656b50b6e5156a2e6ddaac2",
         "request_count": 18,
         "cold_request_count": 6,
         "warm_request_count": 12,
         "hit_status": "observed",
         "hit_request_count": 12,
-        "reused_input_tokens": 48000,
+      "reused_input_tokens": 48000,
+      "response_memo_hit_count": 0,
         "hit_metric": "cached_input_tokens",
-        "cold_latency_ms": {
-          "p50": 3400,
-          "p95": 6100
-        },
-        "warm_latency_ms": {
-          "p50": 700,
-          "p95": 1200
-        },
+      "cold_latency_ms": {
+        "p50": 800,
+        "p95": 1200
+      },
+      "warm_latency_ms": {
+        "p50": 300,
+        "p95": 500
+      },
         "hit_proof": {
           "kind": "synthetic-request-telemetry",
           "reference": "fixture://cache/hits/baseline"

@@ -46,7 +46,7 @@ def failure_evidence(result: dict[str, Any]) -> dict[str, Any] | None:
 
 def summary_object(envelope: dict[str, Any], source: Path) -> dict[str, Any]:
     result, prov = result_of(envelope), provenance_of(envelope)
-    blockers, facts = validate_envelope(envelope, "evidence")
+    blockers, facts = validate_envelope(envelope, "evidence", source.parent)
     rows = task_rows(result)
     priced = pricing_valid(prov)
     metric_keys = (
@@ -148,16 +148,30 @@ def render(summary: dict[str, Any]) -> str:
         cache.get("protocol", {}), cache.get("lifecycle", {}), cache.get("observed", {}),
     )
     cold, warm = observed.get("cold_latency_ms"), observed.get("warm_latency_ms")
+    ttft = observed.get("ttft_latency_ms")
+    layers = cache.get("layers", [])
+    layer_text = ", ".join(
+        f"{layer.get('kind')}={'on' if layer.get('enabled') else 'off'}"
+        for layer in layers
+    ) or "n/a"
+    rss = observed.get("peak_process_rss_bytes")
+    accelerator = observed.get("peak_accelerator_bytes")
     lines.extend([
         f"- Kind / runtime / engine: {runtime.get('kind') or 'n/a'} / {runtime.get('name') or 'n/a'} {runtime.get('version') or 'opaque'} / {runtime.get('engine') or 'n/a'}",
+        f"- Cache layers: {layer_text}",
         f"- Capacity: {capacity.get('visibility') or 'n/a'} / {json.dumps(capacity.get('limits', {}), sort_keys=True)}",
+        f"- Effective knobs: {json.dumps(cache.get('effective_knobs', {}), sort_keys=True)}",
         f"- Configuration fingerprint: {cache.get('configuration_fingerprint') or 'n/a'}",
         f"- Protocol: {protocol.get('profile') or 'n/a'}; reset repetitions={protocol.get('reset_between_task_repetitions')}; within-task={protocol.get('within_task_reuse')}; cross-task={protocol.get('cross_task_reuse')}",
         f"- Lifecycle: {lifecycle.get('server_scope') or 'n/a'} / {lifecycle.get('reset_mechanism') or 'n/a'} / {lifecycle.get('reuse_scope') or 'n/a'}",
         f"- Requests cold / warm / hits: {observed.get('cold_request_count')} / {observed.get('warm_request_count')} / {observed.get('hit_request_count') if observed.get('hit_request_count') is not None else 'n/a'}",
+        f"- Full-response memo hits: {observed.get('response_memo_hit_count') if observed.get('response_memo_hit_count') is not None else 'n/a'}",
         f"- Reused input / metric: {observed.get('reused_input_tokens') if observed.get('reused_input_tokens') is not None else 'n/a'} / {observed.get('hit_metric') or 'n/a'}",
         f"- Cold p50/p95: {'n/a' if not cold else format(cold['p50'], '.0f') + '/' + format(cold['p95'], '.0f') + 'ms'}",
         f"- Warm p50/p95: {'n/a' if not warm else format(warm['p50'], '.0f') + '/' + format(warm['p95'], '.0f') + 'ms'}",
+        f"- TTFT p50/p95: {'n/a' if not isinstance(ttft, dict) else format(ttft['p50'], '.0f') + '/' + format(ttft['p95'], '.0f') + 'ms'}",
+        f"- Peak RSS / accelerator: {'n/a' if rss is None else format(rss / 1048576, '.0f') + 'MiB'} / {'n/a' if accelerator is None else format(accelerator / 1048576, '.0f') + 'MiB'}",
+        f"- Cache resident bytes/tokens / evictions: {observed.get('peak_cache_resident_bytes') if observed.get('peak_cache_resident_bytes') is not None else 'n/a'} / {observed.get('peak_cache_resident_tokens') if observed.get('peak_cache_resident_tokens') is not None else 'n/a'} / {observed.get('cache_evictions') if observed.get('cache_evictions') is not None else 'n/a'}",
         f"- Speed evidence usable: {'yes' if cache.get('speed_usable') else 'no'}", "",
         "## Tasks", "",
         "| Task | Runs | Score | Reliability | pass^k | Worst | Cost/pass |",
