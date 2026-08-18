@@ -1,6 +1,6 @@
 ---
 name: "clawgauge"
-description: "Source-bound cache qualification and exact-route truthfulness gates for realistic OpenClaw model comparisons."
+description: "Fail-closed local-cache admission and decision-grade model comparison"
 ---
 
 # ClawGauge
@@ -135,6 +135,8 @@ For an already-running loopback MLX service, resolve the zero-call plan first:
 python3 skills/clawgauge/scripts/qualify_prefix_cache.py \
   --base-url http://127.0.0.1:<port>/v1 \
   --model <exact-api-model-id> --runtime <mlx-vlm|mlx-lm> \
+  --runtime-version <major.minor.patch> --mlx-version <major.minor.patch> \
+  --model-revision <immutable-40-or-64-hex> --cache-epoch <fresh-epoch> \
   --minimum-reused-tokens 1000 --plan --out <cache-plan.json>
 ```
 
@@ -145,8 +147,9 @@ reuse above the floor, a fresh replay response ID, and replay cache-token
 growth beyond the first warm request. This prevents a full-response prompt
 memo from masquerading as prefix reuse. The MLX-VLM path additionally resets
 before/after and requires APC health, exact hit/store deltas, and zero disk
-activity/configuration. This qualification is a route screen, not the
-source-bound cache trace required for speed claims.
+activity/configuration. A pass grants only `direct-service-prefix-reuse`; it
+does not prove the OpenClaw route, fallback absence, architecture state,
+`cache-qualified`, or operator capability.
 
 Before calling a local route cache-qualified, read
 `references/local-cache-admission.md` and build its architecture-aware plan:
@@ -154,16 +157,37 @@ Before calling a local route cache-qualified, read
 ```bash
 python3 skills/clawgauge/scripts/build_local_cache_admission_plan.py \
   --runtime <mlx-vlm|mlx-lm> --runtime-version <version> \
-  --model <exact-api-id> --model-revision <immutable-revision> \
-  --openclaw-commit <commit> --cache-layout-fingerprint <sha256:...> \
-  --feature <standard-kv|hybrid-recurrent|rotating-or-conv|multimodal|shared-service> \
+  --mlx-version <version> \
+  --provider <exact-openclaw-provider> --model <exact-api-id> \
+  --loaded-model <exact-loaded-model-id-or-path> \
+  --model-revision <immutable-revision> \
+  --openclaw-version <installed-build-version> \
+  --openclaw-commit <immutable-commit> \
+  --architecture-fingerprint <sha256:...> \
+  --template-fingerprint <sha256:...> --parser-fingerprint <sha256:...> \
+  --cache-policy-fingerprint <sha256:...> \
+  --cache-layout-fingerprint <sha256:...> \
+  --feature <exact-structural-feature> --feature <text-only|multimodal> \
+  --feature <isolated-service|shared-service> \
+  --feature <serial-service|batched-service> \
   --out <run-dir>/local-cache-admission-plan.json
 ```
 
-The generic qualifier cannot prove auxiliary recurrent/GDN/conv state, rotating
-cache restoration, media-key isolation, tenant separation, or bounded memory.
-Run every conditional cell emitted by the plan and bind its artifact before a
-cache-qualified claim. Speedup alone never satisfies these gates.
+The generic qualifier cannot prove hybrid/conv state, batch parity, media-key
+isolation, tenant separation, or bounded memory. Execute every frozen case as
+`clawgauge.local-cache-admission-results.v1`, then score it:
+
+```bash
+python3 skills/clawgauge/scripts/validate_local_cache_admission.py \
+  <run-dir>/local-cache-admission-plan.json \
+  <run-dir>/local-cache-admission-results.json \
+  --artifact-root <run-dir> \
+  --out <run-dir>/local-cache-admission-score.json
+```
+
+Only a passing content-bound score grants `cache-qualified`. Tool capability,
+truthfulness, and QA remain separate `operator-qualified` gates. Speedup alone
+never satisfies either claim.
 
 Estimate the full matching-profile campaign:
 
@@ -285,9 +309,10 @@ evidence; latency/cost; advisory judge scores.
 
 Use confidence `routing-smoke`, `insufficient-repeats`, `directional`, or
 `decision-grade`. Directional requires comparable n>=3 evidence.
-Decision-grade local guidance additionally needs fit-for-purpose/Core-19
-coverage, clean QA, proven identity/reasoning, retained artifacts, and reported
-uncertainty.
+The comparator awards decision-grade only with unblocked Core-19 at n>=3,
+comparable route-bound truthfulness, clean content-bound Personal Agent QA, and
+passing current local-cache admission for every local MLX route. Standard Mac
+remains directional even when clean.
 
 Use one verdict: `adopt`, `adopt-for-<lane>`, `keep-baseline`,
 `indeterminate`, or `blocked`. ShellBench alone never earns full-system
@@ -305,6 +330,7 @@ Provider-free regression checks:
 ```bash
 python3 skills/clawgauge/scripts/self_test.py
 python3 skills/clawgauge/scripts/test_local_cache_admission_plan.py
+python3 skills/clawgauge/scripts/test_decision_grade.py
 ```
 
 Keep run artifacts under `skills/clawgauge/runs/<run-id>/`; publish only

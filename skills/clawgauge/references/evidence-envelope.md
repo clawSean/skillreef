@@ -84,6 +84,34 @@ suite, repetitions, case count, and cell count. Missing evidence does not erase
 valid capability measurements, but it makes trust/decision-grade status false.
 An invalid supplied truthfulness block fails envelope validation.
 
+## Personal Agent QA provenance
+
+`provenance.qa` is optional for capability-only comparison and required for
+decision-grade status. It binds the content-hashed JSON emitted by
+`score_qa_suite.py`:
+
+```json
+{
+  "passed": true,
+  "profile": "personal-agent",
+  "scenario_count": 10,
+  "model": "exact/provider-model",
+  "fast_mode_effective": false,
+  "score_proof": {
+    "kind": "clawgauge-qa-scorecard",
+    "reference": "qa-gate.json",
+    "sha256": "sha256:..."
+  }
+}
+```
+
+The scorecard must be comparable, contain exactly one record for the observed
+model, use live-provider evidence, keep fallback disabled, match effective fast
+state, contain the exact ten Personal Agent scenarios, pass every scenario on
+every retained attempt, and contain no blocked/stalled/skipped/failed retry.
+Missing QA leaves capability evidence usable but decision-grade false. An
+invalid supplied QA attestation blocks envelope validation.
+
 ## Cache provenance
 
 `provenance.cache` has six required blocks: `runtime`, `layers`,
@@ -95,7 +123,7 @@ An invalid supplied truthfulness block fails envelope validation.
     "visibility": "known",
     "kind": "prefix-kv",
     "name": "mlx-vlm",
-    "version": "0.6.13",
+    "version": "0.6.15",
     "engine": "automatic-prefix-cache"
   },
   "layers": [
@@ -103,7 +131,7 @@ An invalid supplied truthfulness block fails envelope validation.
       "kind": "prefix-kv",
       "enabled": true,
       "name": "mlx-vlm",
-      "version": "0.6.13",
+      "version": "0.6.15",
       "engine": "automatic-prefix-cache"
     },
     {
@@ -175,6 +203,32 @@ An invalid supplied truthfulness block fails envelope validation.
   }
 }
 ```
+
+For an enabled known MLX runtime, decision-grade status additionally requires
+`provenance.cache.admission` bound to a passing architecture-aware score:
+
+```json
+{
+  "passed": true,
+  "plan_fingerprint": "sha256:...",
+  "case_count": 5,
+  "score_proof": {
+    "kind": "clawgauge-local-cache-admission-score",
+    "reference": "local-cache-admission-score.json",
+    "sha256": "sha256:..."
+  }
+}
+```
+
+The comparator verifies the score schema, blockers, exact runtime/version,
+observed provider/model, OpenClaw commit, cache-policy fingerprint,
+architecture features, and architecture/template/parser/cache-layout
+fingerprints. The bound score itself includes the exact response/loaded model,
+installed OpenClaw build, immutable revisions, and route observation. Missing
+admission preserves directional capability evidence but makes decision-grade
+false. A supplied invalid or mismatched admission blocks validation. See
+`local-cache-admission.md`; direct-service cold/warm/replay proof alone is not
+admission.
 
 Every layer has a unique supported `kind`, a boolean `enabled`, and non-empty
 `name`, `version`, and `engine`. Exactly one

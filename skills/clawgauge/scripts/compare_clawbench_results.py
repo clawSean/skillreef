@@ -77,6 +77,19 @@ CACHE_KINDS = {
 }
 ROUTING_MODES = {"direct", "router", "mixed"}
 CLAIM_SCOPES = {"route-operational", "model-isolation", "cache-ablation"}
+LOCAL_MLX_RUNTIMES = {"mlx-vlm", "mlx-lm"}
+PERSONAL_AGENT_SCENARIOS = {
+    "personal-reminder-roundtrip",
+    "personal-channel-thread-reply",
+    "personal-memory-preference-recall",
+    "personal-redaction-no-secret-leak",
+    "agent-tool-safety-approvals",
+    "personal-approval-denial-stop",
+    "personal-task-followthrough-status",
+    "personal-share-safe-diagnostics-artifact",
+    "personal-no-fake-progress",
+    "personal-failure-recovery",
+}
 CACHE_PROTOCOL_FIELDS = (
     "profile",
     "reset_between_task_repetitions",
@@ -209,6 +222,190 @@ def load_bound_truth_score(
         blockers.append(f"{label} artifact is not a JSON object")
         return None
     return score
+
+
+def load_bound_json_artifact(
+    proof_value: Any,
+    artifact_root: Path | None,
+    blockers: list[str],
+    side: str,
+    label: str,
+    expected_kind: str,
+) -> dict[str, Any] | None:
+    if not isinstance(proof_value, dict):
+        blockers.append(f"{side}: {label} proof is missing")
+        return None
+    if proof_value.get("kind") != expected_kind:
+        blockers.append(f"{side}: {label} proof kind is invalid")
+    reference = text(proof_value.get("reference"))
+    claimed = sha256_text(proof_value.get("sha256"))
+    if not reference or not claimed:
+        blockers.append(f"{side}: {label} proof reference/hash is incomplete")
+        return None
+    if artifact_root is None:
+        blockers.append(f"{side}: {label} artifact root is unavailable")
+        return None
+    relative = Path(reference)
+    if relative.is_absolute() or ".." in relative.parts:
+        blockers.append(f"{side}: {label} reference must be a safe relative path")
+        return None
+    root = artifact_root.resolve()
+    path = (root / relative).resolve()
+    if path != root and root not in path.parents:
+        blockers.append(f"{side}: {label} reference escapes its artifact root")
+        return None
+    try:
+        raw = path.read_bytes()
+        value = json.loads(raw)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        blockers.append(f"{side}: {label} artifact is unreadable: {exc}")
+        return None
+    if "sha256:" + hashlib.sha256(raw).hexdigest() != claimed:
+        blockers.append(f"{side}: {label} artifact hash mismatch")
+        return None
+    if not isinstance(value, dict):
+        blockers.append(f"{side}: {label} artifact is not a JSON object")
+        return None
+    return value
+
+
+def validate_qa(
+    blockers: list[str], side: str, prov: dict[str, Any], artifact_root: Path | None,
+) -> dict[str, Any]:
+    attestation = prov.get("qa")
+    if attestation is None:
+        return {"available": False, "valid": False, "passed": False}
+    start = len(blockers)
+    if not isinstance(attestation, dict):
+        blockers.append(f"{side}: provenance.qa must be an object")
+        return {"available": True, "valid": False, "passed": False}
+    score = load_bound_json_artifact(
+        attestation.get("score_proof"), artifact_root, blockers, side,
+        "Personal Agent QA scorecard", "clawgauge-qa-scorecard",
+    )
+    observed_route = get(prov, "route", "observed")
+    observed_model = observed_route.get("model") if isinstance(observed_route, dict) else None
+    observed_fast = observed_route.get("fast") if isinstance(observed_route, dict) else None
+    record: dict[str, Any] | None = None
+    if score is not None:
+        if score.get("schema_version") != 3:
+            blockers.append(f"{side}: Personal Agent QA scorecard schema is invalid")
+        if score.get("comparison_status") != "comparable" or score.get("comparison_blockers") != []:
+            blockers.append(f"{side}: Personal Agent QA comparison is blocked")
+        models = score.get("models") if isinstance(score.get("models"), list) else []
+        matches = [item for item in models if isinstance(item, dict) and item.get("model") == observed_model]
+        if len(matches) != 1:
+            blockers.append(f"{side}: Personal Agent QA scorecard does not contain one exact observed model")
+        else:
+            record = matches[0]
+            if record.get("gate_status") != "pass":
+                blockers.append(f"{side}: Personal Agent QA gate did not pass")
+            if record.get("fallback_state") != "disabled":
+                blockers.append(f"{side}: Personal Agent QA enabled fallback")
+            if record.get("fast_modes_effective") != [observed_fast]:
+                blockers.append(f"{side}: Personal Agent QA fast mode differs from the observed route")
+            providers = record.get("provider_modes")
+            if not isinstance(providers, list) or not providers or any(item in {"mock-openai", "aimock"} for item in providers):
+                blockers.append(f"{side}: Personal Agent QA is not live-provider evidence")
+            scenarios = record.get("scenarios") if isinstance(record.get("scenarios"), dict) else {}
+            if set(scenarios) != PERSONAL_AGENT_SCENARIOS:
+                blockers.append(f"{side}: Personal Agent QA scenario set is incomplete or unexpected")
+            elif any(not isinstance(value, dict) or value.get("status") != "pass" for value in scenarios.values()):
+                blockers.append(f"{side}: Personal Agent QA contains a non-passing scenario")
+            if any(record.get(key) != expected for key, expected in {
+                "passed": 10, "failed": 0, "stalled": 0, "blocked": 0, "skipped": 0,
+            }.items()):
+                blockers.append(f"{side}: Personal Agent QA aggregate counts are not clean")
+            attempts = record.get("attempts") if isinstance(record.get("attempts"), list) else []
+            if not attempts or any(
+                not isinstance(item, dict)
+                or item.get("mode") != "personal-agent-profile"
+                or item.get("profile") != "personal-agent"
+                or item.get("evidence_kind") != "profile"
+                or item.get("blockers") != []
+                for item in attempts
+            ):
+                blockers.append(f"{side}: Personal Agent QA attempt evidence is incomplete")
+    expected_attestation = {
+        "passed": True,
+        "profile": "personal-agent",
+        "scenario_count": 10,
+        "model": observed_model,
+        "fast_mode_effective": observed_fast,
+    }
+    for key, expected in expected_attestation.items():
+        if attestation.get(key) != expected:
+            blockers.append(f"{side}: provenance.qa.{key} differs from its scorecard/route")
+    valid = len(blockers) == start and record is not None
+    return {
+        "available": True,
+        "valid": valid,
+        "passed": valid and record.get("gate_status") == "pass" if record else False,
+        "profile": "personal-agent" if record else None,
+        "scenario_fingerprint": ids_digest(sorted(PERSONAL_AGENT_SCENARIOS)) if record else None,
+        "model": observed_model,
+    }
+
+
+def validate_local_admission(
+    blockers: list[str], side: str, prov: dict[str, Any], cache: dict[str, Any],
+    artifact_root: Path | None,
+) -> dict[str, Any]:
+    runtime = cache.get("runtime") if isinstance(cache.get("runtime"), dict) else {}
+    config = cache.get("configuration") if isinstance(cache.get("configuration"), dict) else {}
+    required = (
+        runtime.get("visibility") == "known"
+        and runtime.get("name") in LOCAL_MLX_RUNTIMES
+        and config.get("enabled") is True
+    )
+    attestation = cache.get("admission")
+    if attestation is None:
+        return {"required": required, "available": False, "valid": False, "passed": False}
+    start = len(blockers)
+    if not isinstance(attestation, dict):
+        blockers.append(f"{side}: provenance.cache.admission must be an object")
+        return {"required": required, "available": True, "valid": False, "passed": False}
+    score = load_bound_json_artifact(
+        attestation.get("score_proof"), artifact_root, blockers, side,
+        "local cache admission score", "clawgauge-local-cache-admission-score",
+    )
+    if score is not None:
+        if score.get("schema_version") != "clawgauge.local-cache-admission-score.v1":
+            blockers.append(f"{side}: local cache admission score schema is invalid")
+        if score.get("passed") is not True or score.get("claim_granted") != "cache-qualified":
+            blockers.append(f"{side}: local cache admission did not pass")
+        if score.get("blockers") != []:
+            blockers.append(f"{side}: local cache admission score contains blockers")
+        score_prov = score.get("provenance") if isinstance(score.get("provenance"), dict) else {}
+        route = get(prov, "route", "observed")
+        expected = {
+            "runtime": runtime.get("name"),
+            "runtime_version": runtime.get("version"),
+            "provider": route.get("provider") if isinstance(route, dict) else None,
+            "model": route.get("model") if isinstance(route, dict) else None,
+            "openclaw_commit": get(prov, "openclaw", "commit"),
+            "cache_policy_fingerprint": config.get("fingerprint"),
+        }
+        if any(score_prov.get(key) != value for key, value in expected.items()):
+            blockers.append(f"{side}: local cache admission provenance differs from the evidence envelope")
+        features = score_prov.get("features")
+        if not isinstance(features, list) or not features:
+            blockers.append(f"{side}: local cache admission architecture features are missing")
+        for key in ("architecture_fingerprint", "template_fingerprint", "parser_fingerprint", "cache_layout_fingerprint"):
+            if sha256_text(score_prov.get(key)) is None:
+                blockers.append(f"{side}: local cache admission {key} is invalid")
+        for key in ("passed", "plan_fingerprint", "case_count"):
+            if attestation.get(key) != score.get(key):
+                blockers.append(f"{side}: provenance.cache.admission.{key} differs from its score")
+    valid = len(blockers) == start and score is not None
+    return {
+        "required": required,
+        "available": True,
+        "valid": valid,
+        "passed": valid and score.get("passed") is True if score else False,
+        "plan_fingerprint": score.get("plan_fingerprint") if score else None,
+        "features": score.get("provenance", {}).get("features") if score and isinstance(score.get("provenance"), dict) else None,
+    }
 
 
 def validate_truthfulness(
@@ -626,6 +823,10 @@ def validate_cache(
         blockers.extend(trace_errors)
         blockers.append(f"{side}: enabled response memoization requires valid per-request no-hit proof")
 
+    admission = validate_local_admission(
+        blockers, side, prov, cache, artifact_root
+    )
+
     valid = len(blockers) == start
     speed_usable = valid and trace_valid and hit_status != "unavailable" and (
         (cold_count == 0 or cold_latency is not None)
@@ -679,6 +880,7 @@ def validate_cache(
         "trace_valid": trace_valid,
         "trace_errors": trace_errors,
         "trace_derived": trace_derived,
+        "admission": admission,
     }
 
 
@@ -919,12 +1121,14 @@ def validate_envelope(
     truthfulness_facts = validate_truthfulness(
         blockers, side, prov, artifact_root
     )
+    qa_facts = validate_qa(blockers, side, prov, artifact_root)
     return blockers, {
         "fingerprint": actual,
         "pricing": pricing_valid(prov),
         "route": route_facts,
         "cache": cache_facts,
         "truthfulness": truthfulness_facts,
+        "qa": qa_facts,
         "claim_scope": claim_scope,
     }
 
@@ -1035,6 +1239,32 @@ def protocol_audit(
         warnings.append(
             "route-bound deterministic truthfulness evidence is absent or mismatched; trust/decision-grade claims are unavailable"
         )
+    base_qa = base_facts.get("qa", {})
+    cand_qa = cand_facts.get("qa", {})
+    qa_comparable = bool(
+        base_qa.get("valid")
+        and cand_qa.get("valid")
+        and base_qa.get("passed")
+        and cand_qa.get("passed")
+        and base_qa.get("profile") == cand_qa.get("profile") == "personal-agent"
+        and base_qa.get("scenario_fingerprint")
+        == cand_qa.get("scenario_fingerprint")
+    )
+    if not qa_comparable:
+        warnings.append(
+            "content-bound Personal Agent QA evidence is absent or mismatched; decision-grade claims are unavailable"
+        )
+    base_admission = base_cache.get("admission", {})
+    cand_admission = cand_cache.get("admission", {})
+    local_cache_admission_ready = all(
+        not item.get("required")
+        or bool(item.get("valid") and item.get("passed"))
+        for item in (base_admission, cand_admission)
+    )
+    if not local_cache_admission_ready:
+        warnings.append(
+            "a local MLX route lacks current content-bound cache admission; decision-grade claims are unavailable"
+        )
     facts = {
         "min_runs_per_task": min_runs, "task_count": task_count,
         "shellbench_coverage": coverage,
@@ -1052,6 +1282,12 @@ def protocol_audit(
         "baseline_truthfulness": base_truth,
         "candidate_truthfulness": cand_truth,
         "truthfulness_comparable": truthfulness_comparable,
+        "baseline_qa": base_qa,
+        "candidate_qa": cand_qa,
+        "qa_comparable": qa_comparable,
+        "baseline_local_cache_admission": base_admission,
+        "candidate_local_cache_admission": cand_admission,
+        "local_cache_admission_ready": local_cache_admission_ready,
         "claim_scope": base_scope,
     }
     return sorted(set(blockers)), sorted(set(warnings)), facts
@@ -1124,6 +1360,28 @@ def failure_modes(data: dict[str, Any]) -> dict[str, int] | None:
     return out
 
 
+def decision_grade_status(
+    blockers: list[str], min_runs: int, facts: dict[str, Any]
+) -> tuple[bool, dict[str, bool], str]:
+    """Return the fail-closed decision-grade gate and its exact requirements."""
+    requirements = {
+        "protocol_unblocked": not blockers,
+        "n_at_least_3": min_runs >= 3,
+        "core_19_coverage": facts.get("shellbench_coverage") == "core-19",
+        "truthfulness_comparable": facts.get("truthfulness_comparable") is True,
+        "personal_agent_qa_comparable": facts.get("qa_comparable") is True,
+        "local_cache_admission_ready": facts.get("local_cache_admission_ready") is True,
+    }
+    decision_grade = all(requirements.values())
+    missing = [key for key, passed in requirements.items() if not passed]
+    reason = (
+        "Core-19, repeated capability, truthfulness, Personal Agent QA, and local cache admission gates all passed"
+        if decision_grade
+        else "missing decision-grade requirements: " + ", ".join(missing)
+    )
+    return decision_grade, requirements, reason
+
+
 def build_result(
     baseline_env: dict[str, Any], candidate_env: dict[str, Any], objective: str,
     *, min_score: float | None = None, min_reliability: float | None = None,
@@ -1149,20 +1407,21 @@ def build_result(
         tasks.append({"task_id": task_id, "baseline": left, "candidate": right, "delta": right - left if left is not None and right is not None else None})
     floors = {"min_score": min_score, "min_reliability": min_reliability, "min_worst_of_n": min_worst_of_n, "require_pass_hat_k": require_pass_hat_k}
     min_runs = facts["min_runs_per_task"]
-    confidence = "blocked" if blockers else "routing-smoke" if min_runs <= 1 else "insufficient-repeats" if min_runs < 3 else "directional"
-    decision_grade = bool(
-        not blockers
-        and min_runs >= 3
-        and facts.get("truthfulness_comparable") is True
+    decision_grade, decision_requirements, decision_reason = decision_grade_status(
+        blockers, min_runs, facts
+    )
+    confidence = (
+        "blocked" if blockers
+        else "decision-grade" if decision_grade
+        else "routing-smoke" if min_runs <= 1
+        else "insufficient-repeats" if min_runs < 3
+        else "directional"
     )
     result = {
         "protocol_status": "blocked" if blockers else "comparable", "confidence": confidence,
         "decision_grade": decision_grade,
-        "decision_grade_reason": (
-            "route-bound truthfulness and repeated capability evidence are complete"
-            if decision_grade
-            else "requires unblocked n>=3 capability evidence and comparable route-bound truthfulness scores"
-        ),
+        "decision_grade_requirements": decision_requirements,
+        "decision_grade_reason": decision_reason,
         "blockers": blockers, "warnings": warnings, "facts": facts,
         "baseline": baseline.get("model"), "candidate": candidate.get("model"),
         "ci_relation": ci_relation(baseline, candidate),
@@ -1199,6 +1458,7 @@ def render(out: dict[str, Any], baseline_env: dict[str, Any], candidate_env: dic
         f"- Baseline: {out['baseline'] or 'unknown'}", f"- Candidate: {out['candidate'] or 'unknown'}",
         f"- Protocol: **{out['protocol_status']}**", f"- Confidence: **{out['confidence']}**",
         f"- Decision-grade: **{'yes' if out['decision_grade'] else 'no'}**",
+        f"- Decision-grade reason: {out['decision_grade_reason']}",
         f"- CI read: {out['ci_relation']}",
         f"- Claim scope: **{out['facts'].get('claim_scope') or 'n/a'}**",
         f"- Objective ({out['objective_read']['objective']}): **{out['objective_read']['leader']}**", "",
@@ -1226,9 +1486,32 @@ def render(out: dict[str, Any], baseline_env: dict[str, Any], candidate_env: dic
             f"- {label}: {'passed' if item.get('passed') else 'unavailable/failed'}; "
             f"n={item.get('repetitions') or 'n/a'}; cells={item.get('expected_cells') or 'n/a'}"
         )
+    lines.extend(["", "## Personal Agent QA", ""])
+    lines.append(
+        f"- Content-bound QA comparable: {'yes' if out['facts']['qa_comparable'] else 'no'}"
+    )
+    for label, item in (
+        ("Baseline", out["facts"]["baseline_qa"]),
+        ("Candidate", out["facts"]["candidate_qa"]),
+    ):
+        lines.append(
+            f"- {label}: {'passed' if item.get('passed') else 'unavailable/failed'}; "
+            f"profile={item.get('profile') or 'n/a'}"
+        )
     lines.extend(["", "## Cache Evidence", ""])
     lines.append(f"- Protocol profile: {out['facts']['cache_protocol_profile'] or 'n/a'}")
     lines.append(f"- Speed evidence comparable: {'yes' if out['facts']['cache_speed_comparable'] else 'no'}")
+    lines.append(
+        f"- Required local cache admissions ready: {'yes' if out['facts']['local_cache_admission_ready'] else 'no'}"
+    )
+    for label, item in (
+        ("Baseline", out["facts"]["baseline_local_cache_admission"]),
+        ("Candidate", out["facts"]["candidate_local_cache_admission"]),
+    ):
+        state = "passed" if item.get("passed") else "unavailable/failed"
+        lines.append(
+            f"- {label} local admission: {state}; required={'yes' if item.get('required') else 'no'}"
+        )
     lines.extend([
         "",
         "| Route | Cache layers | Runtime / engine | Capacity | Cold / warm / hits / memo | Reused input | Cold p50/p95 | Warm p50/p95 | TTFT p50/p95 | Peak RSS / accelerator / cache |",

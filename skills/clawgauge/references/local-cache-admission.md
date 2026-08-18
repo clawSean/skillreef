@@ -1,74 +1,144 @@
 # Local Cache Admission
 
-Use this after the generic cold/warm/replay qualifier and before any
-`cache-qualified` claim. Configuration, service residency, faster warm time,
-and positive cached-token telemetry are necessary but not sufficient.
+This file is ClawGauge's single detailed protocol for local cache correctness.
+The workspace onboarding procedure owns lifecycle/state transitions and links
+here; dated audits record history only.
 
-## Evidence contract
+Cache admission proves that the exact local route reuses the right model state
+without collisions or unsafe memory behavior. It does **not** prove agent
+capability, truthfulness, or suitability for a work lane. Those belong to
+operator qualification.
 
-Record exact provider/model, immutable model revision, runtime and version,
-OpenClaw commit, chat-template/tool/reasoning configuration, cache layout,
-cache-policy fingerprint, listener PID/start/cache epoch, fallback=false, and
-the artifact hash for every cell.
+## Claim ladder
 
-## Base gates
+1. `cache-configured`: durable launch policy enables a cache.
+2. `direct-service-prefix-reuse`: the generic qualifier proves cold/warm/replay
+   reuse on one already-running loopback API.
+3. `cache-qualified`: every frozen architecture-aware admission case passes,
+   its artifacts are content-bound, and a current OpenClaw route observation
+   proves exact model/runtime identity plus `fallback=false`.
+4. `operator-qualified`: separate ShellBench, truthfulness, and Personal Agent
+   QA gates pass.
+5. `promoted`: explicit routing decision and approved live change.
 
-Every local route must prove:
+Never collapse these states.
 
-1. fresh/reset cold, append-only warm, identical replay, and anti-response-memo
-   evidence through `qualify_prefix_cache.py`;
-2. exact cold-versus-warm output parity on deterministic fixtures;
-3. semantic mutations invalidate the affected prefix;
-4. current-OpenClaw two- or three-tool continuation with preserved reasoning,
-   exact route identity, and no raw tool-text leakage;
-5. frozen truthfulness and realistic lane screens at `n >= 3`;
-6. cold load, cold/warm prefill, decode, tool, and total task timing;
-7. peak RSS, host pressure, swap, saturation/eviction, and target context;
-8. warm-before-idle, cold-after-exit, external reuse, and route handoff.
+## Direct-service screen
 
-## Conditional gates
+Run `qualify_prefix_cache.py` with exact runtime, MLX core version, immutable
+model revision, and a fresh cache epoch. A pass grants only
+`direct-service-prefix-reuse`.
 
-### Hybrid recurrent/GDN cache
+Required observations:
 
-Use branch replay: clean cold A, reset, warm A, branch B, return to A, then a
-fresh cold-A reference. Compare state-sensitive outputs. Speed cannot prove
-that auxiliary arrays were restored.
+- cold cached tokens equal zero;
+- append-only warm reuse clears the declared token floor;
+- exact replay returns a fresh response ID and reuses more input than warm;
+- all responses report the requested model;
+- listener PID/start time remain stable and peak RSS is captured;
+- MLX-VLM additionally proves APC health, reset, positive exact hit/store
+  deltas, and no disk activity/configuration.
 
-### Rotating, sliding, or convolutional cache
+This direct-service screen cannot prove the OpenClaw provider route, fallback
+absence, auxiliary recurrent state, media identity, tenant isolation,
+eviction safety, `cache-qualified`, or `operator-qualified`.
 
-Exercise beyond the rotation/window boundary and compare restored warm output
-with a cold reference. Ordinary KV success does not cover other cache children.
+## Frozen admission plan
 
-### Multimodal cache
+Build `clawgauge.local-cache-admission-plan.v2` with:
 
-Use identical text with media A cold, media A warm, then media B. A must reuse;
-B must not collide and must equal a cold-B reference. Bind processed-media,
-processor, and model hashes.
+- exact runtime/runtime version and MLX version;
+- exact OpenClaw provider, API response model, loaded model, and immutable model revision;
+- installed OpenClaw version and immutable OpenClaw commit;
+- SHA-256 fingerprints for architecture, template, parser, cache policy, and
+  cache layout;
+- exactly one structural feature: `standard-kv`, `hybrid-recurrent`, or
+  `rotating-or-conv`;
+- exactly one modality: `text-only` or `multimodal`;
+- exactly one service scope: `isolated-service` or `shared-service`;
+- exactly one batching mode: `serial-service` or `batched-service`.
 
-### Shared service
+Unknown or ambiguous architecture blocks execution. Do not default a route to
+standard KV.
 
-Use separate tenant salts and concurrent prefixes. Prove no cross-tenant hit,
-correct longest-prefix selection, bounded eviction, and post-eviction parity.
+## Required cases
 
-## Runtime caveats
+Every executable plan includes:
 
-- `mlx-vlm 0.6.14` is the current minimum cache-fix release for new
-  qualification. Older saved proofs remain historical.
-- `mlx-lm 0.31.3` does not enforce `--prompt-cache-bytes` as a universal
-  hard cap. Nearest-cache reuse can transiently copy state.
-- MLX-VLM exact snapshots are count-bounded, not byte-bounded; APC stats omit
-  some exact-snapshot memory.
-- KV quantization is a separate memory/quality trade.
-- Hugging Face `past_key_values`, model-file caches, and response memos are not
-  cross-request prefix-cache proof.
+- `declaration-provenance`: requested/observed route, `fallback=false`, exact
+  runtime/model/OpenClaw identity, fingerprints, and runtime epoch;
+- `cold-warm-replay`: cold zero, warm reuse, replay growth, fresh ID, same
+  PID/start/epoch, output parity, and RSS;
+- `mutation-matrix`: system, tools/order, reasoning, template, revision,
+  media, and tenant mutations invalidate the affected state;
+- `memory-lifecycle`: peak RSS, pressure, swap, saturation/eviction, idle/exit,
+  and route-handoff behavior.
 
-## Official references
+Conditional cases:
 
-- MLX-VLM 0.6.14: <https://github.com/Blaizzy/mlx-vlm/releases/tag/v0.6.14>
-- MLX-LM: <https://github.com/ml-explore/mlx-lm>
-- MLX KV guidance: <https://github.com/ml-explore/mlx/blob/main/docs/src/usage/kv_cache.rst>
-- Hugging Face KV cache: <https://huggingface.co/docs/transformers/main/en/kv_cache>
-- llama.cpp server: <https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md>
-- vLLM APC: <https://docs.vllm.ai/en/stable/design/prefix_caching/>
-- SGLang cache: <https://docs.sglang.ai/advanced_features/hicache_best_practices.html>
-- Ollama lifecycle: <https://docs.ollama.com/faq>
+- `stateful-branch-replay` for hybrid/recurrent/rotating/conv state: clean cold
+  A, warm A, branch B, return A, and a fresh cold-A reference;
+- `media-key-isolation` for multimodal routes: media A cold/warm, media B no
+  collision, cold-B parity, and same-path changed-content invalidation;
+- `tenant-and-eviction-isolation` for shared services: independent tenant salts,
+  concurrent prefixes, no cross-tenant hit, bounded eviction, and parity after
+  eviction;
+- batch parity before concurrency >1: single output must equal output when
+  co-batched with both shorter and longer peer rows. The frozen plan emits
+  `batch-parity` whenever `batched-service` is declared.
+
+Qwen3-Coder-Next is hybrid: MLX-LM uses recurrent/conv arrays plus full-attention
+KV state. It requires branch replay even though its public name says Coder.
+
+## Result and score contract
+
+Execute every plan case and record
+`clawgauge.local-cache-admission-results.v1`:
+
+- exact plan fingerprint and plan artifact SHA-256;
+- byte-equal plan provenance;
+- every expected case exactly once, each `status=pass`;
+- at least one safe relative, SHA-256-bound evidence artifact per case;
+- a content-bound `clawgauge.local-model-architecture.v1` manifest;
+- a content-bound `clawgauge.local-route-observation.v1` artifact with exact
+  requested provider/model, observed provider/model, response model, loaded
+  model, runtime provenance, positive PID, start time, runtime ID, cache epoch,
+  and `fallback_used=false`.
+
+Score with `validate_local_cache_admission.py`. Missing, extra, duplicated,
+failed, stale, mismatched, unsafe, or tampered evidence blocks. Only the
+content-bound `clawgauge.local-cache-admission-score.v1` may grant
+`cache-qualified`. Bind that score under `provenance.cache.admission` in each
+ClawGauge evidence envelope.
+
+## Runtime floors and caveats
+
+- New MLX-VLM admission requires `mlx-vlm >=0.6.15`; pair it with the exact MLX
+  core version used in proof. `0.6.15` includes batching/padding corrections and
+  MLX `0.32.1` compatibility.
+- `mlx-lm 0.31.3 --prompt-cache-bytes` is a trim target, not a hard ceiling.
+  Nearest-prefix reuse may transiently copy state. Entry count plus measured
+  RSS, memory pressure, and swap are the real safety gates.
+- MLX-VLM exact snapshots are count-bounded, not byte-bounded; APC stats do not
+  expose every byte of exact-snapshot residency.
+- Hugging Face `past_key_values` can be retained between in-process
+  `generate()` calls, but is not automatic HTTP prefix caching.
+- Thinking-history policy is exact-model-specific. Pin the model card,
+  template, and parser; do not apply one Qwen-family rule to every model.
+- MLX-VLM tenant headers include `X-APC-Tenant` and `X-Tenant-Id`, with
+  `APC_DEFAULT_TENANT` as a service default. A static shared header is not
+  session isolation. Prove trusted per-session propagation or isolate services
+  by trust domain.
+
+## Official source pins
+
+- MLX-VLM 0.6.15: <https://github.com/Blaizzy/mlx-vlm/releases/tag/v0.6.15>
+- MLX 0.32.1: <https://github.com/ml-explore/mlx/releases/tag/v0.32.1>
+- MLX-LM 0.31.3: <https://github.com/ml-explore/mlx-lm/releases/tag/v0.31.3>
+- Hugging Face cache guide: <https://huggingface.co/docs/transformers/main/en/kv_cache>
+- Qwen3.8-27B model card: <https://huggingface.co/Qwen/Qwen3.8-27B>
+- Qwen3-Coder-Next model card: <https://huggingface.co/Qwen/Qwen3-Coder-Next>
+- llama.cpp server cache: <https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md>
+- vLLM prefix caching: <https://docs.vllm.ai/en/stable/design/prefix_caching/>
+- vLLM-Metal models: <https://github.com/vllm-project/vllm-metal/blob/main/docs/supported_models.md>
+- SGLang Apple backend: <https://docs.sglang.ai/platforms/apple_metal.html>

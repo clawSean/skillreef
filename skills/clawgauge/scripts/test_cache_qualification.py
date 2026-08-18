@@ -34,6 +34,8 @@ class State:
         self.disk_writes = 0
         self.chat_calls = 0
         self.hybrid_prompt_memo = False
+        self.response_model = "mock-model"
+        self.response_models = None
         self.prompt_memo: Dict[str, dict] = {}
         for key, value in overrides.items():
             setattr(self, key, value)
@@ -111,6 +113,14 @@ def handler_for(state: State) -> type[BaseHTTPRequestHandler]:
                 "choices": [{"message": {"role": "assistant", "content": text}}],
                 "usage": {"prompt_tokens": 6000},
             }
+            observed_model = (
+                state.response_models[state.chat_calls - 1]
+                if isinstance(state.response_models, list)
+                and state.chat_calls <= len(state.response_models)
+                else state.response_model
+            )
+            if observed_model is not None:
+                response["model"] = observed_model
             if not state.omit_cache_telemetry:
                 response["usage"]["prompt_tokens_details"] = {"cached_tokens": cached}
             state.prompt_memo[prompt_key] = copy.deepcopy(response)
@@ -153,6 +163,14 @@ def run_qualifier(
             "mock-model",
             "--runtime",
             runtime,
+            "--runtime-version",
+            "0.31.3" if runtime == "mlx-lm" else "0.6.15",
+            "--mlx-version",
+            "0.32.1",
+            "--model-revision",
+            "a" * 40,
+            "--cache-epoch",
+            f"epoch-{label}",
             "--prefix-words",
             "100",
             "--minimum-reused-tokens",
@@ -187,7 +205,7 @@ def main() -> int:
             plan = run_qualifier(root, "plan", base_url, "mlx-vlm", 0, "--plan")
             assert state.calls == before
             assert plan["network_calls_performed"] == 0
-            assert plan["schema_version"] == "clawgauge.prefix-cache-qualification-plan.v2"
+            assert plan["schema_version"] == "clawgauge.prefix-cache-qualification-plan.v3"
             assert "POST /v1/chat/completions (exact warm replay)" in plan["requests"]
             checks += 4
 
@@ -198,7 +216,10 @@ def main() -> int:
             assert report["checks"]["vlm_reset_after"] is True
             assert report["checks"]["response_memoization_disproved"] is True
             assert report["server"]["lifecycle"]["same_process"] is True
-            checks += 5
+            assert report["checks"]["response_model_exact"] is True
+            assert report["claim_granted"] == "direct-service-prefix-reuse"
+            assert report["server"]["fallback_proven_off"] is False
+            checks += 8
 
         with mock_server() as (base_url, state):
             report = run_qualifier(root, "lm-pass", base_url, "mlx-lm", 0)
@@ -247,6 +268,22 @@ def main() -> int:
             assert report["checks"]["vlm_exact_hit_delta"] is False
             checks += 1
 
+        with mock_server(response_model=None) as (base_url, _state):
+            report = run_qualifier(root, "missing-model", base_url, "mlx-lm", 2)
+            assert report["checks"]["response_model_exact"] is False
+            assert report["claim_granted"] is None
+            checks += 2
+
+        with mock_server(response_model="wrong-model") as (base_url, _state):
+            report = run_qualifier(root, "wrong-model", base_url, "mlx-lm", 2)
+            assert report["checks"]["response_model_exact"] is False
+            checks += 1
+
+        with mock_server(response_models=["mock-model", "other-model", "mock-model"]) as (base_url, _state):
+            report = run_qualifier(root, "changing-model", base_url, "mlx-lm", 2)
+            assert report["checks"]["response_model_exact"] is False
+            checks += 1
+
         external = subprocess.run(
             [
                 sys.executable,
@@ -257,6 +294,14 @@ def main() -> int:
                 "mock-model",
                 "--runtime",
                 "mlx-lm",
+                "--runtime-version",
+                "0.31.3",
+                "--mlx-version",
+                "0.32.1",
+                "--model-revision",
+                "a" * 40,
+                "--cache-epoch",
+                "epoch-external",
                 "--plan",
             ],
             text=True,
@@ -266,6 +311,23 @@ def main() -> int:
         assert external.returncode == 2
         assert "loopback" in external.stderr
         checks += 2
+
+        for label, flag, value, expected_message in (
+            ("mutable-revision", "--model-revision", "main", "immutable"),
+            ("bad-runtime-version", "--runtime-version", "latest", "major.minor.patch"),
+            ("bad-mlx-version", "--mlx-version", "0.32", "major.minor.patch"),
+        ):
+            args = [
+                sys.executable, str(QUALIFIER), "--base-url", "http://127.0.0.1:9/v1",
+                "--model", "mock-model", "--runtime", "mlx-lm",
+                "--runtime-version", "0.31.3", "--mlx-version", "0.32.1",
+                "--model-revision", "a" * 40, "--cache-epoch", f"epoch-{label}",
+                "--plan",
+            ]
+            args[args.index(flag) + 1] = value
+            completed = subprocess.run(args, text=True, capture_output=True, check=False)
+            assert completed.returncode == 2 and expected_message in completed.stderr
+            checks += 1
 
     print(f"ClawGauge cache qualification tests: PASS ({checks} assertions)")
     return 0

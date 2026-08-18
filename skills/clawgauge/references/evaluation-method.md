@@ -53,6 +53,7 @@ Provider behavior and load change over time.
 | Personal Agent QA | Selected regression/safety scenarios pass | Every candidate and baseline |
 | Character eval | Persona/naturalness preference | Blind, >=2 verified provider-family judges |
 | Cache-aware quick screen | Reject unusable routes before a full campaign | cold/warm tool loop + 3 tasks, n=1 |
+| Local cache admission | Architecture, isolation, memory, and lifecycle correctness | Every enabled local MLX route |
 | ShellBench Standard Mac | Directional capability and reliability | 9 pinned tasks, n=3 |
 | Core-19 | Broad local OpenClaw capability | When close or consequential |
 | Research campaign | Reproducible external claim | Upstream runbook, n=6 |
@@ -127,6 +128,12 @@ Use sequential stopping:
 3. stop if a route is invalid or the decision is already obvious and low-risk
 4. expand only close, high-impact, or contradictory results to Core-19/n=6
 
+The comparator enforces this fail closed. `decision-grade` requires unblocked
+Core-19 at n>=3, comparable route-bound truthfulness, comparable content-bound
+full Personal Agent QA, and passing current local-cache admission for every
+enabled local MLX route. Standard Mac remains directional. A one-task n=3 run
+is not decision-grade.
+
 ## 7. Route identity
 
 A route is clean only when:
@@ -157,6 +164,10 @@ declared narrowed profile) passes with:
 QA scenario sets must match across compared models. `preflight` is bootstrap
 evidence only. A mock provider yields `harness-only` only after every expected
 harness check passes; a failed mock run is still a failure.
+
+Bind the final QA scorecard by relative path and SHA-256 in each evidence
+envelope. Missing QA keeps capability evidence directional; a supplied stale,
+tampered, mismatched, or failed-retry scorecard blocks validation.
 
 Fast mode is tri-state: requested `unset`, `true`, or `false`, plus the
 effective value observed in each summary. Omission must never be recorded as
@@ -201,6 +212,13 @@ controlled traces are never pooled. Cache profile/reset/reuse drift blocks;
 route engines/capacities may differ.
 Full-response memo hits block repeated quality/trust trials; missing cache-hit evidence makes speed `n/a`.
 Missing pricing evidence makes cost `n/a`; zero is valid only when explicitly free.
+
+For local routes, direct-service prefix reuse and route-level cache admission
+are separate claims. `qualify_prefix_cache.py` proves only direct-service
+cold/warm/replay reuse. `build_local_cache_admission_plan.py` plus
+`validate_local_cache_admission.py` enforce architecture, isolation, memory,
+lifecycle, exact OpenClaw route, and fallback evidence. Cache admission never
+substitutes for ShellBench, truthfulness, or QA operator qualification.
 
 Value means the cheapest route that clears explicit quality, reliability, and
 worst-of-n floors (and pass^k when required)—not simply the lowest cost/pass in

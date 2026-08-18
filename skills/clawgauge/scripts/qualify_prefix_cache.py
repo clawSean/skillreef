@@ -25,10 +25,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
-REPORT_SCHEMA = "clawgauge.prefix-cache-qualification.v2"
-PLAN_SCHEMA = "clawgauge.prefix-cache-qualification-plan.v2"
+REPORT_SCHEMA = "clawgauge.prefix-cache-qualification.v3"
+PLAN_SCHEMA = "clawgauge.prefix-cache-qualification-plan.v3"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+REVISION_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 DISK_CONFIGURATION_KEYS = {
     "disk_bytes",
     "disk_max_bytes",
@@ -248,6 +250,18 @@ def response_id(response: Dict[str, Any]) -> Optional[str]:
     return value
 
 
+def response_model(response: Dict[str, Any]) -> Optional[str]:
+    value = response.get("model")
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > 256
+        or any(ord(char) < 32 for char in value)
+    ):
+        return None
+    return value.strip()
+
+
 def counter(stats: object, key: str) -> Optional[int]:
     if not isinstance(stats, dict) or stats.get("enabled") is not True:
         return None
@@ -297,7 +311,12 @@ def add_check(report: Dict[str, Any], name: str, passed: bool, failure: str) -> 
 def protocol_description(args: argparse.Namespace, run_id: str) -> Dict[str, Any]:
     return {
         "profile": "controlled-cold-append-only-warm-then-exact-replay",
+        "claim_scope": "direct-service-prefix-reuse-only",
         "runtime": args.runtime,
+        "runtime_version": args.runtime_version,
+        "mlx_version": args.mlx_version,
+        "model_revision": args.model_revision,
+        "cache_epoch": args.cache_epoch,
         "prefix_words": args.prefix_words,
         "minimum_reused_tokens": args.minimum_reused_tokens,
         "run_id": run_id,
@@ -323,7 +342,13 @@ def qualification_report(
             "base_url": base_url,
             "model": args.model,
             "runtime": args.runtime,
+            "runtime_version": args.runtime_version,
+            "mlx_version": args.mlx_version,
+            "model_revision": args.model_revision,
+            "cache_epoch": args.cache_epoch,
             "loopback_only": True,
+            "observed_response_models": [],
+            "fallback_proven_off": False,
             "health": None,
             "reset_before": None,
             "reset_after": None,
@@ -346,6 +371,11 @@ def qualification_report(
         "cache_stats_evidence": None,
         "checks": {},
         "blockers": [],
+        "claim_granted": "direct-service-prefix-reuse",
+        "claim_not_granted": [
+            "OpenClaw route identity", "fallback absence", "cache-qualified",
+            "operator-qualified", "promoted",
+        ],
     }
     tenant = f"clawgauge-{run_id}" if args.runtime == "mlx-vlm" else None
     reset_succeeded = False
@@ -423,12 +453,19 @@ def qualification_report(
             response_id(warm),
             response_id(replay),
         )
+        cold_model, warm_model, replay_model = (
+            response_model(cold), response_model(warm), response_model(replay)
+        )
+        report["server"]["observed_response_models"] = [
+            cold_model, warm_model, replay_model
+        ]
         report["cold"] = {
             "wall_seconds": round(cold_wall, 6),
             "cached_tokens": cold_cached,
             "cached_token_sources": cold_sources,
             "text": cold_text,
             "request_id": cold_id,
+            "observed_model": cold_model,
         }
         report["warm"] = {
             "wall_seconds": round(warm_wall, 6),
@@ -436,6 +473,7 @@ def qualification_report(
             "cached_token_sources": warm_sources,
             "text": warm_text,
             "request_id": warm_id,
+            "observed_model": warm_model,
         }
         report["replay"] = {
             "wall_seconds": round(replay_wall, 6),
@@ -443,6 +481,7 @@ def qualification_report(
             "cached_token_sources": replay_sources,
             "text": replay_text,
             "request_id": replay_id,
+            "observed_model": replay_model,
         }
         report["protocol"]["cold_prompt_sha256"] = canonical_sha256(cold_messages)
         report["protocol"]["warm_prompt_sha256"] = canonical_sha256(warm_messages)
@@ -460,6 +499,12 @@ def qualification_report(
         lifecycle["rss_observed"] = all(item["rss_bytes"] > 0 for item in snapshots)
         lifecycle["peak_rss_bytes"] = max(item["rss_bytes"] for item in snapshots)
 
+        add_check(
+            report,
+            "response_model_exact",
+            cold_model == warm_model == replay_model == args.model,
+            "response model was missing, changed, or differed from the requested direct-service model",
+        )
         add_check(
             report,
             "cold_canary_exact",
@@ -642,6 +687,8 @@ def qualification_report(
     report["ok"] = bool(report["checks"]) and not report["blockers"] and all(
         report["checks"].values()
     )
+    if not report["ok"]:
+        report["claim_granted"] = None
     if report.get("cold") and report.get("warm"):
         warm_wall = report["warm"]["wall_seconds"]
         report["speedup"] = (
@@ -666,6 +713,10 @@ def main() -> int:
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--model", required=True)
     parser.add_argument("--runtime", choices=("mlx-vlm", "mlx-lm"), required=True)
+    parser.add_argument("--runtime-version", required=True)
+    parser.add_argument("--mlx-version", required=True)
+    parser.add_argument("--model-revision", required=True)
+    parser.add_argument("--cache-epoch", required=True)
     parser.add_argument("--prefix-words", type=int, default=8000)
     parser.add_argument("--minimum-reused-tokens", type=int, default=1000)
     parser.add_argument("--timeout", type=float, default=600)
@@ -677,6 +728,16 @@ def main() -> int:
     try:
         base_url, origin = normalize_base_url(args.base_url)
         args.model = validate_text(args.model, "--model")
+        args.runtime_version = validate_text(args.runtime_version, "--runtime-version")
+        args.mlx_version = validate_text(args.mlx_version, "--mlx-version")
+        args.model_revision = validate_text(args.model_revision, "--model-revision")
+        args.cache_epoch = validate_text(args.cache_epoch, "--cache-epoch")
+        if not VERSION_RE.fullmatch(args.runtime_version):
+            raise ValueError("--runtime-version must be major.minor.patch")
+        if not VERSION_RE.fullmatch(args.mlx_version):
+            raise ValueError("--mlx-version must be major.minor.patch")
+        if not REVISION_RE.fullmatch(args.model_revision):
+            raise ValueError("--model-revision must identify an immutable 40- or 64-hex revision")
         if args.prefix_words < 1:
             raise ValueError("--prefix-words must be >= 1")
         if args.minimum_reused_tokens < 1:
@@ -702,6 +763,11 @@ def main() -> int:
                 "loopback_only": True,
             },
             "protocol": protocol_description(args, run_id),
+            "claim_if_live_checks_pass": "direct-service-prefix-reuse",
+            "claim_not_granted": [
+                "OpenClaw route identity", "fallback absence", "cache-qualified",
+                "operator-qualified", "promoted",
+            ],
             "requests": (
                 [
                     "GET /health",

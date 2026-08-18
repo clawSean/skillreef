@@ -1615,6 +1615,18 @@ def main() -> int:
         assert "ClawGauge cache qualification tests: PASS" in cache_qualification_test.stdout
         checks += 1
 
+        local_admission_test = run(str(SCRIPTS / "test_local_cache_admission_plan.py"))
+        assert "ClawGauge local cache admission tests: PASS" in local_admission_test.stdout
+        checks += 1
+
+        decision_grade_test = run(str(SCRIPTS / "test_decision_grade.py"))
+        assert "ClawGauge decision-grade tests: PASS" in decision_grade_test.stdout
+        checks += 1
+
+        assert comparison["decision_grade"] is False
+        assert comparison["decision_grade_requirements"]["core_19_coverage"] is False
+        checks += 2
+
     print(f"ClawGauge self-test: PASS ({checks} assertions)")
     return 0
 
