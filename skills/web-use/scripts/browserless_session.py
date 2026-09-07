@@ -41,13 +41,52 @@ import os
 import re
 import sys
 from typing import Any
-
-import requests
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 DEFAULT_HOST = "https://production-sfo.browserless.io"
 DEFAULT_TIMEOUT = 120
 SESSION_URL_KEYS = ("browserQL", "connect", "stop")
 STD_STREAMS = {"-", "/dev/stdout", "/dev/stderr", "/dev/fd/1", "/dev/fd/2"}
+
+
+class BrowserlessRequestError(RuntimeError):
+    """Raised when Browserless returns a failed HTTP response."""
+
+
+def with_query(url: str, params: dict[str, str] | None = None) -> str:
+    if not params:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{urlencode(params)}"
+
+
+def request_json(
+    method: str,
+    url: str,
+    payload: dict[str, Any] | None,
+    timeout: int,
+) -> tuple[int, Any]:
+    body = json.dumps(payload).encode("utf-8") if payload is not None else None
+    request = Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json"} if body is not None else {},
+        method=method,
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            text = response.read().decode("utf-8", errors="replace")
+            try:
+                return response.status, json.loads(text) if text else {}
+            except json.JSONDecodeError:
+                return response.status, {"raw": text}
+    except HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        raise BrowserlessRequestError(f"HTTP {exc.code}: {error_body[:1000]}") from exc
+    except URLError as exc:
+        raise BrowserlessRequestError(str(exc.reason)) from exc
 
 
 def token_from_url(url: Any) -> str | None:
@@ -189,14 +228,12 @@ def cmd_create(args: argparse.Namespace) -> int:
                 raise ValueError("--process-keep-alive-ms must be <= --ttl-ms.")
             body["processKeepAlive"] = args.process_keep_alive_ms
 
-        response = requests.post(
-            f"{args.host}/session",
-            params=params,
-            json=body,
-            timeout=args.timeout,
+        _, session = request_json(
+            "POST",
+            with_query(f"{args.host}/session", params),
+            body,
+            args.timeout,
         )
-        response.raise_for_status()
-        session = response.json()
         if not isinstance(session, dict):
             raise ValueError("Browserless /session did not return a JSON object.")
 
@@ -208,7 +245,7 @@ def cmd_create(args: argparse.Namespace) -> int:
             cleanup = "not attempted"
             if stop_url:
                 try:
-                    requests.delete(stop_url, timeout=args.timeout)
+                    request_json("DELETE", stop_url, None, args.timeout)
                     cleanup = "stopped"
                 except Exception:  # noqa: BLE001
                     cleanup = "stop failed"
@@ -270,19 +307,15 @@ def cmd_query(args: argparse.Namespace) -> int:
             if not isinstance(variables, dict):
                 raise ValueError("--variables-json must be a JSON object.")
 
-        response = requests.post(
+        status_code, payload = request_json(
+            "POST",
             browserql,
-            json={"query": query_text, "variables": variables},
-            timeout=args.timeout,
+            {"query": query_text, "variables": variables},
+            args.timeout,
         )
-        status_code = response.status_code
-        try:
-            payload: Any = response.json()
-        except ValueError:
-            payload = {"raw": response.text}
 
         errors = payload.get("errors") if isinstance(payload, dict) else None
-        ok = response.ok and not errors
+        ok = 200 <= status_code < 300 and not errors
         emit(
             {
                 "ok": ok,
@@ -323,11 +356,15 @@ def cmd_stop(args: argparse.Namespace) -> int:
                 "Session file has no stop URL; nothing to delete remotely."
             )
 
-        response = requests.delete(stop_url, timeout=args.timeout)
-        status_code = response.status_code
-        stopped = response.ok
+        try:
+            status_code, _ = request_json("DELETE", stop_url, None, args.timeout)
+            stopped = 200 <= status_code < 300
+        except BrowserlessRequestError as exc:
+            status_match = re.search(r"HTTP (\d+):", str(exc))
+            status_code = int(status_match.group(1)) if status_match else None
+            stopped = False
         # A 404 means the session is already gone, so the local file is moot too.
-        removable = response.ok or status_code == 404
+        removable = stopped or status_code == 404
 
         file_deleted = False
         retained_reason = None
@@ -413,9 +450,9 @@ def add_common(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument(
         "--token",
-        default=os.environ.get("BROWSERLESS_TOKEN"),
+        default=os.environ.get("BROWSERLESS_TOKEN") or os.environ.get("BROWSERLESS_API_KEY"),
         help=(
-            "Browserless API token (env BROWSERLESS_TOKEN). Required for create; "
+            "Browserless API token (env BROWSERLESS_TOKEN or BROWSERLESS_API_KEY). Required for create; "
             "query/stop read the token-bearing URL from the session file."
         ),
     )

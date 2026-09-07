@@ -1,6 +1,10 @@
 ---
 name: moltmaster
-description: Use for OpenClaw OAuth / auth-profile refresh operations, Auth Molt, Moltmaster, Codex OAuth refresh, Claude/Anthropic OAuth profile refresh planning, or any task involving refreshing, inspecting, or pruning OpenClaw auth-profile credentials without running openclaw doctor. Triggers on Auth Molt, Moltmaster, Codex OAuth refresh, auth-profile refresh, force-expired-for-refresh, openclaw credential rotation.
+description: >
+  Use for OpenClaw OAuth profile refresh operations, Auth Molt, Moltmaster,
+  Codex OAuth refresh, Claude or Anthropic OAuth profile refresh planning, or
+  tasks involving OpenClaw auth profile inspection, pruning, or refresh without
+  running openclaw doctor.
 ---
 
 # Moltmaster
@@ -72,6 +76,7 @@ Covers: dry-run, flag refusals (8 cases), profile validation, prune dry-run. For
 
 | Variable | Purpose |
 |---|---|
+| `AUTH_MOLT_SDK_PATH` / `MOLTMASTER_SDK_PATH` | Override OpenClaw plugin SDK runtime path |
 | `AUTH_MOLT_STORE_PATH` | Override auth store path |
 | `AUTH_MOLT_BACKUP_DIR` | Override backup directory |
 | `AUTH_MOLT_STATE_FILE` | Override cooldown state file |
