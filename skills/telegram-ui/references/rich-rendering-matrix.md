@@ -1,66 +1,187 @@
-# Rich Body Rendering Matrix — Verification Detail
+# Telegram Rich Rendering Matrix
 
-Per-element verification record for Telegram Bot API 10.1 `rich_message` bodies via OpenClaw (`channels.telegram.richMessages: true`). The working vocabulary lives in SKILL.md's Toolchest; this file holds the evidence, dates, and quirks. Client-specific setup/compat debugging: `rich-message-client-compat.md`.
+Evidence for Telegram Bot API 10.3 rich bodies when
+`channels.telegram.richMessages: true`. Operating rules live only in
+`SKILL.md`; client diagnosis lives in `rich-message-client-compat.md`.
 
-## Verified working
+## Current calibrated surface
 
-- ✅ **Markdown-pipe tables** — preferred table path. JPop verified three patterns in a private test group on 2026-07-06: simple 3-column, wider 5-column mobile-scroll, and an operator-card pattern with the key result mirrored in prose first. Nick confirmed the same probe rendered in Dev Team on 2026-07-06.
-- ✅ Collapsible `<details><summary>` (tappable chevron)
-- ✅ `<mark>` highlight (yellow), `<sup>`/`<sub>`
-- ✅ Headings (`##` → large styled heading)
-- ✅ Task lists: `<ul><li><input type="checkbox" checked/> item</li></ul>` → native checked/unchecked boxes
-- ✅ Formulas: `<tg-math>E = mc^2</tg-math>` inline; `<tg-math-block>…</tg-math-block>` display math (beautifully typeset, verified 2026-07-05)
-- ✅ Standalone image blocks: `<img src="https://..."/>`
-- ✅ `<hr>` divider · `<blockquote>` with `<cite>` (citation renders gray under the quote) · `<aside>` pull quote (bordered callout) · `<footer>` (small gray line) — all verified 2026-07-05
-- ✅ `<ol start="5">` numbered-list offset · `<ol reversed>` countdown ordering (verified 2026-07-05)
-- ✅ `<figure><img …/><figcaption>…</figcaption></figure>` — image with gray caption (verified 2026-07-05)
-- ✅ `<tg-collage>` of `<img>` blocks — native grid (1 big + rest tiled); `<tg-slideshow>` — swipeable gallery with dot indicator (both verified 2026-07-05)
-- ✅ `<tg-map lat="…" long="…" zoom="…"/>` — real inline map tile with pin (verified 2026-07-05)
-- ✅ `<video src="https://…"/>` inline playable video · `<audio src="https://…"/>` audio player with duration (both verified 2026-07-05)
-- ✅ `<tg-emoji emoji-id="…">` custom emoji — renders as custom sticker (falls back to the Unicode emoji if the id is unrecognized; verified 2026-07-05)
-- ✅ `<a name="…">` named anchors + in-message `href="#…"` jump links — anchor set and tap-to-jump both work (verified 2026-07-05)
-- ✅ `valign`/`rowspan` table attrs — merged/aligned rendering verified 2026-07-05 on iOS, but see the raw-table warning below before using them group-visible.
-- ✅ Mixed URL + callback presentation keyboards (JPop tap, 2026-07-04)
+- OpenClaw: 2026.9.1
+- Client: native Telegram for macOS 12.9 build 282526
+- Surface: a private test group forum topic
+- Date: 2026-09-04; spacing density revalidated 2026-09-07
+- Additional coverage: the reviewer's post-2026-07-19 Telegram iOS client; exact build
+  was not recorded.
 
-## Dead / broken — never use
+## Capability evidence
 
-- ❌ `<blockquote expandable>` — renders as a normal OPEN blockquote on iOS, no collapse (verified 2026-07-05). Use `<details><summary>`.
-- ❌ `<tg-time>` — fully dead on iOS (all forms verified 2026-07-05): `unix=` with empty content renders nothing; `unix=` with inner fallback shows only the plain fallback; `datetime=` LEAKS RAW MARKUP. Write times as plain text with an explicit timezone.
-- ❌ `figure tg-spoiler` attr — does NOT blur the image, no effect (verified 2026-07-05). For image spoilers use `<tg-spoiler>` wrapping or `||…||` for text.
-- ❌ `<tg-reference name="…" type="footnote">` — leaks as raw markup (tag not whitelisted; verified 2026-07-05). Markdown footnotes `[^1]` also leak as literal text. No working footnote syntax found yet.
+| Capability | State | Evidence / boundary |
+| --- | --- | --- |
+| headings | pass | Native styled heading on calibrated rich clients |
+| details/summary | pass | T1/T6-era iOS proof and macOS message 4308 |
+| checkbox tasks | pass | macOS message 4308 |
+| mark, sup, sub | pass | iOS 2026-07-05 |
+| math inline/block | pass | iOS 2026-07-05 |
+| divider, quote+citation, aside, footer | pass | iOS 2026-07-05 |
+| ordered-list start/reversed | pass | iOS 2026-07-05 |
+| image, figure/caption | pass | iOS 2026-07-05; HTTPS block media only |
+| collage/slideshow | pass | iOS 2026-07-05 |
+| map, video, audio | pass | iOS 2026-07-05; HTTPS block media only |
+| custom emoji | pass | known-good ID confirmed by the reviewer 2026-07-29 |
+| named anchors/jump links | pass | iOS 2026-07-05 |
+| Markdown table | conditional pass | 5×3 plain table complete on macOS message 4309 |
+| raw HTML table | conditional pass | caption + two rows complete on macOS message 4311 |
+| Copy Text presentation action | unavailable | absent from installed 2026.9.1 schema; dry run rejected 2026-09-04 |
 
-## Raw HTML tables — path-sensitive, unsafe group-visible
+## Current layout proof
 
-Raw HTML `<table bordered="true" striped="true">…</table>` leaked as literal/collapsed markup for Nick in Dev Team on 2026-07-05 across Telegram Desktop latest, recently updated mobile, and Telegram Web — a cross-client raw-table renderer/sanitizer failure, not a single-client issue. Earlier iOS successes (incl. `<caption>`, `colspan`, `align` extras verified 2026-07-04/05) are path-specific, not a general guarantee. Until the renderer path is fixed: markdown-pipe tables only for group-visible sends.
+### T9–T13: spacing and prose-list markers
 
-## Structure collapse — FIXED on calibrated iOS client (2026-07-20); Desktop/Web unverified
+- T9 (message 4316) mixed list paths and showed source blank lines collapsing;
+  it was useful for discovery, not a final marker comparison.
+- T10 (message 4320) compared Markdown blank lines, adjacent paragraph blocks,
+  an nbsp spacer paragraph, and `<br><br>`. Only `<br><br>` produced the reviewer's
+  requested visible blank line on native macOS 12.9.
+- T11 (message 4324) was invalid: mixed raw break tags prevented its Markdown
+  lane from parsing as a semantic list.
+- T12 isolated paths, but its low-resolution capture did not justify a verdict
+  about the literal `•` glyph.
+- T13 compared a semantic rich list (message 4336) with literal `•` prose blocks
+  (message 4337) using the same body font and text. Retina inspection showed the
+  literal glyph baseline-aligned while the semantic marker sat high.
 
-**History:** OpenClaw's markdown→rich pipeline (`markdownToTelegramRichHtml`) emits plain `\n` between paragraphs/list items, and Telegram's rich HTML renderer used to collapse literal newlines like a browser (root-caused 2026-07-05). That forced the explicit-HTML-blocks-only regime.
+Observed result: literal `•` aligned in ordinary prose/status blocks. Semantic
+`ul`/`ol` retained hanging indentation, and checkbox lists rendered task state.
 
-**2026-07-20 rebase (T1–T6 screenshot battery, JPop's iOS after Telegram app update):**
-- ✅ Markdown paragraphs separated by blank lines render as separate paragraphs with natural air (T1)
-- ✅ Markdown `-` bullets and `1.` numbered lists render one item per line with list margins (T2)
-- ✅ Single bare `\n` renders as a line break (T3)
-- ✅ Bare `<p>` blocks now get real vertical margins — one blank-line-equivalent gap, JPop's preferred air (T4, T6)
-- 🚫 `<p>&#160;</p>` nbsp spacer now DOUBLE-pads (own blank line + p margins) — visibly fatter gap than bare `<p>` (T5, T6; JPop flagged the overkill). Spacer and its variants (`<br>&#160;<br>`, `&#10240;`) are retired.
-- ✅ `<br/>` no longer leaks as literal text — renders as a break (T5). `<br>` remains the canonical form.
-- Empty `<p></p>` still appears IGNORED (T4/T6 gaps identical with and without it) — medium confidence.
+### T14–T15: production composition and block boundaries
 
-**Caveat:** the fix is in the Telegram CLIENT renderer, not OpenClaw's pipeline (which still emits bare `\n`). Recipients on stale clients may still see run-on text — if reported, fall back to explicit HTML blocks for that surface and log the case in `rich-message-client-compat.md`. Coverage: iOS = full T1–T6 battery; **macOS Desktop = partial** (markdown paragraph structure + air + bold + inline code confirmed 2026-07-20 via self-captured node screenshot of live DM messages; spacer-delta and full battery still pending); Web unverified.
+- T14/T15 (messages 4382–4383) were invalid composition tests. Inline
+  `<br><br>` immediately after headings kept later HTML islands inside the
+  heading block, so `details`, `table`, and break tags leaked visibly. This was
+  authoring failure, not evidence that rich mode was off.
+- T14B (message 4384) used source blank lines to end block structures and a
+  standalone `<br><br>` paragraph between top-level blocks. Retina inspection
+  proved baseline-aligned literal bullets, a working details block, and
+  checked/unchecked task controls; T17D later superseded its spacing conclusion.
+- T15B (message 4385) used the same boundaries. Retina inspection proved the
+  complete captioned 2-column/3-row table and its collapsible row mirror.
+- Screenshots: failed authoring (local evidence),
+  corrected collapsed view (local evidence),
+  expanded structure proof (local evidence),
+  and expanded table mirror (local evidence).
 
-**Re-running the battery** (after a major OpenClaw upgrade or Telegram client change). Record alongside the results: OpenClaw version · `channels.telegram.richMessages` state · Telegram client platform + app version/build · surface (DM/group/topic) · one screenshot per probe. (2026-07-20 run gap: iOS app version/build not recorded — capture it next time.) Send each probe as its own message with the exact body shown (`\n` = literal newline):
+Observed result: source blank lines terminated headings and block islands.
+Inline concatenation caused the leaked tags in 4382–4383; T17D later showed that
+standalone break paragraphs compound spacing and are not a spacing primitive.
 
-- T1 (markdown paragraphs): `First paragraph.\n\nSecond paragraph.\n\nThird paragraph.` → expect three separate paragraphs with air
-- T2a (bullets): `- alpha\n- beta\n- gamma` → expect one item per line with list margins
-- T2b (numbered list, separate message): `1. one\n2. two\n3. three` → expect numbered items one per line (kept separate from T2a so blank-line behavior between list types isn't conflated with item behavior)
-- T3 (bare newlines): `line one\nline two\nline three` → expect three lines
-- T4 (bare p + empty p): `<p>A</p><p>B</p><p></p><p>C</p>` → expect natural gaps; empty `<p></p>` adds nothing
-- T5a (nbsp spacer): `<p>A</p><p>&#160;</p><p>B</p>` → expect spacer gap FATTER than T4's natural gap (validates spacer stays retired)
-- T5b (br forms): `line1<br>line2<br/>line3` → expect two line breaks, no literal `br/` leak (validates `<br/>` handling only)
-- T6 (side-by-side calibration): one message containing both a bare-p gap and an nbsp-spacer gap → direct comparison screenshot
+### T17: compact, spacious, and paragraph density
 
-## Other verified quirks
+- T17A (message 4403) kept three short literal-bullet items adjacent with one
+  inline `<br>`.
+- T17B (message 4404) separated two multi-sentence bullets with inline
+  `<br><br>`; T17C (message 4405) used the same form between prose paragraphs.
+  Each rendered exactly one empty visual row.
+- T17D (message 4406) isolated the old standalone `<br><br>` paragraph between
+  separate prose blocks. It produced the oversized compounded gap visible in
+  the reviewer's screenshot and is not suitable for prose/list spacing.
+- Screenshots: T17A–C density proof (local evidence)
+  and T17D standalone control (local evidence).
 
-- **Escaped entities double-decode (2026-07-05):** writing `&lt;details&gt;` (even inside `<code>`) renders as NOTHING — entities decode back to a real tag and the sanitizer strips it. Mention tag names without angle brackets.
-- **Inbound echo blindness (2026-07-04):** replies quoting our rich sends arrive as `[unsupported Telegram rich_message received]` — we cannot read our own rich bodies back.
-- **Spoiler link bleed (re-tested 2026-07-05, rich mode):** `||spoiler with link||` shows no preview card in rich mode; in normal/non-rich mode a preview card DID appear (2026-06-10) — treat spoiler links as leaky in normal mode.
+Observed result: one newline or inline `<br>` gives compact adjacent lines;
+inline `<br><br>` gives one empty visual row; a standalone break paragraph
+compounds the gap. This test established spacing mechanics only; T18–T19 later
+superseded its item-level density policy.
+
+### T18–T20: authored lines and whole-list density
+
+- T18C (message 4415) failed because both long single-sentence bullets wrapped
+  while the list stayed compact. T18D (message 4416) passed because its
+  multi-line bullets were spaced.
+- T18F (message 4418) failed because it mixed compact and spacious separators
+  inside one list. Density must remain consistent throughout a contiguous list.
+- T18G (message 4419) and the Markdown-only T18I control (message 4421) failed:
+  every authored prose line needs one empty visual row even when it continues
+  the same thought.
+- T19A–D (messages 4425–4428) isolated the accepted replacements: space a list
+  when most items are multi-line, keep it compact when most are single-line,
+  apply that density to every item, and space every authored prose line.
+- T19E/T19F (messages 4429–4430) compared the unresolved 50/50 boundary;
+  spacious is the accepted conservative fallback.
+- T20A/T20B (messages 4459–4460) isolated the refined line threshold: predicted
+  one- and two-line items stayed compact, while predicted three-plus-line items
+  used one spacious density across the list.
+
+Observed result: sentence count does not determine density. At normal target
+width, classify likely one- and two-line items as compact and likely
+three-plus-line items as long; use roughly 100–120 visible characters or 16–20
+ordinary words when direct rendering is unavailable, and count borderline items
+as compact. Choose one density by whole-list majority; a 50/50 tie remains
+spacious. The reviewer reviewed these topic messages directly; local Retina capture was
+unavailable because the Mac display was locked.
+
+### T21: soft-newline paragraph indent
+
+- Production message 4461 used a source newline immediately after each inline
+  `<br><br>`; the reviewer's screenshot in reply 4462 showed the first visual line of
+  each following paragraph indented by one ordinary space.
+- An installed-renderer A/B mapped `Alpha<br><br>\\nBeta` to
+  `Alpha\\n\\n Beta`, while source-adjacent `Alpha<br><br>Beta` mapped to
+  `Alpha\\n\\nBeta`. Outbound controls are messages 4464–4465.
+- Independent native-client capture was unavailable because no computer-capable
+  node was connected; T17C already visually passed the source-adjacent form.
+
+Observed result: a Markdown soft newline after inline break tags survives as one
+leading space. Keep the following prose source-adjacent to `<br><br>`.
+
+## Table history and battery
+
+### Historical failure
+
+In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the
+renderer with every row intact, but an unrecorded client displayed one body row.
+Bold and inline code inside cells were present but were never isolated as the
+cause. This proves tables are not portable across unknown clients.
+
+### T7 regression battery
+
+Record OpenClaw version, rich-message state, client platform/version/build,
+chat surface, message IDs, and Retina screenshots.
+
+1. **T7a — plain:** 5 columns, header, 3 body rows, plain cells. Pass only when
+   every row/cell is visible and horizontal scrolling works where required.
+2. **T7b — formatting isolation:** repeat T7a with bold in row one and inline
+   code values. Diagnostic only; compare with T7a.
+3. **T7c — raw HTML:** caption, two headers, three plain rows. Pass only when no
+   markup leaks and every row is visible.
+
+## Structure regression battery
+
+Send each probe separately. Do not combine Markdown and raw HTML lanes.
+
+1. **T1 paragraphs:** three Markdown paragraphs separated by blank source lines.
+2. **T2a bullets:** three Markdown `-` items.
+3. **T2b numbers:** three Markdown numbered items in a separate message.
+4. **T3 newlines:** three lines separated by single literal newlines.
+5. **T4 paragraph blocks:** three adjacent `p` blocks. Diagnostic only; current
+   rich HTML treats `p` as transparent rather than a dependable spacing island.
+6. **T5 breaks:** `line1<br>line2<br/>line3`, then a separate `<br><br>` gap
+   comparison. Expect no leaked tags and the intended visual gap.
+7. **T6 combined structure:** heading, details, checkbox list, and a plain prose
+   block; verify every block independently.
+8. **T13 marker A/B:** semantic `ul` and literal `•` in separate same-font
+   messages with identical text.
+
+## Dead or failed features
+
+- `tg-time` with `datetime` leaked raw markup in the 2026-07-05 iOS audit. The
+  distinct legacy `unix` form was not tested in that run.
+- `tg-reference` and Markdown footnotes leaked literal text.
+- `figure` with a `tg-spoiler` attribute did not blur the image.
+- Expandable blockquotes did not collapse in the rich-body audit; `details` was
+  separately observed working.
+
+## Evidence discipline
+
+A successful API response proves delivery, not visual rendering. Change an
+operating rule only after exact-client inspection. Keep dated outcomes here;
+do not duplicate them in `SKILL.md` or the compatibility guide.

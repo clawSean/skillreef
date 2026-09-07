@@ -1,75 +1,41 @@
-# Telegram Admin / Control Actions
+# Telegram Admin and Group Controls
 
-Use this reference for rare Telegram group-level control actions that sit near UI/media work but are not ordinary message rendering.
+Use only for an explicitly requested Telegram group mutation that ordinary
+message delivery does not cover, such as changing group info or its image.
 
-Examples:
-- Change a group/supergroup profile photo.
-- Check whether the bot has admin capabilities in a chat.
-- Call Telegram Bot API methods that OpenClaw's `message` tool does not expose directly.
+## Safety contract
 
-These actions mutate group state. Only do them when the user explicitly asks, or when the requested workflow clearly requires it.
+1. Resolve the exact chat and Telegram account from trusted runtime context.
+2. Inspect the active `message` tool schema and account action gates.
+3. Use a supported native `message` action when exposed.
+4. Verify the returned chat/message state and inspect the Telegram client.
+5. If the native action or required field is absent, stop and report that exact
+   runtime gap. Do not construct a raw Bot API command from model context.
 
-## Change Group Profile Photo
+Never request, read, echo, interpolate, log, or place a bot token in chat,
+commands, URLs, shell variables, or durable files. A successful send does not
+prove the requested admin mutation occurred.
 
-Telegram Bot API method: `setChatPhoto`.
+## Change a group image
 
-### Requirements
+Preconditions:
 
-- The bot must be a group admin.
-- The bot needs `can_change_info: true` for the target group/supergroup.
-- The target image should already be finalized and available as a local file.
-- Prefer square images for group avatars. Remember Telegram clients often display them through a circular mask.
+- the user explicitly approved the named group and final image;
+- the chat ID and selected bot account are verified;
+- the bot has permission to change group information;
+- the active `message` schema exposes its group-icon action;
+- the finalized local image is square and crop-safe.
 
-### Permission Check
+Use the current tool's declared field names rather than copying a stale payload.
+After the action returns, inspect the group header/avatar in Telegram. If the
+permission is missing, report the exact administrator permission needed. Never
+retry a mutating admin action blindly after an ambiguous result.
 
-```bash
-CHAT='<telegram_chat_id>'
-TOKEN=$(jq -r '.channels.telegram.accounts.<account>.botToken' ~/.openclaw/openclaw.json)
-BOT_ID=$(curl -fsS "https://api.telegram.org/bot${TOKEN}/getMe" | jq -r '.result.id')
+## Other group mutations
 
-curl -fsS --get "https://api.telegram.org/bot${TOKEN}/getChatMember" \
-  --data-urlencode "chat_id=${CHAT}" \
-  --data-urlencode "user_id=${BOT_ID}" \
-  | jq '{ok, status: .result.status, can_change_info: .result.can_change_info, can_manage_chat: .result.can_manage_chat}'
-```
+Renaming, membership changes, and leaving a group follow the same contract:
+explicit scope, current native action, permission proof, one mutation, and
+readback. Do not infer authorization for a different group-level change from a
+message-formatting request.
 
-Proceed only if Telegram returns `status: "administrator"` or equivalent owner/admin status and `can_change_info: true`.
-
-### Set The Photo
-
-```bash
-CHAT='<telegram_chat_id>'
-PHOTO='/absolute/path/to/avatar.png'
-TOKEN=$(jq -r '.channels.telegram.accounts.<account>.botToken' ~/.openclaw/openclaw.json)
-
-curl -fsS -X POST "https://api.telegram.org/bot${TOKEN}/setChatPhoto" \
-  -F "chat_id=${CHAT}" \
-  -F "photo=@${PHOTO}" \
-  | jq
-```
-
-Expected success:
-
-```json
-{
-  "ok": true,
-  "result": true
-}
-```
-
-### Verify
-
-```bash
-curl -fsS --get "https://api.telegram.org/bot${TOKEN}/getChat" \
-  --data-urlencode "chat_id=${CHAT}" \
-  | jq '{ok, title: .result.title, photo: .result.photo}'
-```
-
-A fresh `photo.small_file_id` / `photo.big_file_id` confirms Telegram accepted the update.
-
-## Notes
-
-- Do not print or expose bot tokens.
-- Do not restart OpenClaw or Telegram services for this.
-- If permission is missing, tell the user the bot needs to be promoted with group-info/photo permission.
-- For ordinary image delivery, use the `message` tool with `media=...`; `setChatPhoto` is only for changing the chat profile image.
+Forum-topic mutations use `telegram-forum-topics.md` instead.

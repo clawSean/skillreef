@@ -1,15 +1,10 @@
-# Telegram Forum Topics (Create / Edit / Post Into)
+# Telegram Forum Topics
 
-Managing topics in forum-enabled supergroups. Fully native — the OpenClaw `message` tool exposes Telegram's `createForumTopic` / `editForumTopic`, no raw Bot API calls needed.
+Use for creating, editing, or posting into a forum-enabled Telegram supergroup.
+These are external group mutations; require explicit scope and verify the bot's
+Manage Topics permission.
 
-Verified working 2026-07-09 in Das Groupies (`-1003778833824`): created topic 5054, posted into it, confirmed in General.
-
-## Requirements
-
-- The group must be a **forum** (topics enabled) supergroup.
-- The bot must be an admin with the **Manage Topics** permission. Without it, topic-create fails with `400: not enough rights to create a topic` — ask the owner to toggle it on under Group settings → Administrators → bot → Manage Topics.
-
-## Create a Topic
+## Create
 
 ```json
 {
@@ -18,37 +13,51 @@ Verified working 2026-07-09 in Das Groupies (`-1003778833824`): created topic 50
 }
 ```
 
-- `target` defaults to the current chat; pass `target: "<chat_id>"` to create in another group.
-- Returns `{ ok, topicId, name, chatId }` — capture `topicId` for follow-up sends.
-- Emoji in topic names works fine.
+`target` defaults to the current chat. Pass a verified target only for another
+group. Capture the returned `topicId` and inspect the topic in Telegram.
 
-## Post Into a Topic
+### Native icon
 
-Use `threadId` with the topic id:
+The reviewer's preference is an intentional native topic icon rather than Telegram's
+default. The runtime field is `iconCustomEmojiId`, but the installed 2026.9.1
+model-facing message schema does not expose it.
+
+Use the icon only when the active schema exposes the field and the ID came from
+Telegram's allowed forum-topic icon set. Never invent or recycle a sticker or
+inline custom-emoji ID. If the field is unavailable, create the requested topic
+only when the user accepts the default-icon limitation, and report it clearly;
+do not fall back to a token-bearing raw Bot API command.
+
+## Post into a topic
 
 ```json
 {
   "action": "send",
-  "target": "-1003778833824",
-  "threadId": "5054",
+  "target": "<chat_id>",
+  "threadId": "<topic_id>",
   "message": "Hello from inside the topic 🦞"
 }
 ```
 
-Same pattern works for other actions (polls, media, etc.) — `threadId` routes them into the topic. Omitting `threadId` posts to General (topic 1).
+Omitting `threadId` posts to General. Polls and media use the same `threadId`
+routing.
 
-## Rename / Edit a Topic
+## Edit
 
 ```json
 {
   "action": "topic-edit",
-  "threadId": "5054",
+  "threadId": "<topic_id>",
   "name": "🦞 Renamed Topic"
 }
 ```
 
-## Notes
+Verify the returned topic ID/name and inspect the visible result. If the action
+fails ambiguously, stop rather than retrying a mutation blindly.
 
-- Topic ids are message-thread ids; inbound context exposes the current one as `topic_id`.
-- Session keys are per-topic (`...:topic:<id>`), so each topic is its own conversation lane — useful for per-project or per-person threads.
-- Deletion isn't wired here; leave that to humans in the Telegram UI.
+## Boundaries
+
+- Topic IDs are message-thread IDs; inbound context exposes the current one.
+- Sessions are topic-scoped, so each topic has its own conversation lane.
+- Topic deletion is not exposed here; leave it to a human unless the active tool
+  explicitly adds a reviewed delete action.

@@ -1,154 +1,212 @@
-# Payload Recipes — message tool JSON for every Telegram action
+# Telegram Payload Recipes
 
-Copy-paste payloads for the rules in SKILL.md's Action Rules section. `target` defaults to the current source conversation — include it only when sending elsewhere. Omit `channel` unless sending outside the current channel. Message bodies below are plain markdown/text (house default since 2026-07-20); use explicit rich-body HTML only as the stale-client fallback per SKILL.md.
+Use these only after `SKILL.md` selects the explicit `message` path. `target`
+defaults to the current source conversation; include it only for another chat.
+All button examples use current typed actions. Legacy `value`, `url`, `webApp`,
+and `web_app` aliases are compatibility inputs, not authoring defaults.
 
-## Mentions
+## Mention
 
 ```json
-{ "action": "send", "target": "telegram:<group_chat_id>",
-  "message": "<a href=\"tg://user?id=<user_id>\">Nick</a> this one is yours." }
+{ "action": "send", "target": "telegram:<group_chat_id>", "message": "<a href=\"tg://user?id=<user_id>\">Nick</a> this one is yours." }
 ```
 
-- `tg://user?id=<id>` works because raw `<a href>` is whitelisted by the renderer.
-- Keep display names simple inside the `<a>` tag — no raw `<`, `>`, `&`.
-- IDs from trusted runtime metadata or contact/group memory are safe; uncertain identity → say so or use plain name.
+Prefer `replyTo`, then a trusted `tg://user?id=` mention, then `@username`, then
+plain name. Never invent an ID.
 
-## Buttons (canonical: presentation.blocks)
+## Callback buttons
 
 ```json
-{ "action": "send", "target": "<chat_id>",
-  "message": "Question text 👇",
-  "presentation": { "blocks": [
-    { "type": "buttons", "buttons": [
-      { "label": "✅ Yes", "value": "yes", "style": "success" },
-      { "label": "❌ No", "value": "no", "style": "danger" }
-    ]}
-  ]}}
+{
+  "action": "send",
+  "message": "Choose one 👇",
+  "presentation": { "blocks": [{
+    "type": "buttons",
+    "buttons": [
+      { "label": "✅ Yes", "action": { "type": "callback", "value": "yes" }, "style": "success" },
+      { "label": "❌ No", "action": { "type": "callback", "value": "no" }, "style": "danger" }
+    ]
+  }] }
+}
 ```
 
-Three button kinds — `value` (callback), `url` (link), `webApp.url` (WebApp; legacy `web_app` accepted). Mixing URL + callback in one keyboard is verified live (2026-07-04). Styles: `primary`, `secondary`, `success`, `danger`.
+Use stable lowercase snake_case callback values. Mirror options in the message.
+Top-level `buttons` are stripped; `presentation` does not replace `message`.
+Telegram auto-chunks three buttons per row, so keep 3+ button labels short.
 
-**Verification history:** raw top-level `buttons` param verified silently dropped live 2026-07-06 (Clawloop msg 18942 — `ok: true`, no keyboard; MCP schema strips it). Presentation-only send fails `Message must be non-empty` (2026-07-06). URL buttons + mixed keyboards live-verified 2026-07-04 (earlier "broken in renderer" claims stale — `toInlineKeyboardButton` handles all three kinds). WebApp button in DM verified 2026-07-04 (rendered, opened in-app webview).
+## Copy Text — future payload shape
 
-### Group Mini App launch (live-verified 2026-07-09, Claw Four in Dev Team)
-
-Mini Apps launch fine from groups — the proven group path is a normal URL button to the BotFather Mini App direct link (opens natively as the Mini App; the keyboard always renders). Only the true `webApp` button KIND gets dropped by Telegram in unproven group keyboards (correction recorded 2026-07-09 08:16 UTC: the working Dev Team button was a URL button, not a true `webApp` button):
+The availability, limit, and fallback rule is owned by
+[SKILL.md](../SKILL.md#copyability). This shape is intentionally non-executable
+until that capability gate passes.
 
 ```json
-{ "action": "send",
-  "message": "Claw Four is live 🦞🎮 Tap in and choose your name.",
-  "presentation": { "blocks": [
-    { "type": "buttons", "buttons": [
-      { "label": "🎮 Play", "url": "https://t.me/<bot_username>/<app_short_name>?startapp=<room_or_payload>", "style": "success" },
-      { "label": "🌐 Browser", "url": "https://example.com/?room=<room>", "style": "secondary" }
-    ]}
-  ]}}
+{
+  "action": "send",
+  "message": "Token: `TOKEN-7319`",
+  "presentation": { "blocks": [{
+    "type": "buttons",
+    "buttons": [{ "label": "📋 Copy token", "action": { "type": "copy-text", "text": "TOKEN-7319" } }]
+  }] }
+}
 ```
 
-Launch hierarchy: group/topic → Mini App direct-link URL button first, browser fallback second, naked link last. Private chat → true `webApp` button preferred. Unknown surface → direct-link URL button + browser fallback; only add true `webApp` after proving the chat renders it.
-
-### Grid layouts (row structure)
-
-- Binary: one row — `✅ Yes · ❌ No`
-- Binary + defer: two rows — `✅ Do it · ❌ Cancel` / `⏰ Not now`
-- Three+ choices: one per row, stacked
-
-### Button emoji intents
-
-✅ yes/approve · ❌ no/cancel · ⏰ later/defer · ⚠️ danger/destructive · ℹ️ info · 🔒 lock in · 🅰️🅱️ neutral A/B
-
-## Selects
+## URL button
 
 ```json
-{ "type": "select", "placeholder": "Choose lane",
+{
+  "action": "send",
+  "message": "Open the report 👇",
+  "presentation": { "blocks": [{
+    "type": "buttons",
+    "buttons": [{ "label": "📄 Report", "action": { "type": "url", "url": "https://example.com/report" } }]
+  }] }
+}
+```
+
+## Mini App
+
+Surface selection is owned by [SKILL.md](../SKILL.md#4-choose-the-interaction).
+Group/topic direct-link shape:
+
+```json
+{
+  "action": "send",
+  "message": "The Mini App is ready 🦞🎮",
+  "presentation": { "blocks": [{
+    "type": "buttons",
+    "buttons": [
+      { "label": "🎮 Play", "action": { "type": "url", "url": "https://t.me/<bot_username>/<app_short_name>?startapp=<payload>" }, "style": "success" },
+      { "label": "🌐 Browser", "action": { "type": "url", "url": "https://example.com/?room=<room>" }, "style": "secondary" }
+    ]
+  }] }
+}
+```
+
+Private-chat shape after the canonical surface gate passes:
+
+```json
+{
+  "label": "🎮 Open app",
+  "action": { "type": "web-app", "url": "https://example.com/app" }
+}
+```
+
+## Select
+
+```json
+{
+  "type": "select",
+  "placeholder": "Choose lane",
   "options": [
-    { "label": "🔐 Security", "value": "security" },
-    { "label": "🦞 Product", "value": "product" }
-  ]}
+    { "label": "🔐 Security", "action": { "type": "callback", "value": "security" } },
+    { "label": "🦞 Product", "action": { "type": "callback", "value": "product" } }
+  ]
+}
 ```
 
-Renders as buttons on Telegram; real dropdown on Slack.
+Telegram renders selects as buttons; use a select only when a shared flow also
+targets a channel with a real dropdown.
 
-## Polls
+## Poll
 
 ```json
-{ "action": "poll", "target": "<chat_id>",
-  "pollQuestion": "Which approach?",
-  "pollOption": ["Option A", "Option B", "Option C"],
-  "pollAnonymous": false,
-  "pollDurationSeconds": 300 }
+{ "action": "poll", "pollQuestion": "Which approach?", "pollOption": ["Option A", "Option B", "Option C"], "pollAnonymous": false, "pollDurationSeconds": 300 }
 ```
 
-Flags: `pollAnonymous`/`pollPublic` (voter visibility), `pollMulti` (multi-select), `pollDurationSeconds` (auto-close, 5–600).
+Use `pollMulti` for multi-select. Auto-close accepts 5–604800 seconds.
 
-## Edits
+## Edit
 
 ```json
-{ "action": "edit", "target": "<chat_id>", "messageId": "<message_id>", "message": "Updated text here." }
+{ "action": "edit", "target": "<numeric_chat_id>", "messageId": "<message_id>", "message": "Updated text." }
 ```
 
-## Replies
+Current OpenClaw resolves topic-qualified targets for edits. Still verify the
+returned `messageId` and inspect topic placement when editing matters.
+
+## Reply
 
 ```json
-{ "action": "send", "target": "<chat_id>", "message": "Replying to that ^", "replyTo": "<message_id>" }
+{
+  "action": "send",
+  "message": "Replying to that.",
+  "replyTo": "<message_id>"
+}
 ```
 
-## Reactions
+After callbacks, pass a verified real message ID or omit `replyTo`; callback
+identifiers are not message IDs.
+
+## Reaction
 
 ```json
-{ "action": "react", "target": "<chat_id>", "messageId": "<message_id>", "emoji": "👍" }
+{ "action": "react", "messageId": "<message_id>", "emoji": "👍" }
 ```
 
-Remove with `"remove": true`. (🦞 in the default set: tested & failed 2026-02-13.)
+Use `"remove": true` to remove it. The supported Unicode set is runtime-owned;
+`🦞` is not in Telegram's default reaction set.
 
-## Media / Files
+## Media or file
 
 ```json
-{ "action": "send", "target": "<chat_id>", "media": "/absolute/path/to/file.png",
-  "message": "Caption text", "forceDocument": true }
+{ "action": "send", "media": "/absolute/path/to/file.png", "message": "Short caption", "forceDocument": true }
 ```
 
-Caption formatting (bold/strike/spoiler/links) verified live 2026-06-10.
+Omit `forceDocument` for an inline photo. Captions are not rich bodies; send
+rich explanation separately. Forum-thumbnail images default to true 1:1.
 
-## Stickers
+## Sticker
 
 ```json
-{ "action": "sticker", "target": "<chat_id>", "stickerId": ["<fileId>"] }
+{
+  "action": "sticker",
+  "stickerId": ["<file_id>"]
+}
 ```
 
 ```json
-{ "action": "sticker-search", "query": "cat waving", "limit": 5 }
+{
+  "action": "sticker-search",
+  "query": "cat waving",
+  "limit": 5
+}
 ```
 
-## Pins
+Check `channels.telegram.actions.sticker` first. A sticker `file_id` is not a
+custom emoji or topic-icon ID.
+
+## Pin
 
 ```json
-{ "action": "send", "target": "<chat_id>", "message": "Pinned announcement", "delivery": { "pin": true } }
+{
+  "action": "send",
+  "message": "Pinned announcement",
+  "delivery": { "pin": true }
+}
 ```
 
-CLI: `--pin`.
+## Plugin-owned command buttons
 
-## Presentation card block support (Telegram)
+This branch is only for deterministic plugin replies; ordinary assistant sends
+use `presentation.blocks`.
 
-- ✅ `text` → message body · ✅ `context` → body (no visual distinction) · ✅ `buttons`/`select` → inline keyboard
-- ⚠️ `divider` → not rendered · `tone` → no visual effect (matters on Slack/Teams) · `title` → prepended to body
-
-## Plugin Reply Buttons (`channelData.telegram.buttons`)
-
-Plugin-owned command menus only (no-LLM slash-command steering where the callback re-enters the command path). Ordinary assistant sends use `presentation.blocks`.
-
-```ts
-return {
-  text: "Choose a report 👇\n\nOptions: 🖥️ Hardware · 🧰 Services",
-  channelData: {
-    telegram: {
-      buttons: [[
-        { text: "🖥️ Hardware", callback_data: "/health hardware" },
-        { text: "🧰 Services", callback_data: "/health services" }
+```json
+{
+  "text": "Choose a report 👇\n\nOptions: 🖥️ Hardware · 🧰 Services",
+  "channelData": {
+    "telegram": {
+      "buttons": [[
+        { "text": "🖥️ Hardware", "callback_data": "/health hardware" },
+        { "text": "🧰 Services", "callback_data": "/health services" }
       ]]
     }
   }
-};
+}
 ```
 
-Mirror the options in message text either way.
+## Topic actions
+
+Use [forum topics](telegram-forum-topics.md). Topic icon fields are
+runtime-schema-gated; never invent a custom emoji ID or drop to a token-bearing
+raw API command.

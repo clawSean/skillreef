@@ -1,81 +1,90 @@
-# Telegram Rich Message Client Compatibility
+# Telegram Rich-Message Client Compatibility
 
-Use this reference when Telegram rich-message rendering differs across clients, or when the user says a current Telegram app does not render rich bodies, tables, collapsibles, buttons, or other Bot API 10.1 features as expected.
+Use this guide when a Telegram client renders rich bodies, tables, details,
+lists, buttons, or spacing differently from the current calibrated surface.
+Operating rules live in `SKILL.md`; dated results live in
+`rich-rendering-matrix.md`.
 
-Keep `SKILL.md` focused on send-time authoring rules. Put install audits, client/version findings, and debug procedures here.
+## Diagnose the failing layer
 
-## Core Rule
+1. Capture the exact OpenClaw version, selected Telegram account, effective
+   `richMessages` value, client platform/version/build, and chat surface.
+2. Inspect the stored outbound body or returned send result. A complete payload
+   plus incomplete display points downstream to Telegram server/client layout.
+3. Identify the symptom before selecting a fallback:
+   - **Unsupported-message banner:** the client cannot display this rich body.
+   - **Rendered but cramped/misaligned:** the rich path works; isolate markup or
+     client layout with the matching canary.
+   - **Literal tags:** the body used a tag outside the active path's contract or
+     a rich-only island entered a legacy caption/HTML path.
+   - **Missing controls:** inspect presentation schema and delivery result; body
+     richness does not create buttons.
+4. Run only the smallest discriminating canary from
+   `rich-rendering-matrix.md`; never mix Markdown and raw-HTML lanes in one test.
+5. Inspect the actual client at native/Retina resolution and record message IDs
+   plus screenshots.
 
-`channels.telegram.richMessages: true` is an OpenClaw send-path feature, but final display still depends on the receiving Telegram client.
+## Fallbacks
 
-If a rich body renders badly on one client:
+- **Unsupported rich body:** resend with normal Telegram Markdown/HTML only.
+  Use literal line breaks and text bullets; omit rich-only tables, details,
+  formulas, rich media, and structural HTML islands.
+- **Spacing regression on a client that still renders rich bodies:** follow the
+  separator boundary map and list-density rule in
+  [SKILL.md](../SKILL.md#structure-and-spacing). Check especially that the final
+  prose/literal-list item and following prose use a source-adjacent inline break,
+  real source blank lines terminate structural islands, and no break is glued to
+  them. Avoid a standalone break paragraph because it compounds the gap.
+- **Table truncation or leaked markup:** immediately resend every relevant row
+  as literal-`•` blocks using the same whole-list density rule, then suspend
+  tables on that exact surface until T7 passes.
+- **Missing button/action:** keep the choice or exact value visible in text. Do
+  not fabricate a look-alike callback or use a token-bearing raw Bot API command.
 
-1. Do not assume OpenClaw failed to send.
-2. Check whether the issue follows the client, chat type, or markup shape.
-3. Mirror operationally important content in plain prose or compact lists.
-4. Prefer markdown-pipe tables over raw HTML tables.
-5. Pick the right fallback for the failure you actually see: client RENDERS rich bodies but collapses newlines (stale renderer) → explicit rich-body blocks (`<p>`, `<ul><li>`, `<br>`); client shows the `not supported in your version of Telegram` fallback → drop the rich body entirely and send normal Telegram formatting with literal line breaks and text bullets (structural `p`/`ul`/`br` are not whitelisted on that path and leak as literal tags).
+## macOS inspection
 
-## JPop Mac Audit — 2026-07-06
-
-Trigger: JPop reported that computer Telegram could not render some rich messaging features, despite showing no available update.
-
-Findings:
-
-- Installed app on <YourMacNode>: `/Applications/Telegram.app`.
-- Bundle id: `ru.keepcoder.Telegram`.
-- Version: `12.8`.
-- Build: `282010`.
-- App Store receipt present.
-- No universal Telegram Desktop bundle found (`org.telegram.desktop`).
-- No `~/Library/Application Support/Telegram Desktop` support dir found.
-
-Interpretation:
-
-- The installed app is the native/App Store macOS Telegram client.
-- "No update available" can mean "current native macOS client," not "best/current universal Telegram Desktop rich-message renderer."
-- The universal Telegram Desktop release line (`6.9.x`) explicitly shipped rich text formatting for bots plus follow-up rich-message display/layout fixes.
-- Native macOS 12.8 release notes around the same release are generic "bug fixes/minor improvements," even though they link to the broad Telegram rich-text announcement.
-
-Recommendation for this specific case:
-
-- Install/run the universal Telegram Desktop app from `desktop.telegram.org` alongside the native macOS app when comparing rich-message behavior.
-- Keep the native app if JPop prefers it for ordinary use, but do not use its update status as proof that rich-message rendering is complete.
-
-## Useful Checks
-
-Mac app identity:
-
-```bash
-for p in /Applications/Telegram.app /Applications/Telegram\ Desktop.app "$HOME/Applications/Telegram.app" "$HOME/Applications/Telegram Desktop.app"; do
-  if [ -d "$p" ]; then
-    echo "APP=$p"
-    /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$p/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$p/Contents/Info.plist" 2>/dev/null || true
-    /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$p/Contents/Info.plist" 2>/dev/null || true
-    /usr/bin/mdls -name kMDItemVersion -name kMDItemAppStoreHasReceipt -name kMDItemLastUsedDate "$p" 2>/dev/null || true
-  fi
-done
-```
-
-Universal Desktop search:
+Current native client identity:
 
 ```bash
-mdfind "kMDItemCFBundleIdentifier == 'org.telegram.desktop'" 2>/dev/null || true
-mdfind "kMDItemDisplayName == 'Telegram Desktop'" 2>/dev/null || true
-ls -ld "$HOME/Library/Application Support/Telegram Desktop" 2>/dev/null || true
+mdls -name kMDItemVersion -name kMDItemCFBundleIdentifier /Applications/Telegram.app
 ```
 
-## Sources Checked On 2026-07-06
+Peekaboo 4 uses `app list`, `window list`, and `see`; older `list apps`,
+`list windows`, and `image` commands are stale.
 
-- Telegram Bot API changelog: Bot API 10.1 added Rich Messages on 2026-06-11.
-- Telegram launch post: "Smartwatch Apps, Rich Text for Bots, AI Guardians for Groups, and Much More."
-- Telegram Desktop release notes: 6.9 introduced rich text formatting for bots; 6.9.1 and 6.9.2 included rich-message layout/display fixes.
-- Telegram Stable Releases feed: native macOS 12.8 build 282010 listed as a 2026-06-10 native client update with generic bugfix notes and the broad launch-post link.
+```bash
+peekaboo permissions status --json
+peekaboo app list --json
+peekaboo see --app Telegram --mode window --retina --no-elements --path /tmp/telegram-rich-audit.png --json
+```
 
-## Known OpenClaw-Side Compatibility Notes
+Keep the screen awake during an approved visual audit. Capture the message at
+Retina resolution and crop/zoom the exact bubble before judging baseline or
+spacing differences.
 
-- On the calibrated post-2026-07-19 iOS client, literal newlines render correctly in rich mode (2026-07-20 rebase — plain markdown is the house default). Older/unverified clients may still collapse them; use explicit rich-body HTML blocks (`<p>`, `<ul><li>`, `<br>`) only after observing that failure on the specific surface.
-- Raw HTML tables are path-sensitive and unsafe for group-visible operator cards.
-- Markdown-pipe tables are the preferred table path while `richMessages: true` is enabled.
-- Inbound replies to our rich bodies may arrive as `[unsupported Telegram rich_message received]`; use message ids instead of relying on quoted body content.
+## Current boundaries
+
+- The default Markdown path sends typed rich blocks when rich messages are on;
+  captions remain legacy Telegram HTML and cap at 1024 characters.
+- Current rich Markdown and legacy `textMode: html` are separate rendering
+  paths. A whitelist statement about one path does not govern the other.
+- Current rich HTML treats `p`, `span`, and `div` as transparent containers;
+  they are not dependable visual-spacing controls.
+- Reply quotes of our rich bodies may arrive as an unsupported placeholder.
+  Preserve message IDs and recent conversation context instead of relying on
+  quoted body text.
+- Copy Text stays capability-gated. Consult the dated result in the
+  [rendering matrix](rich-rendering-matrix.md); treat any future support as
+  unproven until the active schema and a live clipboard canary both pass.
+
+## Recording a result
+
+Append only the durable outcome to `rich-rendering-matrix.md`:
+
+```text
+Date · OpenClaw version · rich ON/OFF · client/version/build · chat surface
+Message IDs · exact markup lane · expected result · observed result · screenshot
+```
+
+Do not duplicate the result here or promote it to a production rule until the
+canary isolates the behavior.

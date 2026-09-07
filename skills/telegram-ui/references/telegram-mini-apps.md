@@ -1,33 +1,28 @@
-# Telegram Mini Apps / Games (early scaffold)
+# Telegram Mini Apps
 
-Skill-side knowledge for launching Telegram Mini Apps (web-app games and tools) from OpenClaw sends. We're early here — this holds only what's proven and Telegram-UI-shaped. The game apps themselves (server, rooms, Caddy, game design, learnings) live in the project: `~/projects/openclaw-game-night/` (STATUS/DECISIONS/LOG + `docs/telegram-webapp-2026-07-09.md`, `docs/telegram-game-ux.md`, `docs/live-game-learnings.md`).
+Use this branch only after `SKILL.md` selects a Mini App interaction. Current
+typed payloads live in `payload-recipes.md`; keep project hosting, game logic,
+and room state in the owning project rather than this UI skill.
 
-## Proven (2026-07-09, Claw Four)
+## Group API evidence
 
-- **Mini Apps launch from groups.** The working group surface is a normal presentation `url` button pointing at the BotFather Mini App direct link — it opens natively as the Mini App and the keyboard always renders.
-- True `webApp` buttons render in DMs (verified 2026-07-04). **Groups are a hard no (verified 2026-07-10, Das Groupies):** Telegram rejects the entire send with `400 BUTTON_TYPE_INVALID` — the webApp button kind is illegal in group keyboards at the API level, not merely hidden. Never mix a `webApp` button into a group send; it kills the whole message. Full launch hierarchy + payloads: SKILL.md Action Rules and `payload-recipes.md` → Group Mini App launch.
+On 2026-07-10, a true `web-app` action in a group keyboard caused Telegram to
+reject the whole send with `400 BUTTON_TYPE_INVALID`. A normal `url` action to
+the BotFather direct link rendered and launched the Mini App. `SKILL.md` owns
+the resulting surface decision; `payload-recipes.md` owns the payload shapes.
 
 ## Direct-link anatomy
 
 `https://t.me/<bot_username>/<app_short_name>?startapp=<payload>`
 
 - `<app_short_name>` comes from BotFather `/newapp` on the owning bot.
-- `startapp` payload reaches the app (e.g. room/session id) — use it to route groups to separate rooms; one codebase, separate room state per group.
+- `startapp` carries a compact app-owned route such as a room/session ID. Do not
+  put secrets or credentials in it.
 
-## Ownership split
+## Verify
 
-- **Sean side:** web app, game server, Caddy/hosting, send/launch cards.
-- **Bot-owner side (JPop):** BotFather Mini App settings (`/newapp`, URL, short name, menu button). Never ask for Telegram credentials or bot tokens for this.
-- Any Caddy block/reload, gateway restart, or BotFather mutation needs JPop approval first.
-
-## Launch-card rules (JPop preference, recorded 2026-07-09)
-
-- Game starts are rich launch cards with a tap button — never a bare pasted URL.
-- Groups/topics: primary = Mini App direct-link URL button, secondary = browser URL fallback; bare links are fallback/debug only.
-- DMs/proven surfaces: true `webApp` button preferred.
-
-## Roadmap / open
-
-- Telegram identity inside the app (initData validation) — v2, via BotFather Mini App context.
-- Which surfaces render true `webApp` buttons — DMs yes; groups closed (API-rejected, 2026-07-10). Log other surface types (channels, forum topics via DM bots) as tested.
-- More games + shared patterns → track in the project, graduate stable Telegram-UI learnings back to this file.
+1. Confirm the send returns a real message ID and the expected keyboard appears.
+2. Open the button in the actual Telegram client and verify the intended app and
+   route load. A successful send alone does not prove the launch target works.
+3. Keep BotFather and hosting mutations outside this send-time branch; they need
+   their own explicit scope and approval. Never request bot credentials or tokens.
