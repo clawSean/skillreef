@@ -1,165 +1,207 @@
 ---
 name: "web-use"
-description: "Use for any task that touches a web page or web data. Routes between web_search/web_fetch, Browserless/TinyFish/protected extraction, OpenClaw browser, and live browser context for login, 2FA, CAPTCHA, current tabs, carts, or checkout. Read before declaring any page blocked — Cloudflare, CAPTCHA, and \"Just a moment\" pages get Browserless /unblock first. Domain skills keep site-specific policy."
+description: "Route web tasks across search/fetch, managed browsing, Arc/Dia fallbacks, protected extraction, authenticated sessions, and visible handoff."
 ---
 
 # Web Use
 
-Use this as the default routing layer for web work. Decide the lightest
-dependable path before reaching for a browser or protected extraction backend.
-
-This skill answers two separate questions:
+Use this as the default router for web tasks. Decide two things separately:
 
 1. **Data path:** how should the page or site data be retrieved?
-2. **Browser context:** whose browser, device, tab, or login state matters?
+2. **Browser context:** which profile, login state, visible app, or human handoff matters?
 
-Keep those questions separate even when one workflow needs both.
+Do not pick a browser merely because one is installed or running.
 
-## Quick Route
+## Quick route
 
 | Need | Start with |
 |---|---|
-| Search, discovery, quick source finding | `web_search` |
+| Search or discover sources | `web_search` |
 | Read a simple public URL | `web_fetch` |
-| Inspect a JS-rendered page visually | OpenClaw `browser` |
-| Extract protected or bot-gated data | `references/extraction-backends.md` |
-| Use a current tab, login, 2FA, CAPTCHA, extension, cart, or checkout | `references/context-device.md` |
-| Site-specific paid API or domain policy | Relevant domain skill |
+| Render, inspect, or interact with a page unattended | OpenClaw managed browser |
+| Managed browser is bot-blocked or lacks a needed capability | Try Arc or Dia with live page/control proof; use protected extraction for extraction-only blocks |
+| Extract a protected or bot-gated page without human login | `references/extraction-backends.md` |
+| Use an existing login, current tab, 2FA, CAPTCHA, extension, cart, or checkout | `references/context-device.md` |
+| Apply site-specific policy or paid structured data | Relevant domain skill |
 
-Do not use a browser when search or fetch is enough. Do not use Browserless,
-TinyFish, or paid APIs when a simple tool can finish the task.
+Use the lightest dependable route. Search or fetch beats browser automation when
+it can finish the task. A local browser beats a paid remote backend when it can
+finish safely and reliably.
 
-## Logged-in sessions are NOT user-device-only (read this)
+## Tool-guidance loading
 
-A logged-in browser session can live on the **agent side**, not just the user's
-machine. The VPS managed `openclaw` browser (`profile="openclaw"`, `target="host"`,
-CDP `:18800`, persistent `userDataDir`) can hold durable logins — e.g. it is
-signed into Amazon as Jared — and is frequently the **primary** lane for
-cart/checkout/order-history/account tasks. The user's own device browser
-(Mac node) is often a **fallback** and may be logged into nothing.
+`web-use` owns the route. Load implementation guidance only after choosing it:
 
-So when a task needs a logged-in session: check the agent-side managed browser
-FIRST, verify login state on the live page, and only fall back to the user
-device when the agent session is logged out or the user wants to co-interact.
-Do not assume "logged in" ⇒ "the user's current browser."
+| Chosen lane | Load next |
+|---|---|
+| Search or fetch | The matching tool; no browser skill |
+| Managed browser or shared current tab | `browser-automation` for multi-step page control |
+| Existing login, profile, or human takeover | `references/context-device.md` |
+| Shared-tab setup, pairing, status diagnosis, or release proof | `references/shared-tab-extension.md` |
+| Protected extraction | `references/extraction-backends.md` |
+| Site-specific workflow | The relevant domain skill |
 
-## Routing Rules
+`browser-automation` owns page-control mechanics after this skill chooses a
+browser lane. It never chooses the data path or silently replaces search,
+fetch, an API, or the user-requested browser context.
+
+When the user explicitly asks to use, inspect, or control **their shared tab or
+current browser**, pin that lane. Verify the attachment, then operate only that
+shared context. Do not detour into research, a managed profile, another browser,
+or extension maintenance unless the requested context is unavailable or broken.
+
+## Browser contract
+
+Use the managed browser for ordinary unattended interaction. Treat a visible
+desktop browser as a separate, consent-bound context: an open app is not an
+attached or controllable page. The shared-tab extension exposes only explicitly
+shared tabs, and every run must verify the live attachment before acting.
+
+Read `references/browser-capability-audit.md` before changing browser routing,
+configuring an attachment, or making a capability claim.
+
+## Browser naming
+
+Keep implementation names out of user-facing instructions. Driver, engine, and
+transport labels such as `cdp`, `chrome-mcp`, `Chromium`, or an executable
+path describe plumbing, not the browser the user should open.
+
+Use these labels with the user:
+
+- **Managed browser** — isolated agent-controlled profile.
+- **Your current browser** — an existing signed-in tab/session, only when
+  attachment is actually verified.
+- **Visible handoff** — the user must review, solve, approve, or take over.
+
+Mention a named app only when that app has been live-inspected and is genuinely
+the intended user-visible context.
+
+## Routing rules
 
 1. Start with the lightest viable path.
-2. Escalate only when the simpler path will clearly fail or already failed.
-3. Treat paid/API-credit backends as deliberate choices, not defaults.
-4. Keep interactive human-visible browsing separate from server-side extraction.
-5. Keep site-specific policy in the relevant domain skill.
-6. A logged-in session may be agent-side; verify login state rather than routing by device assumption.
+2. Escalate only when the simpler path will fail or already failed.
+3. Verify the exact profile, login, visibility boundary, and attachment state.
+4. Treat paid or credit-consuming backends as deliberate choices.
+5. Keep interactive human-visible browsing separate from server-side extraction.
+6. Keep site-specific policy in the relevant domain skill.
+7. Never infer current capability from a historical VPS, node, Arc, or extension
+   proof.
+8. Never bypass CAPTCHA, 2FA, passkeys, confirmation gates, or irreversible
+   action review.
+9. When the managed browser is blocked, Arc or Dia may be tried if a visible
+   local context could help; prove capture and control live before relying on it.
 
-## Data Path Decision
+## Data path
 
-### 1. Lightweight Search Or Fetch
+### 1. Search or fetch
 
-Use native OpenClaw tools first when they are enough:
+- `web_search` for discovery, current facts, links, and source finding.
+- `web_fetch` for a known public URL that does not need JavaScript or login.
+- Managed browser when rendering or interaction matters.
 
-- `web_search` for discovery, source finding, current facts, and links.
-- `web_fetch` for a specific public URL that does not need JavaScript or login.
-- OpenClaw `browser` for simple visual inspection when rendering matters.
+### 2. Managed browser
 
-### 2. Protected Server-Side Extraction
+Use for ordinary rendered pages, deterministic interaction, isolated login
+state, screenshots, uploads from approved roots, downloads, and unattended
+multi-step work.
 
-Use Browserless when the core problem is getting through protection and
-extracting page data without a human-visible browser:
+Before account work:
 
-- Cloudflare or anti-bot friction
-- protected pages that a normal fetch or local headless browser cannot read
-- structured extraction from a hard page
+1. inspect the live page;
+2. verify the account and login state;
+3. verify that the managed profile is acceptable for the task;
+4. stop before purchase, send, publish, delete, or other approval-gated actions.
 
-Use Browserless `/session` sparingly. It is not the default for one-off reads.
-Use it only when repeated same-site BQL/CDP work genuinely benefits from
-persisted cookies, localStorage, sessionStorage, or cache. Session URLs include
-the Browserless token and act as bearer credentials.
+If a dialog or browser action hangs, stop the run cleanly and report the gap.
+Detection alone is not proof that the action completed.
 
-### 3. Remote Stealth Browser Primitive
+### 3. Protected extraction
 
-Use TinyFish when you need a hosted stealth browser you can control:
+Use Browserless when the core problem is protected server-side extraction:
 
-- brittle multi-step flows
-- custom CDP / Playwright-style control
-- hard pages where a remote browser session is useful
+- Cloudflare or anti-bot friction;
+- a hard page that fetch or the local managed browser cannot read;
+- structured extraction without a human-visible browser.
 
-Do not assume the TinyFish Agent API is the first surface for protected
-extraction. The better current fit is the TinyFish Browser API / CDP session.
+Use Browserless sessions only when repeated same-site work genuinely needs
+cookies, localStorage, sessionStorage, or cache to persist. Session URLs are
+bearer credentials.
 
-### 4. Site-Specific Structured APIs
+Use TinyFish when deeper hosted stealth-browser control is needed. The browser
+API / remote session is the preferred primitive; do not assume its higher-level
+agent API is the best route.
 
-Use a structured API only when the relevant domain skill says the clean fields,
-cost, and credential policy are worth it. Keep API-specific policy out of this
-skill.
+### 4. Site-specific APIs
 
-## Browser Context Decision
+Use a structured API only when the relevant domain skill owns the credential and
+says the fields, reliability, and cost are worth it.
 
-Use browser context routing when the task needs one of these:
+## Browser context
 
-- deciding between fresh browser vs current browser
-- deciding between user device vs agent device
-- preserving or using an existing logged-in tab/session
-- a visible browser on the user's device
-- a browser extension lane
-- CAPTCHA, 2FA, manual review, cart, checkout, or account state
-- user-facing UX/design for browser intents
+Use context routing for:
 
-Plain-English labels:
+- an existing logged-in tab or account;
+- extension state;
+- CAPTCHA, 2FA, passkeys, or manual review;
+- cart, checkout, order history, account settings, or irreversible actions;
+- a user-visible page where the human must take over.
 
-- Fresh browser
+Preferred plain-English modes:
+
+- Fresh managed browser
 - Your current browser
-- On your device
-- On my side
+- Visible handoff
 
-Note: "On my side" (agent device) can be a **logged-in** session, not just a
-fresh one. For account/cart/checkout work, prefer the agent-side logged-in
-managed browser first when it holds the needed login.
+Read `references/context-device.md` for availability and consent rules.
 
-Read `references/context-device.md` for the compact 2 x 2 browser-mode matrix
-and phrasing guide.
+## Escalation patterns
 
-## Escalation Patterns
+### Public page
 
-### Public Page
+1. Search if the source is unknown.
+2. Fetch if the URL is known and likely static.
+3. Use the managed browser if rendering or interaction matters.
 
-1. `web_search` if the URL/source is unknown.
-2. `web_fetch` if the URL is known and likely static.
-3. OpenClaw `browser` if JavaScript/rendering matters.
+### Protected page
 
-### Protected Page Data
+1. Try the managed browser if ordinary rendering may be enough.
+2. If it is bot-blocked or lacks a needed capability and a visible local context
+   may help, try Arc or Dia as a fallback experiment. Live-prove the exact page
+   capture and control path before relying on it.
+3. Use Browserless `/unblock` or `/stealth/bql` for extraction-only blocks.
+4. Use a Browserless session only for demonstrated persistence needs.
+5. Use TinyFish for deeper hosted browser control.
+6. Use verified manual handoff for CAPTCHA/2FA, passkeys, provider approval, or
+   review that must remain human-controlled.
+7. Report blockage plainly if the site still resists.
 
-1. Try Browserless `/stealth/bql` or `/unblock`.
-2. Use Browserless `/session` only for repeated same-site work that benefits
-   from persisted remote state.
-3. Use TinyFish Browser API / CDP when deeper remote browser automation is needed.
-4. Use a site-specific API only when the domain skill approves the tradeoff.
-5. Switch to interactive browser work when login, CAPTCHA/2FA, visible review,
-   or extension state matters.
-6. If the site remains blocked, say so plainly.
+### Existing login or current tab
 
-### Current Tab Or Logged-In Browser
+1. Confirm that existing session state is actually required.
+2. Check whether the managed profile is already signed in and acceptable.
+3. If the user's current tab is required, verify a live supported attachment.
+4. If no attachment is live, say so and offer the managed-browser or manual
+   handoff path.
+5. Do not treat a running Arc or Dia process as attached.
+6. Do not instruct the user to configure an implementation browser unless that
+   named browser is truly required and the setup is approved.
 
-1. Confirm that the task needs a live browser/session.
-2. Check the agent-side managed browser first — it may already hold the login
-   (e.g. Amazon). Verify login state on the live page.
-3. Use the appropriate browser profile/node path for the target device; the
-   user's device browser is a fallback when the agent session is unavailable.
-4. If the requested mode is unavailable, say which capability is missing and
-   choose the closest acceptable fallback.
+## Bundled helpers
 
-## Bundled Helper Scripts
+- `scripts/browserless_extract.py` — Browserless content, unblock, or stealth BQL
+- `scripts/browserless_session.py` — opt-in persistent Browserless session with
+  redacted output and `0600` session files
+- `scripts/tinyfish_browser_extract.py` — TinyFish browser-session extraction
 
-Use these from this skill directory when repeatable execution helps:
+See `references/backends.md.example` for public-safe setup patterns.
 
-- `scripts/browserless_extract.py` - Browserless `content`, `unblock`, or `stealth-bql`
-- `scripts/browserless_session.py` - opt-in persistent Browserless session helper with redacted output and 0600 session files
-- `scripts/tinyfish_browser_extract.py` - TinyFish Browser API / CDP extraction helper
+## References
 
-See `references/backends.md.example` for credential and command templates.
-
-## Reference Files
-
-- `references/context-device.md` - browser context/device/session matrix
-- `references/extraction-backends.md` - backend ladder and safety notes
-- `references/backends.md.example` - public-safe credential and command template
+- `references/browser-capability-audit.md` — current ClawPop proof, gaps, and
+  browser evaluation
+- `references/context-device.md` — context, consent, and attachment matrix
+- `references/shared-tab-extension.md` — rare setup, pairing, diagnosis, and
+  release-proof branch for the shared-tab extension
+- `references/extraction-backends.md` — backend ladder and safety notes
+- `references/backends.md` — Sean-local backend operating notes
+- `references/backends.md.example` — public-safe configuration template
