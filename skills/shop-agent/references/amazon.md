@@ -2,6 +2,23 @@
 
 Step-by-step browser automation guide for Amazon shopping.
 
+## Session repair
+
+The primary interactive lane is the Mac managed `openclaw` browser. Historical
+VPS login state is not current proof. If Amazon shows `Hello, sign in`:
+
+1. Verify the active Mac browser profile and live page.
+2. Fetch the Amazon login fields from the `Amazon` item in the Sean 1Password
+   vault only inside an approved runtime path.
+3. Fill the form without printing, logging, saving, or placing credentials in
+   process arguments.
+4. If Amazon requests 2FA, CAPTCHA, or trusted-device confirmation, stop for
+   the reviewer's interactive step.
+5. Verify the account header, then resume the original task.
+
+Use an attached visible/extension-capable browser for Keepa/CCC, co-interaction,
+or manual authentication. Never copy the profile or credentials to the VPS.
+
 ## Search for a product
 
 1. Navigate to `https://www.amazon.com`

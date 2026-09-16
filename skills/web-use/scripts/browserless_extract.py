@@ -21,12 +21,25 @@ import re
 import sys
 from html import unescape
 from typing import Any
+from urllib.parse import urlparse
 
 import _http as requests
 
 DEFAULT_HOST = "https://production-sfo.browserless.io"
 DEFAULT_TIMEOUT = 120
 DEFAULT_SNIPPET_CHARS = 3000
+
+
+def configured_host() -> str:
+    host = os.environ.get("BROWSERLESS_HOST", DEFAULT_HOST).rstrip("/")
+    parsed = urlparse(host)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        raise ValueError("BROWSERLESS_HOST must be a bare trusted HTTPS origin")
+    allowed = {urlparse(DEFAULT_HOST).netloc}
+    allowed.update(item.strip() for item in os.environ.get("BROWSERLESS_ALLOWED_HOSTS", "").split(",") if item.strip())
+    if parsed.netloc not in allowed:
+        raise ValueError("BROWSERLESS_HOST is not in BROWSERLESS_ALLOWED_HOSTS")
+    return host
 
 
 def clean_text(text: str) -> str:
@@ -169,8 +182,6 @@ def parse_args() -> argparse.Namespace:
         default="stealth-bql",
         help="Browserless surface to use",
     )
-    parser.add_argument("--host", default=DEFAULT_HOST, help="Browserless host")
-    parser.add_argument("--token", default=os.environ.get("BROWSERLESS_TOKEN"), help="Browserless API token")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT, help="Request timeout in seconds")
     parser.add_argument(
         "--snippet-chars",
@@ -188,23 +199,25 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    if not args.token:
-        print("Missing Browserless token. Pass --token or set BROWSERLESS_TOKEN.", file=sys.stderr)
+    token = os.environ.get("BROWSERLESS_TOKEN")
+    if not token:
+        print("Missing Browserless token. Set BROWSERLESS_TOKEN through secure runtime injection.", file=sys.stderr)
         return 2
 
     try:
+        host = configured_host()
         if args.mode == "content":
-            result = request_content(args.token, args.url, args.host, args.timeout)
+            result = request_content(token, args.url, host, args.timeout)
         elif args.mode == "unblock":
-            result = request_unblock(args.token, args.url, args.host, args.timeout)
+            result = request_unblock(token, args.url, host, args.timeout)
         else:
-            result = request_stealth_bql(args.token, args.url, args.host, args.timeout, args.solve)
+            result = request_stealth_bql(token, args.url, host, args.timeout, args.solve)
     except Exception as exc:  # noqa: BLE001
         print(
             json.dumps(
                 {
                     "ok": False,
-                    "error": sanitize_error(exc, args.token),
+                    "error": sanitize_error(exc, token),
                     "provider": "browserless",
                     "mode": args.mode,
                     "url": args.url,

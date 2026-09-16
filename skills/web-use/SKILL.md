@@ -31,7 +31,7 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 
 | Task category | Default tool type | Load next |
 |---|---|---|
-| Prior local answer/proof | local knowledge or memory | `knowledge-search` + narrow source |
+| Prior local answer/proof | narrow files, native memory, or `rg` | use `knowledge-search` only after its live preflight passes |
 | Authoritative structured domain data | domain API/MCP/skill | active domain skill |
 | Public discovery/current facts | native search | `references/research-routing.md` |
 | Known public URL | native fetch | `references/research-routing.md` |
@@ -58,7 +58,8 @@ Load provider-specific files only after the category is selected:
   `references/provider-registry.local.example.md`
 - Protected/bulk extraction → `references/extraction-backends.md`
 - Shared-tab setup/diagnosis/release proof → `references/shared-tab-extension.md`
-- Domain workflow → only the reference named by the active domain skill
+- Domain workflow → only the reference named by the active domain skill; use
+  `references/domain-backlink-audit.md` when installing or migrating skills
 
 The local registry is runtime state, not portable policy. If it is absent,
 create it from the public example and prove entries locally. Verify it live
@@ -78,8 +79,10 @@ agent/machine inherits it.
 6. Keep public extraction separate from interactive human-visible browsing.
 7. Verify exact profile, account, visibility boundary, tab attachment, and final
    state. A click or command success is not proof the intended result occurred.
-8. Never bypass CAPTCHA, 2FA, passkeys, payment approval, confirmation gates, or
-   irreversible-action review.
+8. Public anti-bot/Cloudflare challenge solving may be used only for lawful
+   public extraction. Login, account-security, transactional, user-present,
+   2FA, passkey, payment, confirmation, and irreversible-review challenges are
+   human gates and must never be bypassed.
 9. Treat uninstalled, disabled, or unproved providers as candidates—not live
    fallbacks.
 
@@ -155,9 +158,11 @@ and update the local registry at the moment reality changes.
 - `references/provider-registry.local.example.md` — portable registry template
 - `references/provider-registry.local.md` — optional private host/account state
 - `references/domain-ownership.md` — domain/web boundary and backlink contract
+- `references/domain-backlink-audit.md` — portable install/migration check
 - `references/context-device.md` — browser/device consent and selection
 - `references/extraction-backends.md` — public extraction modes and economics
 - `references/shared-tab-extension.md` — rare extension operations branch
 - `references/proof-policy.md` — portable admission and regression rules
+- `references/design-decisions.md` — sanitized rationale and provenance
 - `references/proof-ledger.local.example.md` — portable proof-ledger template
 - `references/proof-ledger.local.md` — optional private dated proof and gaps

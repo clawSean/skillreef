@@ -2,7 +2,10 @@
 
 ## Core Principle
 
-Use ALL tools available in your current environment. Do not default to a single search provider. Every topic deserves multiple source types — triangulate.
+Use the source categories that fit the question and triangulate when independent
+source types materially improve confidence. Load `web-use` for generic search,
+fetch, research-provider, browser, extraction, and fallback routing. Do not keep
+a competing provider ladder here.
 
 ## Source Categories
 
@@ -12,9 +15,10 @@ Search engines, AI-assisted search, news aggregators. Use whatever search tools 
 Capture: title, URL, key claim, publication date.
 
 Default module hint:
-- `web_search`/Brave-style search is the routine baseline.
-- Use about 5 results by default, with `country: US` / English unless the topic calls for another locale.
-- Use it in every routine run unless the user disables web lookup.
+- Let `web-use` select the configured native search provider.
+- Use about 5 results by default, with locale matched to the topic.
+- Routine runs may skip web lookup when local/internal authoritative sources
+  already answer the question.
 
 ### 2. Page Fetching & Extraction
 When search snippets are insufficient, fetch and read full pages. Use browser tools for JS-rendered content, fetch tools for static pages.

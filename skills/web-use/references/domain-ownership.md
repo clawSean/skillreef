@@ -36,6 +36,8 @@ guarantee `web-use` is already in context.
 | Crypto market data | `coingecko` / `coinmarketcap` | generic fallback only; APIs retain priority/semantics |
 | Spotify | `spotify-player` | browser/cookie/session context only; Spotify skill owns auth semantics |
 | Email | `email` | **no fallback** while screened read is disabled; email fail-closed policy wins |
+| Durable multi-topic research | `bottom-feeder` | generic retrieval/provider routing; Bottom Feeder owns topic orchestration, synthesis, and durable writes |
+| LinkedIn | ownership gap | read-only MCP is unproved and no domain skill exists; account actions fail closed until a narrow owner and live proof exist |
 
 Add new domains here only when a real web-facing skill exists. Domain-specific
 references remain inside the domain skill and are loaded only for that task.

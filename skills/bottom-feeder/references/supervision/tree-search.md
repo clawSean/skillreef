@@ -27,7 +27,7 @@ Before collecting sources, draft 3–5 candidate branches:
 ```yaml
 branch_id: short-slug
 question: "What are we trying to learn?"
-why_it_matters: "Why this branch is useful to JPop / OpenClaw / Edge / product system"
+why_it_matters: "Why this branch is useful to the reviewer / OpenClaw / Edge / product system"
 source_plan: [knowledge-search, brave, browser]
 expected_artifact: knowledge/topics/foo.md
 risk: low|medium|high
@@ -37,7 +37,7 @@ estimated_cost_units: 0.25
 ## Scoring
 
 Score each branch 1–5 on:
-- **User value** — likely usefulness for JPop’s ecosystem
+- **User value** — likely usefulness for the reviewer’s ecosystem
 - **Novelty** — not already covered in local knowledge
 - **Actionability** — can produce decisions, implementation ideas, or watch items
 - **Evidence availability** — credible sources likely accessible

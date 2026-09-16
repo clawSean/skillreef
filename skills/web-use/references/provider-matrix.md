@@ -36,3 +36,10 @@ Use active free allowances first when fit/reliability are equivalent. Paid use
 is appropriate when it materially improves accuracy, coverage, or completion
 time. Cost priority never overrides privacy boundaries or causes repeated
 low-quality attempts.
+
+## Existing-session limitations
+
+Managed profiles are the full-featured default. Existing/shared-session routes
+may restrict text/label extraction, emulation, batching, request/error logs,
+cookie import scope, or action timeouts. Before selecting one, load current
+`browser-automation` guidance and verify the exact operation is supported.

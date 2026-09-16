@@ -70,8 +70,11 @@ Prove the exact packaged artifact, not only its source tree:
 8. clean disposable profiles and verify no credential entered logs or artifacts.
 
 Keep versioned build, branding, test, checksum, and release instructions in the
-canonical extension project. Current public reference:
-<https://github.com/clawSean/openclaw-arc-dia-browser-extension>.
+canonical extension project. Sean's public repository is a **reference
+implementation**, not an install artifact for another agent:
+<https://github.com/clawSean/openclaw-arc-dia-browser-extension>. A non-Sean
+agent must use its separately branded build/handoff with isolated storage and
+pairing state.
 
 Use the installed OpenClaw documentation as runtime authority for Gateway and
 extension commands; the project proves the custom distribution, not future

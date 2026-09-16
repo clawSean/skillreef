@@ -1,130 +1,124 @@
 ---
 name: "shop-agent"
-description: "Shop/reorder from Amazon/retailers via the VPS logged-in browser (primary); compare, add to cart, prepare checkout. Stop before purchase."
+description: "Research and prepare purchases through live-verified Mac browser state and a hard purchase gate."
 ---
 
 # Shop Agent
 
-Browser-driven shopping assistant. Searches for products, adds to cart, and walks through checkout — but **always stops for user confirmation before placing an order**.
+Use for product research, retailer/eBay live data, cart work, checkout
+preparation, and purchase follow-through. Always stop before placing an order.
 
-## Browser lanes (READ FIRST — corrects a recurring mistake)
+## Current browser contract
 
-- **VPS managed `openclaw` browser = PRIMARY, and it is already logged in.** The VPS-local headless Chrome (`profile="openclaw"`, `target="host"`, CDP `:18800`, persistent `userDataDir` `~/.openclaw/browser/openclaw/user-data`) holds a durable signed-in Amazon session as Jared (ships to San Diego 92130). It handles search, compare, price checks, **and logged-in cart/checkout/order-history**. Use it first for everything.
-- **Do NOT assume "logged in" means the user's Mac browser.** The Mac node browser (`clawnode-arc`, CDP `:18802`) is a **strictly compatibility fallback**: it is normally logged into nothing, and its bridge is flaky. Use it only when (a) the VPS session is actually logged out / blocked, or (b) JPop explicitly wants to co-interact in a visible browser live.
-- Never conclude "the VPS can't touch your cart." It can. Verify login state on the live page instead of guessing from lane.
+- The managed OpenClaw browser is Mac-local on ClawPop.
+- Login, cart, Prime, order-history, saved-address, and payment state are never
+  inferred from the former VPS profile. Verify the live page first.
+- Use an attached user-visible browser only when co-interaction, extension state,
+  CAPTCHA/2FA, or the user's current tab is required.
+- Load `web-use` for browser/data-path routing.
 
-## Prerequisites
+## Route by need
 
-- **VPS managed `openclaw` browser (primary, logged in)**: headless Chromium on the VPS with a persistent, Amazon-authenticated profile. Use for search, comparison, price checks, cart-building, and checkout review.
-- The `web-use` skill for product/pricing/site-data research and browser-context routing: lightweight retrieval, protected extraction, structured APIs, remote extraction sessions, cart, checkout, order history, Prime/login state, CAPTCHA/2FA.
-- **Mac node browser (fallback only)**: an attached logged-in session on JPop's Mac (requires an OpenClaw browser node connected and `gateway.nodes.browser.mode: "auto"`). Not assumed logged in; use only when the VPS lane fails or live co-interaction is wanted.
-
-## Dependency routing
-
-Shop Agent owns the shopping workflow. Do not make the user or future agent choose
-a generic web lane. Use `web-use` when the shopping task spans research plus
-cart/checkout.
-
-| Shopping need | Route |
+| Need | Route |
 |---|---|
-| Product discovery, option comparison, reviews, candidate URLs | `web-use`; stay lightweight unless blocked |
-| Current price, stock, seller, Prime, coupon, selected variant | Live retailer page is ground truth; use the VPS `openclaw` browser to read the live offer |
-| Protected product/history/review data with no human-visible browser need | `web-use` protected extraction |
-| Structured fresh Amazon product data / ASIN fields | Site-specific API only when this skill says the credit tradeoff is worth it |
-| Add to cart, checkout review, order history, saved address/payment, Prime/login state | VPS `openclaw` browser (logged in) via `web-use` browser context |
-| Keepa/extension-backed Amazon history | `web-use` selects the extension-capable browser lane; this skill decides whether the history is worth using |
-| CAPTCHA, 2FA, manual visual confirmation, final purchase gate | VPS `openclaw` browser first; escalate to the Mac fallback only if the VPS lane is blocked, then stop for user approval |
+| Product discovery, reviews, candidate links | `web-use`; start with search/fetch |
+| Current price, stock, seller, coupon, selected variant | Live retailer page |
+| Structured Amazon/retailer data | Site API only when the domain reference approves cost/fit |
+| Live eBay search/item/auction/shipping/seller/end time | `ebay-readonly` MCP when enabled; otherwise public live page |
+| eBay sold/completed history or bid/photos/descriptions audit | Authenticated Product Research/live browser if currently available |
+| Cart, checkout review, order history, account state | Mac managed browser after live login verification |
+| Keepa or another extension | Verified extension-capable browser context |
+| CAPTCHA, 2FA, manual review | Pause for the user or switch to a visible co-interaction lane |
+| Final order placement | Explicit approval gate below |
 
-Common Amazon flow: use `web-use` to research/select candidates with the
-lightest viable data path, then drive the logged-in VPS `openclaw` browser for the
-Amazon cart and checkout review.
+Public ended eBay pages are non-exhaustive. The eBay MCP provides public
+read-only data only when enabled; it does not bid, sell, pay, or access an
+account.
 
-## Core safety rule
+## Hard purchase gate
 
-**Never click "Place your order" or equivalent without explicit user approval.**
+Never click “Place your order,” “Buy now,” “Confirm purchase,” or equivalent
+without explicit user approval for that exact checkout.
 
-Before any purchase confirmation:
-1. Present a summary: item(s), quantity, price, shipping estimate
-2. Send as Telegram buttons: ✅ Place Order / ❌ Cancel
-3. Wait for tap
-4. Only proceed on explicit ✅
+Before placement:
 
-This rule has no exceptions.
+1. Present item, quantity, price, shipping, tax/fees, delivery estimate, and
+   selected address/payment labels without exposing sensitive details.
+2. Ask for a clear confirm/cancel choice using the current channel's safest UI.
+3. Wait for explicit confirmation.
+4. Re-read the final checkout total and selections.
+5. Place only if they still match; otherwise stop and report the drift.
+
+Adding to cart is allowed when requested; it is not purchase approval.
 
 ## Workflow
 
-### Step 1: Understand the request
+### 1. Classify
 
-Classify what the user wants:
+- Specific product → find exact match.
+- Vague category → present two or three good options.
+- Reorder → use order history only after current login verification.
+- Add to cart → add and confirm; do not advance the purchase gate.
+- Compare/check price → report without cart mutation unless requested.
+- Track eBay auction → read-only MCP/live page plus finalist browser audit.
+- Sold-history request → authenticated Product Research when available; label
+  public fallback evidence as incomplete.
 
-| Request type | Action |
-|---|---|
-| "Buy me [specific product]" | Search and navigate directly |
-| "Order [category/vague item]" | Search, present 2-3 options, let user pick |
-| "Reorder [thing I bought before]" | Navigate to order history (VPS browser is logged in) |
-| "Add [item] to cart" | Search, add, confirm — do not proceed to checkout |
-| "Check price of [item]" | Search, report price — no cart action |
-| "Compare [items]" | Search both, present side-by-side summary |
+### 2. Select the lightest data path
 
-### Step 2: Select data path
+- Search/fetch for public research.
+- Live page for current offer truth.
+- Protected extraction only when ordinary retrieval fails.
+- Paid/credit APIs only after their tradeoff is justified.
+- Browser only when rendering, login, cart, account, or visual proof matters.
 
-Use `web-use` when data retrieval matters:
+### 3. Verify browser context
 
-- **Casual browsing/research** → prefer free/manual/lightweight paths first
-- **Amazon research for a cart** → collect candidates/ASINs/prices first, then hand the chosen item to the browser/cart step
-- **Protected history or hard extraction** → use protected-site routing, currently Browserless first and TinyFish Browser API / CDP second
-- **Structured Amazon lookup** → do not default to Rainforest; use it only on request or after proposing the credit tradeoff
+1. Confirm the target profile is available.
+2. Open the retailer and verify login/account state from the live page.
+3. If signed out, follow the retailer reference's approved session-repair path.
+4. Never print/log credentials or pass secrets in process arguments.
+5. Pause for CAPTCHA or 2FA.
+6. Do not claim a cart/order-history capability until the page proves it.
 
-### Step 3: Select browser mode
+### 4. Navigate and verify
 
-- **Anything on Amazon (browse, compare, price, cart, checkout review, order history)** → **VPS `openclaw` browser (default, logged in).** No user intervention needed.
-- **VPS session logged out / blocked, or JPop wants to co-interact live** → Mac node browser fallback. Confirm it is logged in first; it usually is not.
-- **Never** tell the user the cart is untouchable without first verifying login state on the live VPS page.
-
-### Step 4: Navigate the retailer
-
-Follow the retailer-specific procedure. See `references/amazon.md` for Amazon.
-
-General pattern:
-1. Open retailer site
-2. Search for product
-3. Select best match (or present options)
-4. Add to cart
-5. Proceed to checkout
-6. **STOP — present summary and wait for approval**
-7. On approval: complete purchase
-8. Confirm order placed, share order number if visible
-
-### Step 5: Report back
-
-After order or cancellation:
-- Confirm what happened
-- Share relevant details (order number, estimated delivery, total charged)
-- If cancelled: leave items in cart or remove, based on user preference
+1. Open retailer.
+2. Search/select exact variant and seller.
+3. Confirm price, stock, shipping, and return terms.
+4. Add to cart when requested.
+5. Review checkout.
+6. Stop at the hard purchase gate.
+7. On approval, re-read and place.
+8. Report order number/total/delivery only when visible and verified.
 
 ## Login handling
 
-- **Never store, request, or handle login credentials**
-- The VPS `openclaw` browser is expected to be logged in; if it is logged out mid-flow, notify the user and pause (do not attempt to re-auth silently)
-- If 2FA prompt appears: notify user, pause
-- If a CAPTCHA / "are you a robot" page appears: notify user, pause
+- Credentials, when an approved workflow needs them, come from 1Password at
+  runtime and never appear in chat, logs, files, or command arguments.
+- A signed-out page is a live state fact, not proof that another device is
+  logged in.
+- Use a visible browser for user-controlled authentication or 2FA.
+- Never copy browser profiles or account credentials to the VPS.
 
-## When not to use this skill
+## VPS boundary
 
-- Price lookup only with no purchase intent → web search is lighter
-- Product research / reviews → web search or Perplexity is better
-- Tracking an existing order → this skill doesn't cover post-purchase yet
+The VPS may host public shopping helpers or receive non-sensitive webhooks, but
+it is not the default shopping browser and must not regain personal browser
+profiles or broad retail credentials.
 
-## Supported retailers
+## When not to use
 
-| Retailer | Reference file | Status |
-|---|---|---|
-| Amazon | `references/amazon.md` | 🟡 Building |
-| Target | `references/target.md` | ⬜ Future |
-| Walmart | `references/walmart.md` | ⬜ Future |
+- One public price lookup with no purchase intent: ordinary web search is enough.
+- General product research with no cart/account work: web research is enough.
+- Post-purchase carrier tracking: use the appropriate order/carrier workflow.
 
-## Reference
+## Retailer references
 
-- `references/amazon.md` — Amazon-specific navigation procedure
-- `references/safety.md` — Checkout confirmation rules and edge cases
-- `references/price-history.md` — optional Rainforest usage and price-history guidance (not default, credit-sensitive)
+- `references/amazon.md`
+- `references/ebay.md`
+- `references/safety.md`
+- `references/price-history.md`
+
+All retailer references inherit this Mac-first browser contract. Treat any
+remaining host-specific claim as drift until current live proof confirms it.

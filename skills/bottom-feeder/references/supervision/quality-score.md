@@ -9,7 +9,7 @@ Score each dimension 0–2:
 - **Completeness**: required sections present, no vague placeholders
 - **Evidence**: sources are dated, credible, and sufficient for claims
 - **Novelty / delta**: adds new value beyond existing local knowledge
-- **User relevance**: tied to JPop/OpenClaw/Edge/product system, not generic
+- **User relevance**: tied to the reviewer/OpenClaw/Edge/product system, not generic
 - **Actionability**: has decisions, watch items, next steps, or implementation hooks
 - **Safety / provenance**: untrusted content separated from conclusions; risky claims labeled
 

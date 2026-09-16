@@ -39,8 +39,10 @@ import argparse
 import json
 import os
 import re
+import stat
 import sys
 from typing import Any
+from urllib.parse import urlparse
 
 import _http as requests
 
@@ -48,6 +50,18 @@ DEFAULT_HOST = "https://production-sfo.browserless.io"
 DEFAULT_TIMEOUT = 120
 SESSION_URL_KEYS = ("browserQL", "connect", "stop")
 STD_STREAMS = {"-", "/dev/stdout", "/dev/stderr", "/dev/fd/1", "/dev/fd/2"}
+
+
+def configured_host() -> str:
+    host = os.environ.get("BROWSERLESS_HOST", DEFAULT_HOST).rstrip("/")
+    parsed = urlparse(host)
+    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.path not in ("", "/") or parsed.query or parsed.fragment:
+        raise ValueError("BROWSERLESS_HOST must be a bare trusted HTTPS origin")
+    allowed = {urlparse(DEFAULT_HOST).netloc}
+    allowed.update(item.strip() for item in os.environ.get("BROWSERLESS_ALLOWED_HOSTS", "").split(",") if item.strip())
+    if parsed.netloc not in allowed:
+        raise ValueError("BROWSERLESS_HOST is not in BROWSERLESS_ALLOWED_HOSTS")
+    return host
 
 
 def token_from_url(url: Any) -> str | None:
@@ -102,17 +116,13 @@ def file_mode(path: str) -> int:
     return os.stat(path).st_mode & 0o777
 
 
-def warn_if_insecure(path: str) -> None:
-    try:
-        mode = file_mode(path)
-    except OSError:
-        return
-    if mode & 0o077:
-        print(
-            f"warning: session file {path} mode is {oct(mode)}; expected 0o600 "
-            "(it holds token-bearing URLs).",
-            file=sys.stderr,
-        )
+def validate_session_file(path: str) -> None:
+    info = os.lstat(path)
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        raise ValueError("Session file must be a regular non-symlink file")
+    mode = info.st_mode & 0o777
+    if mode != 0o600:
+        raise PermissionError(f"Session file mode is {oct(mode)}; required 0o600")
 
 
 def write_session_file(path: str, data: dict[str, Any], overwrite: bool) -> None:
@@ -128,8 +138,10 @@ def write_session_file(path: str, data: dict[str, Any], overwrite: bool) -> None
             os.chmod(parent, 0o700)
         except OSError:
             pass
-    # O_CREAT mode is masked by umask, so chmod afterwards to guarantee 0600.
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    flags = os.O_WRONLY | os.O_CREAT | (os.O_TRUNC if overwrite else os.O_EXCL)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    fd = os.open(path, flags, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as handle:
         json.dump(data, handle, indent=2)
     os.chmod(path, 0o600)
@@ -138,6 +150,7 @@ def write_session_file(path: str, data: dict[str, Any], overwrite: bool) -> None
 def load_session_file(path: str) -> dict[str, Any]:
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Session file not found: {path}")
+    validate_session_file(path)
     with open(path, encoding="utf-8") as handle:
         data = json.load(handle)
     if not isinstance(data, dict):
@@ -159,10 +172,10 @@ def resolve_query(value: str) -> str:
 
 
 def cmd_create(args: argparse.Namespace) -> int:
-    token = args.token
+    token = os.environ.get("BROWSERLESS_TOKEN")
     if not token:
         print(
-            "Missing Browserless token. Pass --token or set BROWSERLESS_TOKEN.",
+            "Missing Browserless token. Set BROWSERLESS_TOKEN through secure runtime injection.",
             file=sys.stderr,
         )
         return 2
@@ -190,7 +203,7 @@ def cmd_create(args: argparse.Namespace) -> int:
             body["processKeepAlive"] = args.process_keep_alive_ms
 
         response = requests.post(
-            f"{args.host}/session",
+            f"{configured_host()}/session",
             params=params,
             json=body,
             timeout=args.timeout,
@@ -254,8 +267,7 @@ def cmd_query(args: argparse.Namespace) -> int:
     secrets: set[str] = set()
     try:
         session = load_session_file(args.session_file)
-        warn_if_insecure(args.session_file)
-        secrets = collect_secrets(args.token, session)
+        secrets = collect_secrets(None, session)
 
         browserql = session.get("browserQL")
         if not browserql:
@@ -296,7 +308,7 @@ def cmd_query(args: argparse.Namespace) -> int:
         )
         return 0 if ok else 1
     except Exception as exc:  # noqa: BLE001
-        secrets = secrets or collect_secrets(args.token, session)
+        secrets = secrets or collect_secrets(None, session)
         emit(
             {
                 "ok": False,
@@ -315,7 +327,7 @@ def cmd_stop(args: argparse.Namespace) -> int:
     secrets: set[str] = set()
     try:
         session = load_session_file(args.session_file)
-        secrets = collect_secrets(args.token, session)
+        secrets = collect_secrets(None, session)
 
         stop_url = session.get("stop")
         if not stop_url:
@@ -325,7 +337,7 @@ def cmd_stop(args: argparse.Namespace) -> int:
 
         response = requests.delete(stop_url, timeout=args.timeout)
         status_code = response.status_code
-        stopped = response.ok
+        stopped = response.ok or status_code == 404
         # A 404 means the session is already gone, so the local file is moot too.
         removable = response.ok or status_code == 404
 
@@ -355,7 +367,7 @@ def cmd_stop(args: argparse.Namespace) -> int:
         emit(result, secrets)
         return 0 if stopped else 1
     except Exception as exc:  # noqa: BLE001
-        secrets = secrets or collect_secrets(args.token, session)
+        secrets = secrets or collect_secrets(None, session)
         emit(
             {
                 "ok": False,
@@ -374,7 +386,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
     secrets: set[str] = set()
     try:
         session = load_session_file(args.session_file)
-        secrets = collect_secrets(args.token, session)
+        secrets = collect_secrets(None, session)
         mode = file_mode(args.session_file)
         emit(
             {
@@ -392,7 +404,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
         )
         return 0
     except Exception as exc:  # noqa: BLE001
-        secrets = secrets or collect_secrets(args.token, session)
+        secrets = secrets or collect_secrets(None, session)
         emit(
             {
                 "ok": False,
@@ -410,14 +422,6 @@ def add_common(parser: argparse.ArgumentParser) -> None:
         "--session-file",
         required=True,
         help="Path to the local 0600 session file (required; no global default).",
-    )
-    parser.add_argument(
-        "--token",
-        default=os.environ.get("BROWSERLESS_TOKEN"),
-        help=(
-            "Browserless API token (env BROWSERLESS_TOKEN). Required for create; "
-            "query/stop read the token-bearing URL from the session file."
-        ),
     )
     parser.add_argument(
         "--timeout",
@@ -466,7 +470,6 @@ def build_parser() -> argparse.ArgumentParser:
             "Must be <= --ttl-ms. Omit unless live in-memory state matters."
         ),
     )
-    create.add_argument("--host", default=DEFAULT_HOST, help="Browserless host.")
     create.add_argument(
         "--overwrite",
         action="store_true",

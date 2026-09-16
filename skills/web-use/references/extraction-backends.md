@@ -26,7 +26,9 @@ Use for Cloudflare/anti-bot friction, hard public pages, and structured
 extraction without a human-visible browser.
 
 - Prefer stateless `/unblock` or `/stealth/bql`.
-- Choose premium proxy/CAPTCHA settings only when the blocker requires them.
+- Choose premium proxy or public anti-bot/Cloudflare solve settings only when a
+  lawful public extraction blocker requires them. Never apply automated solving
+  to login, account-security, transactional, or user-present challenges.
 - Use `/session` only for demonstrated public same-site persistence; returned
   connection URLs are bearer credentials.
 - The public Free plan currently advertises 1,000 units/month; units vary with
@@ -74,7 +76,9 @@ prompts, scripts, logs, committed examples, or chat.
 - Switch providers when the task fit changes; do not loop on identical calls.
 - A paid provider is acceptable when it materially improves accuracy or avoids
   wasted work, but log/verify the choice where the domain skill requires it.
-- CAPTCHA/2FA/passkeys/payment approval remain human gates, not bypass targets.
+- Login/account/transaction CAPTCHAs, 2FA, passkeys, and payment approval remain
+  human gates. Public anti-bot challenge solving stays inside the narrow public
+  extraction policy above.
 
 ## Helpers
 

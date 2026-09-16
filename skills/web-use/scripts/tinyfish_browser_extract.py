@@ -131,7 +131,6 @@ def parse_args() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("url", help="Target URL")
-    parser.add_argument("--api-key", default=os.environ.get("TINYFISH_API_KEY"), help="TinyFish API key")
     parser.add_argument(
         "--session-timeout-seconds",
         type=int,
@@ -167,15 +166,16 @@ def main() -> int:
             file=sys.stderr,
         )
         return 70
-    if not args.api_key:
-        print("Missing TinyFish API key. Pass --api-key or set TINYFISH_API_KEY.", file=sys.stderr)
+    api_key = os.environ.get("TINYFISH_API_KEY")
+    if not api_key:
+        print("Missing TinyFish API key. Set TINYFISH_API_KEY through secure runtime injection.", file=sys.stderr)
         return 2
 
     session: dict[str, Any] | None = None
     try:
         response = requests.post(
             CREATE_SESSION_URL,
-            headers={"X-API-Key": args.api_key, "Content-Type": "application/json"},
+            headers={"X-API-Key": api_key, "Content-Type": "application/json"},
             json={"url": args.url, "timeout_seconds": args.session_timeout_seconds},
             timeout=60,
         )
@@ -193,7 +193,7 @@ def main() -> int:
                     "provider": "tinyfish",
                     "mode": "browser-cdp",
                     "url": args.url,
-                    "error": sanitize_error(exc, args.api_key, session),
+                    "error": sanitize_error(exc, api_key, session),
                 },
                 indent=2,
             )

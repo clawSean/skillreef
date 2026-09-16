@@ -67,8 +67,8 @@ Useful return fields:
 ## Keepa extension procedure (preferred for true history)
 
 Recovered 2026-07-12 (a 2026-06-27 workshop apply dropped this from SKILL.md).
-When an extension-capable browser lane is available (Mac node, or any lane with
-the Keepa extension), prefer Keepa's on-page chart before external history pages:
+When a verified extension-capable browser context with Keepa is available,
+prefer Keepa's on-page chart before external history pages:
 
 1. Identify product title, ASIN, current Amazon price, seller, and selected variant.
 2. Open the product page in the chosen browser lane.
@@ -93,16 +93,17 @@ the Keepa extension), prefer Keepa's on-page chart before external history pages
 Rainforest does **not** provide the real historical price view we want.
 
 For true history:
-- try CamelCamelCamel or similar sources — ⚠️ CCC (site + charts subdomain) is
-  fully Cloudflare bot-walled as of 2026-06; headless lanes are a dead end.
-  Prefer Keepa, or hand the user the CCC link directly.
+- try CamelCamelCamel or similar sources — ⚠️ the tested CCC site/chart paths
+  were Cloudflare-blocked in 2026-06. Prefer Keepa, or hand the user the CCC
+  link directly; do not assume that historical failure proves every current
+  managed or protected backend will fail.
 - if protected, route through `web-use` protected-site logic
 - if the fallback needs login, CAPTCHA/2FA, a visible browser, or an extension-capable browser, use `web-use` browser-context routing
-- current canonical VPS order: **Browserless first** (`/stealth/bql` or `/unblock`), then **TinyFish Browser API / CDP session** if needed
+- current host-independent protected-extraction order: **Browserless first** (`/stealth/bql` or `/unblock`), then **TinyFish Browser API / CDP session** if needed
 - do **not** assume TinyFish Agent API is the right path for CCC-style history pages
 - if still blocked, say so plainly and offer manual/browser-assisted checking
 
-If reusable execution helps, `web-use` ships bundled helpers for both working VPS-side lanes:
+If reusable execution helps, `web-use` ships bundled helpers for both protected-backend lanes:
 - `skills/web-use/scripts/browserless_extract.py`
 - `skills/web-use/scripts/tinyfish_browser_extract.py`
 
