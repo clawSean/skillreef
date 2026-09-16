@@ -1,200 +1,163 @@
 ---
 name: "web-use"
-description: "Route web work across local knowledge, search/fetch, cited research, managed browsing, public extraction, browser apps, shared tabs, and GUI fallback."
+description: "Route web work by task category across local knowledge, domain tools, retrieval, cited research, managed browsing, public extraction, local apps, shared tabs, and GUI fallback."
 ---
 
 # Web Use
 
-Use this as the single front door for web work. Choose these independently:
+Use this as the single front door for web work. First choose the **tool
+category**, then load only that category's provider guidance. A provider failure
+is never an overall web-capability verdict.
 
-1. **Information path:** local knowledge, search/fetch, cited research, extraction,
-   or a domain API.
-2. **Interaction context:** managed profile, local browser app, explicitly shared
-   tab, or whole-desktop GUI.
+## Ownership contract
 
-Do not choose a browser just because one is installed or running. Do not treat a
-failure in one lane as an overall web capability failure.
+- `web-use` owns transport category, browser context, provider fallback,
+  attachment proof, and lane-failure escalation.
+- Domain skills own business intent, data semantics, account scope,
+  credentials, preferences, and approval/action policy.
+- `browser-automation` owns page-control mechanics only after this skill chooses
+  a browser lane.
+- `perplexity-search` owns Perplexity API, key, and preset mechanics after this
+  skill chooses cited research.
 
-## Default priority
+When a domain skill applies, load it for domain rules and this skill for generic
+web routing. Neither overrides the other's ownership. See
+`references/domain-ownership.md`.
 
-| Need | Start with |
+## Category waterfall
+
+Start at the first row that fits the task. Leap directly to a specialist when
+the task shape already proves it is better; do not make weaker lanes fail first.
+
+| Task category | Default tool type | Load next |
+|---|---|---|
+| Prior local answer/proof | local knowledge or memory | `knowledge-search` + narrow source |
+| Authoritative structured domain data | domain API/MCP/skill | active domain skill |
+| Public discovery/current facts | native search | `references/research-routing.md` |
+| Known public URL | native fetch | `references/research-routing.md` |
+| Cited synthesis, comparison, difficult or broad research | specialist cited research | `perplexity-search` + `references/research-routing.md` |
+| JavaScript, rendering, interaction, or local persistent login | managed browser | `references/context-device.md`, then `browser-automation` |
+| Protected public page, crawl, or bulk structured extraction | hosted/public extraction | `references/extraction-backends.md` |
+| Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
+| User explicitly requests their tab, must watch/participate, or requires exceptional sensitivity | shared-tab context | `references/shared-tab-extension.md` |
+| Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
+| 2FA, passkey, CAPTCHA, payment, irreversible review, or missing authority | human gate | domain policy + visible handoff |
+
+Expanded decision logic and next-hop states:
+`references/decision-matrix.md`.
+
+## Selective exposure
+
+Load provider-specific files only after the category is selected:
+
+- Research/retrieval → `references/research-routing.md`
+- Managed/local/shared/GUI context → `references/context-device.md`
+- Provider order and portable capabilities → `references/provider-matrix.md`
+- Current machine/account/provider state → optional
+  `references/provider-registry.local.md`, seeded from
+  `references/provider-registry.local.example.md`
+- Protected/bulk extraction → `references/extraction-backends.md`
+- Shared-tab setup/diagnosis/release proof → `references/shared-tab-extension.md`
+- Domain workflow → only the reference named by the active domain skill
+
+The local registry is runtime state, not portable policy. If it is absent,
+create it from the public example and prove entries locally. Verify it live
+before authenticated or sensitive work. Never publish it or assume another
+agent/machine inherits it.
+
+## Core rules
+
+1. Use the lightest dependable route that fits the task.
+2. Optimize for accurate first-pass completion, not merely the cheapest call.
+3. Prefer primary sources; inspect them before consequential claims or actions.
+4. Treat paid/credit-consuming providers deliberately, using active free
+   allowances first only when task fit and reliability are equivalent.
+5. Keep authenticated state local by default. Do not export cookies, storage,
+   or login sessions to hosted extraction providers without explicit approval
+   and a domain policy permitting it.
+6. Keep public extraction separate from interactive human-visible browsing.
+7. Verify exact profile, account, visibility boundary, tab attachment, and final
+   state. A click or command success is not proof the intended result occurred.
+8. Never bypass CAPTCHA, 2FA, passkeys, payment approval, confirmation gates, or
+   irreversible-action review.
+9. Treat uninstalled, disabled, or unproved providers as candidates—not live
+   fallbacks.
+
+## Lane-failure escalation
+
+Before saying a web task is blocked, classify the failure:
+
+| Failure class | Next category |
 |---|---|
-| Existing local knowledge or prior proof | `knowledge-search` / memory |
-| Discover sources or current facts | native `web_search` |
-| Read a known public URL | native `web_fetch` |
-| Cited synthesis, multi-source comparison, or difficult research | `perplexity-search` |
-| JavaScript, rendering, interaction, or persistent login | OpenClaw managed browser |
-| Public anti-bot page or bulk structured extraction | `references/extraction-backends.md` |
-| Full local browser/app context is genuinely required | local browser automation |
-| The user explicitly requests their shared tab, must watch, or must keep an exceptionally sensitive workflow off the agent-managed profile | shared-tab extension |
-| Browser tools cannot reach the needed GUI/OS surface | Peekaboo / computer use |
-| Authoritative structured data or site policy exists | relevant domain skill/API |
+| Missing source/data | domain tool → search/fetch → cited research |
+| JavaScript/rendering | managed browser |
+| Login/profile context | managed local profile → domain-approved visible context |
+| Public anti-bot/protected extraction | hosted public extraction |
+| Browser attachment/control | another live-proven provider in the same context category |
+| Native app/OS surface | GUI/computer use after display/permission preflight |
+| Human-only/security gate | visible handoff; state the exact user action |
+| Provider outage/rate limit | next proven provider for the same category |
 
-This is a priority order, not a ritual. Leap directly to a specialist when the
-task shape already proves it is the right lane. Do not waste time making a
-simpler route fail first.
+Check the active/deferred tool catalog, domain skill, provider registry, and
+relevant fallback category. Do not repeat identical cheap retries. Stop only for
+a genuine human gate, missing authority/credential, unacceptable risk, or
+exhaustion of relevant proven lanes; name the remaining gate precisely.
 
-## Tool-guidance loading
-
-Load only the guidance for the chosen lane:
-
-| Chosen lane | Load next |
-|---|---|
-| Local recall | `knowledge-search` and the narrow memory/knowledge source |
-| Search or fetch | matching native tool; no browser skill |
-| Cited research | `perplexity-search`; the primary agent still verifies consequential claims |
-| Managed browser or page-level local/shared control | `browser-automation` for mechanics |
-| Protected/bulk public extraction | `references/extraction-backends.md` |
-| Login/profile/device selection | `references/context-device.md` |
-| Shared-tab setup, pairing, diagnosis, or release proof | `references/shared-tab-extension.md` |
-| GUI/desktop fallback | Peekaboo/computer-use guidance plus `references/context-device.md` |
-| Site-specific workflow | relevant domain skill |
-
-`browser-automation` owns page-control mechanics only after this skill chooses a
-browser lane. It must not silently replace search, fetch, cited research, an API,
-or the browser context requested by the user.
-
-## Research and retrieval
-
-### Native search and fetch
-
-- Use `web_search` for discovery, current facts, links, and source finding.
-- Use `web_fetch` for known public pages that do not need JavaScript or login.
-- Prefer primary sources and fetch them before relying on snippets for
-  consequential claims.
-- A domain tool may leapfrog generic search when it is clearly more
-  authoritative or structured.
-
-### Perplexity cited research
-
-Use the standalone `perplexity-search` skill early—not merely after failure—when
-the task benefits from source-backed synthesis, broad discovery, comparison,
-multi-hop reasoning, or exhaustive coverage. Use the narrowest sufficient
-preset. Perplexity is a research analyst lane; the primary agent owns final interpretation
-and checks material primary sources.
-
-Routine URL retrieval remains native search/fetch. Do not spend a Perplexity
-call duplicating a simple fact or known-page read.
-
-### Scraping and extraction
-
-Scrapers are for protected pages, repeated structured collection, or bulk
-extraction—not routine exploration. Keep native search/fetch and Perplexity as
-the primary discovery/research paths.
-
-Prefer active free allowances before paid calls when reliability is equivalent,
-but never burn time looping on a cheap route whose task fit is wrong. Treat
-uninstalled providers as candidates, not capabilities.
-
-## Browser and interaction lanes
+## Context contracts
 
 ### Managed browser
 
-Use the managed browser for ordinary rendered pages, deterministic interaction,
-screenshots, uploads/downloads, and both public and authenticated work. Its
-isolated profile can persist state, but verify the live account and login before
-acting.
+Default for rendered, interactive, and authenticated unattended work. Persistent
+profile state may exist, but verify live login/account state. Stop before any
+approval-gated external action.
 
-Stop before purchase, send, publish, delete, credential change, or other
-approval-gated action. Detection or a click is not proof of completion; verify
-the resulting state.
+### Hosted extraction
 
-### Hosted public extraction
+Public data only by default. Choose provider/mode based on the actual blocker,
+not provider novelty. A session primitive does not make hosted login persistence
+desirable.
 
-Use Browserless first for stateless protected extraction; select `/unblock` or
-`/stealth/bql` according to the blocker. Use TinyFish when deeper hosted
-multi-step public-browser control is needed.
+### Local visible browser/app
 
-Do not export cookies or maintain authenticated logins in Browserless, TinyFish,
-or another remote provider by default. Privacy, cost, and cross-session
-reliability make the agent-managed profile the authenticated lane. Any exception
-needs explicit user authorization and an owning domain policy.
+Use only when a full local profile, extension, browser-specific behavior, or
+human-visible app context materially matters. Select from the local registry and
+prove capture/control before relying on it.
 
-### Local browser apps
+### User's shared tab
 
-Use a real local browser/app-control path only when the managed browser or data
-lanes cannot supply browser-specific behavior, a full local profile, extension
-state, or a human-visible local context. Prove page capture and control live.
-
-### The user's shared tab
-
-The shared-tab extension is consent-bound and intentionally rare. Use it when:
-
-- the user explicitly asks to operate the shared/current tab;
-- he must actively watch, review, or participate; or
-- the workflow is exceptionally sensitive and should not run in the agent-managed
-  profile.
-
-When selected, pin that context and operate only the shared tab. Do not detour
-into unrelated research, another browser, or extension maintenance unless the
-shared context is unavailable or broken.
+Consent-bound and rare. When explicitly selected, pin that context and operate
+only the shared tab. Do not detour into another browser, generic research, or
+extension maintenance unless the shared context is unavailable or broken.
 
 ### Peekaboo / computer use
 
-Use whole-desktop control when DOM/browser tools cannot reach browser chrome, a
-native app, OS dialog, or other required GUI. It is slower and token-expensive.
-It also requires an active unlocked graphical session; a locked Mac may expose
-no display. Ask for unlock when needed, but continue evaluating other lanes
-before declaring the task blocked.
+Last browser/GUI category, not last overall capability. It is slower and
+token-expensive and requires an active unlocked graphical session plus required
+permissions. A locked/no-display result is a GUI-lane gate, not proof the web
+task is impossible.
 
-## Anti-bot and human gates
-
-1. For a public protected page, try the managed browser if normal rendering may
-   work.
-2. For extraction-only blocks, use Browserless stateless modes, then TinyFish
-   for deeper hosted control.
-3. Use a local visible browser only when local browser context materially helps.
-4. Use the shared tab only under its explicit/sensitive/watch-required policy.
-5. CAPTCHA, 2FA, passkeys, payment approval, and irreversible review remain
-   human gates; never claim or attempt to bypass them.
-
-## Never incorrectly declare “blocked”
-
-Before saying a web task cannot be done, classify the failure:
-
-- missing information/data path;
-- rendering or JavaScript;
-- authentication/profile context;
-- anti-bot protection;
-- browser attachment/control;
-- GUI/display access;
-- human approval or authority.
-
-Then check the active and deferred tool catalog, the relevant domain skill,
-native search/fetch, cited research, managed browser, protected extraction,
-local app control, shared handoff, and GUI fallback as appropriate. A provider
-timeout, stale accessibility reference, locked display, or detached tab is a
-lane failure—not proof of inability.
-
-Stop only for a genuine human gate, missing authority/credential, unacceptable
-risk, or exhaustion of the relevant lanes. State exactly which gate remains.
-
-## Browser truth and naming
+## Truth and naming
 
 - **Managed browser** — isolated agent-controlled profile.
-- **Your current browser** — an existing signed-in tab/session only after live
-  attachment proof.
-- **Visible handoff** — the user must review, solve, approve, or take over.
+- **Your current browser** — existing session only after live attachment proof.
+- **Visible handoff** — user must review, solve, approve, or take over.
 
-Keep driver/transport names out of user instructions unless implementation
-details matter. A running browser is not an attached page. Recheck live status
-for every sensitive or authenticated task.
-
-Read `references/browser-capability-audit.md` before changing browser routing,
-configuring an attachment, or making a capability claim.
-
-## Bundled helpers
-
-- `scripts/browserless_extract.py` — Browserless content, unblock, or stealth BQL
-- `scripts/browserless_session.py` — opt-in public persistence with redacted
-  output and `0600` session files
-- `scripts/tinyfish_browser_extract.py` — TinyFish browser-session extraction
+Keep transport/driver names out of user instructions unless implementation
+details matter. Read `references/proof-policy.md` before changing routing or
+making a capability claim; record new durable proof in the private local ledger
+and update the local registry at the moment reality changes.
 
 ## References
 
-- `references/browser-capability-audit.md` — current proof and honest gaps
-- `references/context-device.md` — context, consent, and attachment matrix
-- `references/shared-tab-extension.md` — rare setup/diagnosis/proof branch
-- `references/extraction-backends.md` — provider ladder, cost posture, and safety
-- `references/backends.md` — machine-local backend notes (never publish)
-- `references/backends.md.example` — public-safe setup template
+- `references/decision-matrix.md` — categorical waterfall and next-hop logic
+- `references/research-routing.md` — native retrieval vs cited research
+- `references/provider-matrix.md` — portable ordered providers by category
+- `references/provider-registry.local.example.md` — portable registry template
+- `references/provider-registry.local.md` — optional private host/account state
+- `references/domain-ownership.md` — domain/web boundary and backlink contract
+- `references/context-device.md` — browser/device consent and selection
+- `references/extraction-backends.md` — public extraction modes and economics
+- `references/shared-tab-extension.md` — rare extension operations branch
+- `references/proof-policy.md` — portable admission and regression rules
+- `references/proof-ledger.local.example.md` — portable proof-ledger template
+- `references/proof-ledger.local.md` — optional private dated proof and gaps

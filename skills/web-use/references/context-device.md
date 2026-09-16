@@ -1,61 +1,53 @@
-# Browser Context Modes
+# Browser and Device Contexts
 
-Availability must be proved live. These modes describe intent, not guaranteed
-runtime support.
+Choose context independently from information provider. Availability must be
+proved live; these modes express intent, not guaranteed runtime support.
 
-## Current local matrix
-
-| Context | Meaning | Current status |
+| Context | Use when | Required proof |
 |---|---|---|
-| Fresh managed browser | isolated agent-controlled profile | proven; default unattended lane |
-| Existing signed-in browser | attach to a real current session | built-in `user` route targets Chrome; custom supported Chromium-based profiles require setup, consent, and live proof |
-| Shared current tab | user explicitly shares a tab to OpenClaw | Arc/Dia manual-WSS flow proved with the supported extension build; attachment remains live-state dependent |
-| Local browser-app fallback | use a full local browser/app context only when data and managed-browser lanes cannot satisfy the task | page capture and control must be proved live |
-| Visible manual handoff | user reviews, solves, approves, or takes over | available when direct control is unproved or the step must remain human-controlled |
-
-## Preferred user-facing labels
-
-- Fresh managed browser
-- Your current browser
-- Visible handoff
-
-Do not expose internal transport names unless implementation details are
-explicitly relevant.
-
-## Consent boundaries
-
-- Managed browser: agent-controlled isolated profile; verify account identity
-  before authenticated work.
-- Local browser-app fallback: use only when a full local profile, extension,
-  browser-specific behavior, or human-visible local context materially helps.
-- Existing-session attachment: configuring or attaching a real browser profile
-  requires a supported running browser, explicit setup, and local user approval.
-- Shared-tab attachment: controls only tabs explicitly placed in the OpenClaw
-  tab group; sharing the tab is a separate consent action.
-- A direct request to use the shared/current tab pins that context. Do not switch
-  to a managed profile or unrelated web route unless attachment is unavailable.
-- Manual handoff: stop before the user-only step and state exactly what they
-  need to review or complete.
-
-## App truth rules
-
-- Arc and Dia may be tried when the managed browser or data paths lack a needed
-  local-browser capability; they are not the default anti-bot or research lane.
-- Arc running does not mean its page is attached, capturable, or controllable.
-- Dia running does not mean its page can be captured or automated.
-- Chromium ancestry or extension compatibility does not prove OpenClaw support.
-- Brave is not installed on the current host.
-- Never infer current login or attachment from historical VPS or node proof.
+| Managed browser | ordinary rendered, interactive, or authenticated unattended work | process/profile page-ready; intended account/login verified |
+| Existing local browser session | a particular local profile, extension, or browser-specific behavior matters | selected provider installed; page capture/control live |
+| Shared current tab | user explicitly requests it, must watch/participate, or exceptional sensitivity requires their context | authenticated relay, exact shared tab, snapshot/control |
+| Whole-desktop GUI | browser/DOM tools cannot reach browser chrome, native app, or OS dialog | active unlocked display, permissions, target capture |
+| Visible handoff | user-only security/approval/review step remains | exact requested human action and safe resume point |
 
 ## Selection questions
 
 1. Does the task need rendering, cookies, interaction, or a specific login?
-2. Can search, fetch, or an API finish it more simply?
-3. Is an isolated managed profile acceptable?
-4. Does a full local browser/app context materially address the remaining gap?
-5. Does the user need to see or take over the page?
-6. Is the chosen capture or attachment path live and page-ready?
-7. Is the next action external, irreversible, or approval-gated?
+2. Can local knowledge, a domain tool, search/fetch, or cited research finish it
+   without a browser?
+3. Is the managed isolated profile acceptable and live for the intended account?
+4. Does a full local visible browser/app context materially solve a remaining
+   capability or profile gap?
+5. Did the user explicitly select their current/shared tab, or must they actively
+   watch/participate?
+6. Is the remaining surface browser chrome/native GUI rather than webpage DOM?
+7. Is the next step human-only, external, irreversible, or approval-gated?
 
-If the requested context is unavailable, say which capability is missing and
-use the closest safe fallback.
+## Consent and privacy boundaries
+
+- Managed browser: agent-controlled local isolated profile; verify account
+  identity before authenticated work.
+- Existing local session: use only the selected provider/profile after live
+  proof; installed/running is not attached/controllable.
+- Shared tab: controls only explicitly shared tabs. Sharing is a separate
+  consent action and pins the requested context.
+- Hosted extraction: public data only by default; do not export local session
+  state into it.
+- GUI control: requires unlocked graphical session and target-specific capture.
+- Handoff: stop before the user-only step and state exactly what to complete.
+
+## Shared-context pinning
+
+When the user requests their current/shared tab, do not silently substitute a
+managed profile, another local browser, hosted extractor, or unrelated research
+lane. If the attachment is unavailable, report that specific gap and offer safe
+alternatives; do not re-pair/repair unless the user asks or the requested lane
+cannot operate.
+
+## Live provider selection
+
+Use `provider-matrix.md` for portable order and
+`provider-registry.local.md` for this installation's exact provider rank,
+status, login/context notes, and proof requirements. Never infer current state
+from historical node, VPS, browser, or extension evidence.

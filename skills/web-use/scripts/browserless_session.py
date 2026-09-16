@@ -42,7 +42,7 @@ import re
 import sys
 from typing import Any
 
-import requests
+import _http as requests
 
 DEFAULT_HOST = "https://production-sfo.browserless.io"
 DEFAULT_TIMEOUT = 120

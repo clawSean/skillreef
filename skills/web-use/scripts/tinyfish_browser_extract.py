@@ -17,8 +17,12 @@ import re
 import sys
 from typing import Any
 
-import requests
-import websockets
+import _http as requests
+
+try:
+    import websockets
+except ModuleNotFoundError:
+    websockets = None  # type: ignore[assignment]
 
 CREATE_SESSION_URL = "https://api.browser.tinyfish.ai/"
 DEFAULT_TIMEOUT_SECONDS = 300
@@ -151,6 +155,18 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    missing = [
+        name
+        for name, module in (("websockets", websockets),)
+        if module is None
+    ]
+    if missing:
+        print(
+            "TinyFish helper runtime is incomplete: missing Python package(s): "
+            + ", ".join(missing),
+            file=sys.stderr,
+        )
+        return 70
     if not args.api_key:
         print("Missing TinyFish API key. Pass --api-key or set TINYFISH_API_KEY.", file=sys.stderr)
         return 2

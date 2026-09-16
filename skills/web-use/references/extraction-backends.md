@@ -18,7 +18,7 @@ for authenticated sessions.
 Do not deliberately walk every rung. Start at the lightest dependable lane that
 fits the task.
 
-## Active providers
+## Configured providers
 
 ### Browserless
 
@@ -31,6 +31,8 @@ extraction without a human-visible browser.
   connection URLs are bearer credentials.
 - The public Free plan currently advertises 1,000 units/month; units vary with
   duration, proxy, and CAPTCHA use. Verify pricing before optimizing around it.
+- The bundled helper uses a stdlib-only HTTP path. The local registry owns
+  whether a bounded public smoke is current enough for automatic use.
 
 ### TinyFish
 
@@ -41,6 +43,10 @@ API is automatically better.
 TinyFish currently advertises free Search/Fetch plus metered Browser/Agent
 usage and introductory wallet credit. Verify current pricing and balance before
 paid use.
+
+The bundled helper's HTTP path is stdlib-only; its CDP path requires a declared
+WebSocket runtime. Do not use it automatically until the local registry records
+dependency and bounded public-smoke proof.
 
 ## Candidate providers, not live capabilities
 
