@@ -1,207 +1,200 @@
 ---
 name: "web-use"
-description: "Route web tasks across search/fetch, managed browsing, Arc/Dia fallbacks, protected extraction, authenticated sessions, and visible handoff."
+description: "Route web work across local knowledge, search/fetch, cited research, managed browsing, public extraction, browser apps, shared tabs, and GUI fallback."
 ---
 
 # Web Use
 
-Use this as the default router for web tasks. Decide two things separately:
+Use this as the single front door for web work. Choose these independently:
 
-1. **Data path:** how should the page or site data be retrieved?
-2. **Browser context:** which profile, login state, visible app, or human handoff matters?
+1. **Information path:** local knowledge, search/fetch, cited research, extraction,
+   or a domain API.
+2. **Interaction context:** managed profile, local browser app, explicitly shared
+   tab, or whole-desktop GUI.
 
-Do not pick a browser merely because one is installed or running.
+Do not choose a browser just because one is installed or running. Do not treat a
+failure in one lane as an overall web capability failure.
 
-## Quick route
+## Default priority
 
 | Need | Start with |
 |---|---|
-| Search or discover sources | `web_search` |
-| Read a simple public URL | `web_fetch` |
-| Render, inspect, or interact with a page unattended | OpenClaw managed browser |
-| Managed browser is bot-blocked or lacks a needed capability | Try Arc or Dia with live page/control proof; use protected extraction for extraction-only blocks |
-| Extract a protected or bot-gated page without human login | `references/extraction-backends.md` |
-| Use an existing login, current tab, 2FA, CAPTCHA, extension, cart, or checkout | `references/context-device.md` |
-| Apply site-specific policy or paid structured data | Relevant domain skill |
+| Existing local knowledge or prior proof | `knowledge-search` / memory |
+| Discover sources or current facts | native `web_search` |
+| Read a known public URL | native `web_fetch` |
+| Cited synthesis, multi-source comparison, or difficult research | `perplexity-search` |
+| JavaScript, rendering, interaction, or persistent login | OpenClaw managed browser |
+| Public anti-bot page or bulk structured extraction | `references/extraction-backends.md` |
+| Full local browser/app context is genuinely required | local browser automation |
+| The user explicitly requests their shared tab, must watch, or must keep an exceptionally sensitive workflow off the agent-managed profile | shared-tab extension |
+| Browser tools cannot reach the needed GUI/OS surface | Peekaboo / computer use |
+| Authoritative structured data or site policy exists | relevant domain skill/API |
 
-Use the lightest dependable route. Search or fetch beats browser automation when
-it can finish the task. A local browser beats a paid remote backend when it can
-finish safely and reliably.
+This is a priority order, not a ritual. Leap directly to a specialist when the
+task shape already proves it is the right lane. Do not waste time making a
+simpler route fail first.
 
 ## Tool-guidance loading
 
-`web-use` owns the route. Load implementation guidance only after choosing it:
+Load only the guidance for the chosen lane:
 
 | Chosen lane | Load next |
 |---|---|
-| Search or fetch | The matching tool; no browser skill |
-| Managed browser or shared current tab | `browser-automation` for multi-step page control |
-| Existing login, profile, or human takeover | `references/context-device.md` |
-| Shared-tab setup, pairing, status diagnosis, or release proof | `references/shared-tab-extension.md` |
-| Protected extraction | `references/extraction-backends.md` |
-| Site-specific workflow | The relevant domain skill |
+| Local recall | `knowledge-search` and the narrow memory/knowledge source |
+| Search or fetch | matching native tool; no browser skill |
+| Cited research | `perplexity-search`; the primary agent still verifies consequential claims |
+| Managed browser or page-level local/shared control | `browser-automation` for mechanics |
+| Protected/bulk public extraction | `references/extraction-backends.md` |
+| Login/profile/device selection | `references/context-device.md` |
+| Shared-tab setup, pairing, diagnosis, or release proof | `references/shared-tab-extension.md` |
+| GUI/desktop fallback | Peekaboo/computer-use guidance plus `references/context-device.md` |
+| Site-specific workflow | relevant domain skill |
 
-`browser-automation` owns page-control mechanics after this skill chooses a
-browser lane. It never chooses the data path or silently replaces search,
-fetch, an API, or the user-requested browser context.
+`browser-automation` owns page-control mechanics only after this skill chooses a
+browser lane. It must not silently replace search, fetch, cited research, an API,
+or the browser context requested by the user.
 
-When the user explicitly asks to use, inspect, or control **their shared tab or
-current browser**, pin that lane. Verify the attachment, then operate only that
-shared context. Do not detour into research, a managed profile, another browser,
-or extension maintenance unless the requested context is unavailable or broken.
+## Research and retrieval
 
-## Browser contract
+### Native search and fetch
 
-Use the managed browser for ordinary unattended interaction. Treat a visible
-desktop browser as a separate, consent-bound context: an open app is not an
-attached or controllable page. The shared-tab extension exposes only explicitly
-shared tabs, and every run must verify the live attachment before acting.
+- Use `web_search` for discovery, current facts, links, and source finding.
+- Use `web_fetch` for known public pages that do not need JavaScript or login.
+- Prefer primary sources and fetch them before relying on snippets for
+  consequential claims.
+- A domain tool may leapfrog generic search when it is clearly more
+  authoritative or structured.
+
+### Perplexity cited research
+
+Use the standalone `perplexity-search` skill early—not merely after failure—when
+the task benefits from source-backed synthesis, broad discovery, comparison,
+multi-hop reasoning, or exhaustive coverage. Use the narrowest sufficient
+preset. Perplexity is a research analyst lane; the primary agent owns final interpretation
+and checks material primary sources.
+
+Routine URL retrieval remains native search/fetch. Do not spend a Perplexity
+call duplicating a simple fact or known-page read.
+
+### Scraping and extraction
+
+Scrapers are for protected pages, repeated structured collection, or bulk
+extraction—not routine exploration. Keep native search/fetch and Perplexity as
+the primary discovery/research paths.
+
+Prefer active free allowances before paid calls when reliability is equivalent,
+but never burn time looping on a cheap route whose task fit is wrong. Treat
+uninstalled providers as candidates, not capabilities.
+
+## Browser and interaction lanes
+
+### Managed browser
+
+Use the managed browser for ordinary rendered pages, deterministic interaction,
+screenshots, uploads/downloads, and both public and authenticated work. Its
+isolated profile can persist state, but verify the live account and login before
+acting.
+
+Stop before purchase, send, publish, delete, credential change, or other
+approval-gated action. Detection or a click is not proof of completion; verify
+the resulting state.
+
+### Hosted public extraction
+
+Use Browserless first for stateless protected extraction; select `/unblock` or
+`/stealth/bql` according to the blocker. Use TinyFish when deeper hosted
+multi-step public-browser control is needed.
+
+Do not export cookies or maintain authenticated logins in Browserless, TinyFish,
+or another remote provider by default. Privacy, cost, and cross-session
+reliability make the agent-managed profile the authenticated lane. Any exception
+needs explicit user authorization and an owning domain policy.
+
+### Local browser apps
+
+Use a real local browser/app-control path only when the managed browser or data
+lanes cannot supply browser-specific behavior, a full local profile, extension
+state, or a human-visible local context. Prove page capture and control live.
+
+### The user's shared tab
+
+The shared-tab extension is consent-bound and intentionally rare. Use it when:
+
+- the user explicitly asks to operate the shared/current tab;
+- he must actively watch, review, or participate; or
+- the workflow is exceptionally sensitive and should not run in the agent-managed
+  profile.
+
+When selected, pin that context and operate only the shared tab. Do not detour
+into unrelated research, another browser, or extension maintenance unless the
+shared context is unavailable or broken.
+
+### Peekaboo / computer use
+
+Use whole-desktop control when DOM/browser tools cannot reach browser chrome, a
+native app, OS dialog, or other required GUI. It is slower and token-expensive.
+It also requires an active unlocked graphical session; a locked Mac may expose
+no display. Ask for unlock when needed, but continue evaluating other lanes
+before declaring the task blocked.
+
+## Anti-bot and human gates
+
+1. For a public protected page, try the managed browser if normal rendering may
+   work.
+2. For extraction-only blocks, use Browserless stateless modes, then TinyFish
+   for deeper hosted control.
+3. Use a local visible browser only when local browser context materially helps.
+4. Use the shared tab only under its explicit/sensitive/watch-required policy.
+5. CAPTCHA, 2FA, passkeys, payment approval, and irreversible review remain
+   human gates; never claim or attempt to bypass them.
+
+## Never incorrectly declare “blocked”
+
+Before saying a web task cannot be done, classify the failure:
+
+- missing information/data path;
+- rendering or JavaScript;
+- authentication/profile context;
+- anti-bot protection;
+- browser attachment/control;
+- GUI/display access;
+- human approval or authority.
+
+Then check the active and deferred tool catalog, the relevant domain skill,
+native search/fetch, cited research, managed browser, protected extraction,
+local app control, shared handoff, and GUI fallback as appropriate. A provider
+timeout, stale accessibility reference, locked display, or detached tab is a
+lane failure—not proof of inability.
+
+Stop only for a genuine human gate, missing authority/credential, unacceptable
+risk, or exhaustion of the relevant lanes. State exactly which gate remains.
+
+## Browser truth and naming
+
+- **Managed browser** — isolated agent-controlled profile.
+- **Your current browser** — an existing signed-in tab/session only after live
+  attachment proof.
+- **Visible handoff** — the user must review, solve, approve, or take over.
+
+Keep driver/transport names out of user instructions unless implementation
+details matter. A running browser is not an attached page. Recheck live status
+for every sensitive or authenticated task.
 
 Read `references/browser-capability-audit.md` before changing browser routing,
 configuring an attachment, or making a capability claim.
 
-## Browser naming
-
-Keep implementation names out of user-facing instructions. Driver, engine, and
-transport labels such as `cdp`, `chrome-mcp`, `Chromium`, or an executable
-path describe plumbing, not the browser the user should open.
-
-Use these labels with the user:
-
-- **Managed browser** — isolated agent-controlled profile.
-- **Your current browser** — an existing signed-in tab/session, only when
-  attachment is actually verified.
-- **Visible handoff** — the user must review, solve, approve, or take over.
-
-Mention a named app only when that app has been live-inspected and is genuinely
-the intended user-visible context.
-
-## Routing rules
-
-1. Start with the lightest viable path.
-2. Escalate only when the simpler path will fail or already failed.
-3. Verify the exact profile, login, visibility boundary, and attachment state.
-4. Treat paid or credit-consuming backends as deliberate choices.
-5. Keep interactive human-visible browsing separate from server-side extraction.
-6. Keep site-specific policy in the relevant domain skill.
-7. Never infer current capability from a historical VPS, node, Arc, or extension
-   proof.
-8. Never bypass CAPTCHA, 2FA, passkeys, confirmation gates, or irreversible
-   action review.
-9. When the managed browser is blocked, Arc or Dia may be tried if a visible
-   local context could help; prove capture and control live before relying on it.
-
-## Data path
-
-### 1. Search or fetch
-
-- `web_search` for discovery, current facts, links, and source finding.
-- `web_fetch` for a known public URL that does not need JavaScript or login.
-- Managed browser when rendering or interaction matters.
-
-### 2. Managed browser
-
-Use for ordinary rendered pages, deterministic interaction, isolated login
-state, screenshots, uploads from approved roots, downloads, and unattended
-multi-step work.
-
-Before account work:
-
-1. inspect the live page;
-2. verify the account and login state;
-3. verify that the managed profile is acceptable for the task;
-4. stop before purchase, send, publish, delete, or other approval-gated actions.
-
-If a dialog or browser action hangs, stop the run cleanly and report the gap.
-Detection alone is not proof that the action completed.
-
-### 3. Protected extraction
-
-Use Browserless when the core problem is protected server-side extraction:
-
-- Cloudflare or anti-bot friction;
-- a hard page that fetch or the local managed browser cannot read;
-- structured extraction without a human-visible browser.
-
-Use Browserless sessions only when repeated same-site work genuinely needs
-cookies, localStorage, sessionStorage, or cache to persist. Session URLs are
-bearer credentials.
-
-Use TinyFish when deeper hosted stealth-browser control is needed. The browser
-API / remote session is the preferred primitive; do not assume its higher-level
-agent API is the best route.
-
-### 4. Site-specific APIs
-
-Use a structured API only when the relevant domain skill owns the credential and
-says the fields, reliability, and cost are worth it.
-
-## Browser context
-
-Use context routing for:
-
-- an existing logged-in tab or account;
-- extension state;
-- CAPTCHA, 2FA, passkeys, or manual review;
-- cart, checkout, order history, account settings, or irreversible actions;
-- a user-visible page where the human must take over.
-
-Preferred plain-English modes:
-
-- Fresh managed browser
-- Your current browser
-- Visible handoff
-
-Read `references/context-device.md` for availability and consent rules.
-
-## Escalation patterns
-
-### Public page
-
-1. Search if the source is unknown.
-2. Fetch if the URL is known and likely static.
-3. Use the managed browser if rendering or interaction matters.
-
-### Protected page
-
-1. Try the managed browser if ordinary rendering may be enough.
-2. If it is bot-blocked or lacks a needed capability and a visible local context
-   may help, try Arc or Dia as a fallback experiment. Live-prove the exact page
-   capture and control path before relying on it.
-3. Use Browserless `/unblock` or `/stealth/bql` for extraction-only blocks.
-4. Use a Browserless session only for demonstrated persistence needs.
-5. Use TinyFish for deeper hosted browser control.
-6. Use verified manual handoff for CAPTCHA/2FA, passkeys, provider approval, or
-   review that must remain human-controlled.
-7. Report blockage plainly if the site still resists.
-
-### Existing login or current tab
-
-1. Confirm that existing session state is actually required.
-2. Check whether the managed profile is already signed in and acceptable.
-3. If the user's current tab is required, verify a live supported attachment.
-4. If no attachment is live, say so and offer the managed-browser or manual
-   handoff path.
-5. Do not treat a running Arc or Dia process as attached.
-6. Do not instruct the user to configure an implementation browser unless that
-   named browser is truly required and the setup is approved.
-
 ## Bundled helpers
 
 - `scripts/browserless_extract.py` — Browserless content, unblock, or stealth BQL
-- `scripts/browserless_session.py` — opt-in persistent Browserless session with
-  redacted output and `0600` session files
+- `scripts/browserless_session.py` — opt-in public persistence with redacted
+  output and `0600` session files
 - `scripts/tinyfish_browser_extract.py` — TinyFish browser-session extraction
-
-See `references/backends.md.example` for public-safe setup patterns.
 
 ## References
 
-- `references/browser-capability-audit.md` — current ClawPop proof, gaps, and
-  browser evaluation
+- `references/browser-capability-audit.md` — current proof and honest gaps
 - `references/context-device.md` — context, consent, and attachment matrix
-- `references/shared-tab-extension.md` — rare setup, pairing, diagnosis, and
-  release-proof branch for the shared-tab extension
-- `references/extraction-backends.md` — backend ladder and safety notes
-- `references/backends.md` — Sean-local backend operating notes
-- `references/backends.md.example` — public-safe configuration template
+- `references/shared-tab-extension.md` — rare setup/diagnosis/proof branch
+- `references/extraction-backends.md` — provider ladder, cost posture, and safety
+- `references/backends.md` — machine-local backend notes (never publish)
+- `references/backends.md.example` — public-safe setup template

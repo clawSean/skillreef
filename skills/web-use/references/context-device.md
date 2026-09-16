@@ -3,14 +3,14 @@
 Availability must be proved live. These modes describe intent, not guaranteed
 runtime support.
 
-## Current ClawPop matrix
+## Current local matrix
 
 | Context | Meaning | Current status |
 |---|---|---|
 | Fresh managed browser | isolated agent-controlled profile | proven; default unattended lane |
 | Existing signed-in browser | attach to a real current session | built-in `user` route targets Chrome; custom supported Chromium-based profiles require setup, consent, and live proof |
 | Shared current tab | user explicitly shares a tab to OpenClaw | Arc/Dia manual-WSS flow proved with the supported extension build; attachment remains live-state dependent |
-| Arc or Dia fallback experiment | try a visible installed browser after a managed-browser block or capability gap | authorized; shared-tab builds have passed E2E, but the exact attachment must still be verified live |
+| Local browser-app fallback | use a full local browser/app context only when data and managed-browser lanes cannot satisfy the task | page capture and control must be proved live |
 | Visible manual handoff | user reviews, solves, approves, or takes over | available when direct control is unproved or the step must remain human-controlled |
 
 ## Preferred user-facing labels
@@ -26,8 +26,8 @@ explicitly relevant.
 
 - Managed browser: agent-controlled isolated profile; verify account identity
   before authenticated work.
-- Arc/Dia fallback canary: no-config testing through currently available app or
-  UI controls is authorized after a managed-browser block or capability gap.
+- Local browser-app fallback: use only when a full local profile, extension,
+  browser-specific behavior, or human-visible local context materially helps.
 - Existing-session attachment: configuring or attaching a real browser profile
   requires a supported running browser, explicit setup, and local user approval.
 - Shared-tab attachment: controls only tabs explicitly placed in the OpenClaw
@@ -39,12 +39,12 @@ explicitly relevant.
 
 ## App truth rules
 
-- Arc and Dia may be tried when the managed browser is blocked or lacks a needed
-  capability.
+- Arc and Dia may be tried when the managed browser or data paths lack a needed
+  local-browser capability; they are not the default anti-bot or research lane.
 - Arc running does not mean its page is attached, capturable, or controllable.
 - Dia running does not mean its page can be captured or automated.
 - Chromium ancestry or extension compatibility does not prove OpenClaw support.
-- Brave is not installed on ClawPop.
+- Brave is not installed on the current host.
 - Never infer current login or attachment from historical VPS or node proof.
 
 ## Selection questions
@@ -52,7 +52,7 @@ explicitly relevant.
 1. Does the task need rendering, cookies, interaction, or a specific login?
 2. Can search, fetch, or an API finish it more simply?
 3. Is an isolated managed profile acceptable?
-4. Did the managed browser fail in a way Arc or Dia might address?
+4. Does a full local browser/app context materially address the remaining gap?
 5. Does the user need to see or take over the page?
 6. Is the chosen capture or attachment path live and page-ready?
 7. Is the next action external, irreversible, or approval-gated?

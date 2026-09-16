@@ -1,13 +1,14 @@
-# ClawPop Browser Capability Audit
+# Local Browser Capability Audit
 
 Verified 2026-09-15. Treat runtime status as volatile and recheck before a
 sensitive or authenticated task.
 
 ## Verdict
 
-Use the managed browser for maximum proven unattended control. Use the
-shared-tab extension when the user requests their current browser, existing
-login, or a specifically shared tab.
+Use the managed browser for ordinary unattended rendered/authenticated work.
+Use the shared-tab extension only when the user explicitly requests their current
+tab, must watch/participate, or the workflow is exceptionally sensitive and
+should stay off the agent-managed profile.
 
 The supported Arc/Dia extension build passed manual-WSS pairing, one-tab
 publication, semantic snapshot, page action, disconnect-to-zero, and reconnect
@@ -47,12 +48,12 @@ canary.
 
 ## Installed runtime facts
 
-- OpenClaw 2026.7.1
+- OpenClaw 2026.9.4 at the latest recorded proof; recheck live
 - `playwright-core` 1.61.1
 - managed profile: Mac-local, headless, `noSandbox:false`
 - detected internal executable: Google Chrome 151
 - dedicated stable managed-profile data directory
-- current browser work is Gateway-local on ClawPop
+- current browser work is Gateway-local on the current host
 - no usable browser node was connected during the sweep
 - node browser routing was observed as `manual` in live config readback
 
@@ -77,15 +78,15 @@ because it can run extensions or is Chromium-based.
 
 ### Arc
 
-- Installed and the reviewer's normal visible browser.
+- Installed and the user's normal visible browser.
 - Local profiles retain logins and cookies.
 - Core product development is in maintenance mode.
 - No vendor-supported external automation contract or live OpenClaw attachment
   was proved.
 
-Use for ordinary human browsing and as an authorized fallback when the managed
-browser is blocked. Begin each automated attempt with a live page capture and
-control canary; use manual handoff if that proof fails.
+Use for ordinary human browsing and only as an automated fallback when a full
+local-browser context is genuinely required. Begin each attempt with a live
+page capture/control canary; use manual handoff if that proof fails.
 
 ### Dia
 
@@ -95,7 +96,7 @@ control canary; use manual handoff if that proof fails.
   irreversible controls.
 - Chromium ancestry does not prove external attachment.
 
-Keep as a human-facing AI browser and authorized fallback experiment. Begin
+Keep as a human-facing AI browser and local-context fallback experiment. Begin
 each automated attempt with a live page-level or macOS visual-control smoke
 test; use manual handoff if that proof fails.
 
@@ -106,7 +107,7 @@ test; use manual handoff if that proof fails.
 - Supports Chromium extensions and encrypted sync.
 - Has the strongest mature automation substrate of these three.
 
-If the reviewer approves a future visible-agent lane, use a dedicated headed profile,
+If the user approves a future visible-agent lane, use a dedicated headed profile,
 bind debugging to loopback, keep it separate from the personal profile, and
 smoke-test OpenClaw attachment before trusting it. The current OpenClaw
 shared-tab extension documentation still favors Chrome, so Brave extension

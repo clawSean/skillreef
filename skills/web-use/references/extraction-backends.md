@@ -1,81 +1,84 @@
-# Web Use Extraction Backends
+# Web Extraction Backends
 
-Choose the lightest dependable backend for web data. Keep site policy, paid API
-decisions, and credentials in the relevant domain skill.
+Use these for public protected pages, repeated structured collection, or bulk
+extraction. They are not the default research path and are not the normal home
+for authenticated sessions.
 
-## Selection order
+## Placement in the ladder
 
-### 1. Lightweight retrieval
+1. Native `web_search` for discovery; `web_fetch` for known public URLs.
+2. `perplexity-search` for source-backed synthesis or broad/multi-hop research.
+3. Managed browser for ordinary JavaScript/rendering/interaction and logins.
+4. Browserless for stateless protected public extraction.
+5. TinyFish for deeper hosted multi-step public-browser control.
+6. Installed domain API or scraper when its structured data/task fit wins.
+7. Local visible browser, explicitly shared tab, or GUI fallback only when that
+   context is actually required.
 
-- `web_search` for discovery and source finding
-- `web_fetch` for public URLs that do not need JavaScript or login
-- managed browser for ordinary rendering and interaction
+Do not deliberately walk every rung. Start at the lightest dependable lane that
+fits the task.
 
-The managed browser is agent-side and currently headless. Do not describe it as
-automatically person-facing.
+## Active providers
 
-Before using a remote extraction backend, distinguish a data-path block from a
-browser-context block. If a visible local profile, login, or app-specific path
-may help, try Arc or Dia under the live-proof rules in `../SKILL.md`.
-Browserless and TinyFish remain extraction-only alternatives unless the owning
-domain policy and the user explicitly authorize transferring authenticated
-session state.
+### Browserless
 
-### 2. Browserless
+Use for Cloudflare/anti-bot friction, hard public pages, and structured
+extraction without a human-visible browser.
 
-Use Browserless for protected server-side extraction:
+- Prefer stateless `/unblock` or `/stealth/bql`.
+- Choose premium proxy/CAPTCHA settings only when the blocker requires them.
+- Use `/session` only for demonstrated public same-site persistence; returned
+  connection URLs are bearer credentials.
+- The public Free plan currently advertises 1,000 units/month; units vary with
+  duration, proxy, and CAPTCHA use. Verify pricing before optimizing around it.
 
-- Cloudflare or anti-bot friction;
-- a hard page that fetch or local managed browsing cannot read;
-- structured extraction without a human-visible browser.
+### TinyFish
 
-Prefer stateless `/unblock` or `/stealth/bql` calls. Use `/session` only
-when repeated same-site work demonstrably needs cookies, localStorage,
-sessionStorage, or cache to persist. Session URLs contain bearer credentials.
+Use when a hosted stealth browser needs deeper multi-step control. Prefer its
+browser/session primitive for extraction; do not assume the higher-level Agent
+API is automatically better.
 
-### 3. TinyFish
+TinyFish currently advertises free Search/Fetch plus metered Browser/Agent
+usage and introductory wallet credit. Verify current pricing and balance before
+paid use.
 
-Use TinyFish when a hosted stealth-browser session needs deeper multi-step
-control. Prefer the browser API / remote session. Do not assume the higher-level
-agent API is the best protected-extraction surface.
+## Candidate providers, not live capabilities
 
-### 4. Site-specific APIs
+- Firecrawl currently advertises a monthly free credit allowance and is useful
+  for crawl/map/scrape workloads, but it is not installed here.
+- Apify currently advertises monthly free platform credit and is useful when a
+  maintained Actor matches the site, but it is not installed here.
 
-Use a structured API only when the domain skill owns the credential and approves
-the reliability, field quality, and cost tradeoff.
+Do not route to either until its plugin/tool, credential, and smoke proof exist.
+Install/activation remains approval-gated.
 
-### 5. Verified visible handoff
+## Authentication boundary
 
-Switch to visible handoff when login, 2FA, CAPTCHA, passkeys, manual review, or
-final approval matters. A visible app being installed or running is not proof of
-page-level agent control.
+Do not export or maintain authenticated cookies, localStorage, sessionStorage,
+or signed-in state in Browserless, TinyFish, or another hosted provider by
+default. The managed local profile is the dependable authenticated lane.
 
-## Protected-page escalation
+An exception requires explicit user authorization plus an owning domain policy
+that accepts the privacy, cost, and persistence tradeoff. Never place secrets in
+prompts, scripts, logs, committed examples, or chat.
 
-1. Try the managed browser for ordinary rendering.
-2. If a signed-in or visible local context may help, try Arc or Dia and
-   live-prove the exact page capture/control path.
-3. Use Browserless `/unblock` or `/stealth/bql` for extraction-only blocks.
-4. Use a Browserless session only for proven persistence needs.
-5. Use TinyFish for deeper hosted browser control.
-6. Use a verified manual handoff for user-only gates.
-7. Report blockage plainly.
+## Failure discipline
 
-## Secret safety
-
-Fetch credentials only at runtime through the owning secret workflow. Never
-hardcode them in skills, committed examples, logs, or chat.
-
-Treat Browserless session URLs and TinyFish remote-session URLs as bearer
-credentials. Redact them, keep local session files at `0600`, and close remote
-sessions when finished.
-
-Do not export authenticated cookies, localStorage, sessionStorage, or other
-signed-in state from the managed browser, Arc, or Dia to Browserless or TinyFish
-without explicit user authorization and an owning domain policy that permits it.
+- Distinguish data failure from browser-context failure.
+- Switch providers when the task fit changes; do not loop on identical calls.
+- A paid provider is acceptable when it materially improves accuracy or avoids
+  wasted work, but log/verify the choice where the domain skill requires it.
+- CAPTCHA/2FA/passkeys/payment approval remain human gates, not bypass targets.
 
 ## Helpers
 
 - `../scripts/browserless_extract.py`
 - `../scripts/browserless_session.py`
 - `../scripts/tinyfish_browser_extract.py`
+
+## Official pricing references
+
+- Browserless: https://www.browserless.io/pricing
+- TinyFish: https://www.tinyfish.ai/pricing
+- Firecrawl: https://www.firecrawl.dev/pricing
+- Apify: https://apify.com/pricing
