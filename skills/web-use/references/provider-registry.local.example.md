@@ -7,9 +7,10 @@ current local state; never publish the populated copy.
 |---|---:|---|---|---|---|---|
 | Native retrieval | 10 | example | candidate | unknown | none | Confirm tool discovery and bounded fetch |
 | Managed browser | 10 | example | candidate | unknown | none | Confirm profile, login scope, snapshot, control |
+| Existing browser session | 10 | example | candidate | unknown | none | Confirm exact driver/profile, attach prompt, feature limits, snapshot/control |
 | Hosted extraction | 10 | example | candidate | unknown | none | Confirm credential, balance, privacy boundary, public smoke |
 | Local visible app | 10 | example | candidate | unknown | none | Confirm installed app, profile, display, capture/control |
-| Shared tab | 10 | example | candidate | unknown | none | Confirm consent, pairing, attachment, snapshot/control |
+| Extension-relay shared tab | 10 | example | candidate | unknown | none | Confirm consent, pairing, access mode, inventory, snapshot/control |
 | GUI/computer use | 10 | example | candidate | unknown | none | Confirm unlocked display and permissions |
 
 Admission states: `proven`, `configured-unproven`, `candidate`, `unavailable`,

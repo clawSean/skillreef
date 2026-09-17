@@ -16,17 +16,23 @@ Keep these facts separate:
 
 1. **Configured** — pairing data is stored.
 2. **Relay connected** — the extension has an authenticated Gateway socket.
-3. **Tab selected** — the browser granted debugger access to a local tab.
-4. **Tab published** — Gateway inventory exposes the intended tab.
-5. **Page controllable** — a fresh snapshot or action succeeds.
+3. **Access mode** — `Selected tabs` or `All tabs` is known.
+4. **Tab selected** — the browser granted debugger access to a local tab.
+5. **Tab published** — Gateway inventory exposes the intended tab.
+6. **Page controllable** — a fresh snapshot or action succeeds.
 
 Never infer a later state from an earlier one. A selected tab is not proof of a
-connected relay, and a listed tab is not proof of page control.
+connected relay, and a listed tab is not proof of page control. Pairing does not
+prove narrow access: current official OpenClaw fresh automatic pairings default
+to `All tabs`, while selected-tab mode and separately branded builds can enforce
+a narrower boundary.
 
 ## Normal shared-tab use
 
-1. List current shared tabs and identify the intended tab without opening or
-   researching elsewhere. Continue only when its identity is unambiguous.
+1. Check the extension profile, access mode, and published inventory. Identify
+   the requested tab without opening or researching elsewhere. If access is
+   broader than the user's intended boundary, disclose that and constrain all
+   actions to the requested tab; prefer `Selected tabs` for consent-bound use.
 2. Take a fresh snapshot. Report attachment failure plainly if it cannot read
    the page.
 3. Load `browser-automation` for multi-step control, stale-ref recovery, tab
@@ -42,20 +48,24 @@ connected relay, and a listed tab is not proof of page control.
    pairing state, or Gateway credentials.
 2. For manual remote WSS pairing, disable automatic local setup so two
    connection authorities do not compete.
-3. Deliver pairing credentials only through a trusted private channel. Never
+3. Set or verify `Selected tabs` when the intended contract is one-tab consent.
+   Current official automatic setup may begin in `All tabs`; never rely on the
+   product name or pairing success to infer access scope.
+4. Deliver pairing credentials only through a trusted private channel. Never
    echo them into a group, screenshot, log, normal temp file, or tool result.
-4. Treat any visibly exposed pairing credential as compromised. Follow current
+5. Treat any visibly exposed pairing credential as compromised. Follow current
    OpenClaw docs and the operator's restart/config approval policy before
    rotating or revoking it.
-5. Call setup complete only after the E2E gate below passes on the target
+6. Call setup complete only after the E2E gate below passes on the target
    machine.
 
 ## Diagnosis order
 
 1. Read Settings and popup state as separate observations; neither alone proves
    control.
-2. Check authenticated relay state and Gateway tab inventory.
-3. Confirm exactly the intended tab is selected and published.
+2. Check authenticated relay state, access mode, and Gateway tab inventory.
+3. Confirm the intended tab is selected and published; record whether other
+   tabs are also exposed.
 4. Attempt a fresh snapshot, then one harmless reversible action.
 5. Diagnose pairing, relay, tab publication, and page-control failures at their
    owning layer. Do not repair OpenClaw, change live config, or restart the
@@ -67,7 +77,8 @@ Prove the exact packaged artifact, not only its source tree:
 
 1. pair through the real Settings manual-WSS path;
 2. observe Settings move to authenticated relay state without reopening;
-3. publish exactly one HTTPS tab;
+3. select one HTTPS tab and verify the relay publishes exactly the intended
+   inventory for the chosen access mode;
 4. list and snapshot that tab;
 5. perform one harmless reversible page action;
 6. disconnect and verify Gateway inventory returns to zero;

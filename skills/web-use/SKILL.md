@@ -36,7 +36,7 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 | Public discovery/current facts | native search | `references/research-routing.md` |
 | Known public URL | native fetch | `references/research-routing.md` |
 | Cited synthesis, comparison, difficult or broad research | specialist cited research | `perplexity-search` + `references/research-routing.md` |
-| JavaScript, rendering, interaction, or local persistent login | managed browser | `references/context-device.md`, then `browser-automation` |
+| JavaScript, rendering, interaction, or agent-managed persistent login | managed browser | `references/context-device.md`, then `browser-automation` |
 | Protected public page, crawl, or bulk structured extraction | hosted/public extraction | `references/extraction-backends.md` |
 | Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
 | Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
@@ -114,6 +114,14 @@ Default for rendered, interactive, and authenticated unattended work. Persistent
 profile state may exist, but verify live login/account state. Stop before any
 approval-gated external action.
 
+### Existing browser session
+
+Use OpenClaw's existing-session driver only when a daily Chromium profile's
+cookies or browser-specific context materially matters. In current OpenClaw,
+`profile="user"` uses this driver; it is not the extension relay and it may
+require the user to approve attachment. Load current
+`browser-automation` limits before acting.
+
 ### Hosted extraction
 
 Public data only by default. Choose provider/mode based on the actual blocker,
@@ -139,14 +147,22 @@ task is impossible.
 Consent-bound and rare. Use immediately when explicitly requested or when the
 user must watch/participate; otherwise reach it only after relevant
 self-sufficient lanes, including GUI/computer use, are unfit or unavailable and
-the user agrees to share. Once selected, pin that context and operate only the
-shared tab. Do not detour into another browser, generic research, or extension
-maintenance unless the shared context is unavailable or broken.
+the user agrees to share. Verify the extension relay's actual access mode and
+published-tab inventory: official fresh automatic pairings may expose **All
+tabs**, while a selected-tab build/mode is narrower. Once selected, pin the
+requested tab and operate only there. Do not detour into another browser,
+generic research, or extension maintenance unless the shared context is
+unavailable or broken.
 
 ## Truth and naming
 
-- **Managed browser** — isolated agent-controlled profile.
-- **Your current browser** — existing session only after live attachment proof.
+- **Managed browser** — isolated agent-controlled CDP profile.
+- **Existing-session browser** — OpenClaw's `existing-session` driver (the
+  built-in `user` profile in current releases), after live attachment proof.
+- **Extension relay** — the `extension` driver (the built-in `chrome` profile
+  in current releases); verify relay, access mode, inventory, and control.
+- **Shared tab** — the one user-selected tab and consent boundary, not a synonym
+  for every tab an extension relay happens to expose.
 - **Visible handoff** — user must review, solve, approve, or take over.
 
 Keep transport/driver names out of user instructions unless implementation
