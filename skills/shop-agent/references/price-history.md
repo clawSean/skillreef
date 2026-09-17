@@ -4,13 +4,12 @@ Use Rainforest for **structured Amazon data**, not as the default path and not a
 
 ## Credentials
 
-Fetch at runtime only:
+Credential locator (not an executable command):
+`op://<vault>/Rainforest API Key/password`.
 
-```bash
-op read "op://<vault>/Rainforest API Key/password"
-```
-
-Never hardcode the key.
+An approved helper must resolve that reference internally or receive it through
+the protected runtime. Never run a naked `op read` on a transcript-visible tool
+surface, print the result, hardcode it, or place it in process arguments.
 
 ## When to use Rainforest
 
