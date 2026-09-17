@@ -35,18 +35,22 @@ Bad fits:
 https://api.rainforestapi.com/request
 ```
 
-## Product lookup by ASIN
+## Request shape
 
-```bash
-curl "https://api.rainforestapi.com/request?api_key=<KEY>&type=product&asin=<ASIN>&amazon_domain=amazon.com"
+Use an approved HTTP helper that resolves the key at runtime and constructs the
+query internally. Never put `api_key` in a URL or command argument. The
+non-secret request fields are:
+
+```text
+type=product  asin=<ASIN>  amazon_domain=amazon.com
 ```
 
 Useful return fields: title, price, rating, review count, brand, variants, availability, Prime eligibility.
 
-## Search
+For search:
 
-```bash
-curl "https://api.rainforestapi.com/request?api_key=<KEY>&type=search&search_term=<QUERY>&amazon_domain=amazon.com"
+```text
+type=search  search_term=<QUERY>  amazon_domain=amazon.com
 ```
 
 Useful return fields:
