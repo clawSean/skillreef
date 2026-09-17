@@ -41,7 +41,7 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 | Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
 | User explicitly requests their tab, must watch/participate, or requires exceptional sensitivity | shared-tab context | `references/shared-tab-extension.md` |
 | Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
-| 2FA, passkey, CAPTCHA, payment, irreversible review, or missing authority | human gate | domain policy + visible handoff |
+| 2FA, passkey, payment, irreversible review, missing authority, or login/account/transaction/user-present CAPTCHA | human gate | domain policy + visible handoff |
 
 Expanded decision logic and next-hop states:
 `references/decision-matrix.md`.
