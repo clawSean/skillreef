@@ -11,7 +11,9 @@ the local AID floor and local provider/proof registries.
 - Keep authenticated state local by default; hosted extraction is public-only
   unless explicit domain policy and user authorization say otherwise.
 - Treat the user's shared tab as explicit/watch-required/exceptional-sensitivity
-  context, never a generic fallback.
+  context, never a generic fallback. Unless explicitly selected, exhaust
+  relevant self-sufficient local-app and GUI/computer-use lanes before asking
+  the user to initiate sharing.
 - Separate portable policy from local installation, login, balance, profile,
   and dated proof state.
 - Domain skills own intent/account/action policy; `web-use` owns transport and

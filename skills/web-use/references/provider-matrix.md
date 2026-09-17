@@ -12,8 +12,8 @@ account, login, install, balance, and proof state live only in
 | Managed interaction/auth | OpenClaw managed profile → another live-proven managed profile | verify profile/account live |
 | Protected public extraction | stateless anti-bot extractor → deeper hosted browser → installed crawl/actor provider | choose mode/provider by blocker, breadth, and cost |
 | Local visible browser/app | lowest-priority-number installed context-fit app with live capture/control proof | local registry owns exact order; skip any row that fails fit or proof |
-| Shared current tab | the explicitly shared tab/provider | user selection pins provider; no generic preference chain |
 | Native GUI/OS | installed computer-use provider with active display/permissions | preflight display, permission, and target capture |
+| Shared current tab | the explicitly shared tab/provider | user selection pins provider; absent explicit selection, relevant self-sufficient GUI lanes come first |
 | Domain structured data | owning domain API/MCP/skill | domain owner defines its provider order |
 
 ## Provider admission states

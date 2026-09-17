@@ -7,8 +7,8 @@ proved live; these modes express intent, not guaranteed runtime support.
 |---|---|---|
 | Managed browser | ordinary rendered, interactive, or authenticated unattended work | process/profile page-ready; intended account/login verified |
 | Existing local browser session | a particular local profile, extension, or browser-specific behavior matters | selected provider installed; page capture/control live |
-| Shared current tab | user explicitly requests it, must watch/participate, or exceptional sensitivity requires their context | authenticated relay, exact shared tab, snapshot/control |
 | Whole-desktop GUI | browser/DOM tools cannot reach browser chrome, native app, or OS dialog | active unlocked display, permissions, target capture |
+| Shared current tab | user explicitly requests it, must watch/participate, exceptional sensitivity requires their context, or relevant self-sufficient lanes failed and the user agrees to share | authenticated relay, exact shared tab, snapshot/control |
 | Visible handoff | user-only security/approval/review step remains | exact requested human action and safe resume point |
 
 ## Selection questions
@@ -19,9 +19,10 @@ proved live; these modes express intent, not guaranteed runtime support.
 3. Is the managed isolated profile acceptable and live for the intended account?
 4. Does a full local visible browser/app context materially solve a remaining
    capability or profile gap?
-5. Did the user explicitly select their current/shared tab, or must they actively
-   watch/participate?
-6. Is the remaining surface browser chrome/native GUI rather than webpage DOM?
+5. Is the remaining surface browser chrome/native GUI rather than webpage DOM,
+   and can computer use reach it without user initiation?
+6. Did the user explicitly select their current/shared tab, must they actively
+   watch/participate, or have relevant self-sufficient lanes proved unfit?
 7. Is the next step human-only, external, irreversible, or approval-gated?
 
 ## Consent and privacy boundaries
@@ -35,6 +36,9 @@ proved live; these modes express intent, not guaranteed runtime support.
 - Hosted extraction: public data only by default; do not export local session
   state into it.
 - GUI control: requires unlocked graphical session and target-specific capture.
+- Shared-tab initiation is a human action. Unless the user explicitly requests
+  that context, attempt relevant self-sufficient GUI control before asking them
+  to share a personal tab.
 - Handoff: stop before the user-only step and state exactly what to complete.
 
 ## Shared-context pinning

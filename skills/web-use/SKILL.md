@@ -1,6 +1,6 @@
 ---
 name: "web-use"
-description: "Route web work by task category across local knowledge, domain tools, retrieval, cited research, managed browsing, public extraction, local apps, shared tabs, and GUI fallback."
+description: "Route web work by task category across local knowledge, domain tools, retrieval, cited research, managed browsing, public extraction, local apps, GUI control, and consent-bound shared tabs."
 ---
 
 # Web Use
@@ -39,8 +39,8 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 | JavaScript, rendering, interaction, or local persistent login | managed browser | `references/context-device.md`, then `browser-automation` |
 | Protected public page, crawl, or bulk structured extraction | hosted/public extraction | `references/extraction-backends.md` |
 | Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
-| User explicitly requests their tab, must watch/participate, or requires exceptional sensitivity | shared-tab context | `references/shared-tab-extension.md` |
 | Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
+| User explicitly requests their tab, must watch/participate, requires exceptional sensitivity, or self-sufficient local lanes cannot provide the required context and the user agrees to share | shared-tab context | `references/shared-tab-extension.md` |
 | 2FA, passkey, payment, irreversible review, missing authority, or login/account/transaction/user-present CAPTCHA | human gate | domain policy + visible handoff |
 
 Expanded decision logic and next-hop states:
@@ -96,7 +96,7 @@ Before saying a web task is blocked, classify the failure:
 | JavaScript/rendering | managed browser |
 | Login/profile context | managed local profile → domain-approved visible context |
 | Public anti-bot/protected extraction | hosted public extraction |
-| Browser attachment/control | another live-proven provider in the same context category |
+| Browser attachment/control | another live-proven provider in the same context category → GUI/computer use when it can reach the surface → consent-bound shared tab only after explicit request/agreement |
 | Native app/OS surface | GUI/computer use after display/permission preflight |
 | Human-only/security gate | visible handoff; state the exact user action |
 | Provider outage/rate limit | next proven provider for the same category |
@@ -126,18 +126,22 @@ Use only when a full local profile, extension, browser-specific behavior, or
 human-visible app context materially matters. Select from the local registry and
 prove capture/control before relying on it.
 
-### User's shared tab
-
-Consent-bound and rare. When explicitly selected, pin that context and operate
-only the shared tab. Do not detour into another browser, generic research, or
-extension maintenance unless the shared context is unavailable or broken.
-
 ### Peekaboo / computer use
 
-Last browser/GUI category, not last overall capability. It is slower and
+Final self-sufficient browser/GUI escalation before asking the user to share a
+personal tab, when it can reach the required surface. It is slower and
 token-expensive and requires an active unlocked graphical session plus required
 permissions. A locked/no-display result is a GUI-lane gate, not proof the web
 task is impossible.
+
+### User's shared tab
+
+Consent-bound and rare. Use immediately when explicitly requested or when the
+user must watch/participate; otherwise reach it only after relevant
+self-sufficient lanes, including GUI/computer use, are unfit or unavailable and
+the user agrees to share. Once selected, pin that context and operate only the
+shared tab. Do not detour into another browser, generic research, or extension
+maintenance unless the shared context is unavailable or broken.
 
 ## Truth and naming
 

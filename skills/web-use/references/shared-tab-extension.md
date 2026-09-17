@@ -5,6 +5,11 @@ credential rotation, branding, compatibility proof, or release work. Ordinary
 page control uses `browser-automation` after `web-use` selects the shared-tab
 lane.
 
+Unless the user explicitly requests this context, the shared-tab lane follows
+relevant self-sufficient managed-browser, local-app, and GUI/computer-use lanes.
+It requires the user to initiate sharing and must not become an automatic
+fallback merely because another browser provider failed.
+
 ## State model
 
 Keep these facts separate:

@@ -12,8 +12,9 @@ for authenticated sessions.
 4. Browserless for stateless protected public extraction.
 5. TinyFish for deeper hosted multi-step public-browser control.
 6. Installed domain API or scraper when its structured data/task fit wins.
-7. Local visible browser, explicitly shared tab, or GUI fallback only when that
-   context is actually required.
+7. Local visible browser or GUI/computer use only when that context is actually
+   required; ask for a shared personal tab only when explicitly selected or
+   after relevant self-sufficient lanes cannot supply the required context.
 
 Do not deliberately walk every rung. Start at the lightest dependable lane that
 fits the task.

@@ -13,8 +13,8 @@ sequential attempts.
 | Does it require JS, rendering, interaction, upload/download, or local persistent login? | managed browser | continue |
 | Is it protected public data, bulk crawl, or repeated structured extraction? | hosted/public extraction | continue |
 | Does it genuinely need a full visible local browser/app context? | local provider registry + live canary | continue |
-| Did the user request their current/shared tab, need to watch, or require exceptional sensitivity? | shared-tab context, pinned | continue |
 | Is the needed surface browser chrome, a native app, or an OS dialog? | GUI/computer use after display preflight | continue |
+| Did the user explicitly request their current/shared tab, need to watch, require exceptional sensitivity, or agree to share after self-sufficient lanes proved unfit? | shared-tab context, pinned | continue |
 | Is the remaining step human-only or approval-gated? | visible handoff | classify the exact unhandled gap |
 
 ## Specialist leapfrogs
@@ -25,6 +25,20 @@ sequential attempts.
 - Managed browser directly when known JS/auth interaction is required.
 - Hosted extraction directly when a known public anti-bot/bulk workload matches
   a proven provider and no login is involved.
+- Shared-tab context directly when the user explicitly requests it; this pins
+  the context rather than making the user repeat autonomous fallback lanes.
+
+## Context escalation order
+
+When a browser-context lane fails and the user did not explicitly select their
+shared tab, preserve self-sufficiency:
+
+`managed browser → local visible app → GUI/computer use → consent-bound shared tab`
+
+Skip any lane whose task fit is already false. The shared tab is not an
+automatic fallback: ask the user to initiate sharing only after relevant
+self-sufficient lanes are exhausted or when sensitivity/active participation
+requires their context.
 
 ## Retry budget
 

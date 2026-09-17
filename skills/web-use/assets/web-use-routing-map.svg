@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Web-use autonomy-first routing map</title>
+  <desc id="desc">Choose a category directly from task shape. When browser context must escalate, use the managed browser, a proven local app, and computer use before asking the user to share a personal tab. An explicit shared-tab request may enter the consent rail directly. Human gates can interrupt any lane.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#8294b2"/></marker>
+    <marker id="arrow-teal" markerWidth="11" markerHeight="11" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#42d4c3"/></marker>
+    <marker id="arrow-coral" markerWidth="11" markerHeight="11" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#ff8b78"/></marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;fill:#f2f6ff}
+      .title{font-size:38px;font-weight:750}.subtitle{font-size:18px;fill:#aebbd0}
+      .panel{rx:22;stroke-width:2}.box{rx:16;stroke-width:2}.head{font-size:21px;font-weight:700}
+      .body{font-size:15px;fill:#dbe4f2}.small{font-size:13px;fill:#aebbd0}.section{font-size:16px;font-weight:750;letter-spacing:.8px}
+      .flow{fill:none;stroke:#8294b2;stroke-width:3;marker-end:url(#arrow)}
+      .auto{fill:none;stroke:#42d4c3;stroke-width:3;marker-end:url(#arrow-teal)}
+      .consent{fill:none;stroke:#ff8b78;stroke-width:3;stroke-dasharray:10 8;marker-end:url(#arrow-coral)}
+      .merge{fill:none;stroke:#42d4c3;stroke-width:3}
+      .gate{fill:none;stroke:#ff8b78;stroke-width:2;stroke-dasharray:7 7}
+      .label{font-size:13px;fill:#9fadc4;font-weight:650}
+    </style>
+  </defs>
+  <rect width="1600" height="1120" fill="#0b1220"/>
+  <text x="72" y="68" class="title">Route by task shape. Escalate by context.</text>
+  <text x="72" y="103" class="subtitle">Jump to the lane that fits. Preserve self-sufficiency before requesting a shared personal tab.</text>
+
+  <!-- Panels -->
+  <rect class="panel" x="55" y="145" width="790" height="770" fill="#0f192a" stroke="#334663"/>
+  <rect class="panel" x="885" y="145" width="660" height="770" fill="#0f192a" stroke="#334663"/>
+  <text x="90" y="185" class="section" fill="#6fa8ff">1 · SELECT THE CATEGORY — DIRECT ENTRY</text>
+  <text x="920" y="185" class="section" fill="#42d4c3">2 · BROWSER CONTEXT ESCALATION</text>
+
+  <!-- Left panel: category cards are alternatives, never a sequential waterfall -->
+  <path class="flow" d="M450 285V310"/>
+  <path class="flow" d="M450 310H60V390H90"/>
+  <path class="flow" d="M450 310H840V390H810"/>
+  <path class="flow" d="M60 310V530H90"/>
+  <path class="flow" d="M840 310V530H810"/>
+  <path class="flow" d="M450 310V620"/>
+
+  <path class="merge" d="M90 390H72V730H450"/>
+  <path class="merge" d="M90 530H72"/>
+  <path class="merge" d="M810 390H828V730H450"/>
+  <path class="merge" d="M810 530H828"/>
+  <path class="merge" d="M450 720V730"/>
+  <path class="auto" d="M450 730V750"/>
+  <path class="auto" d="M450 840V855"/>
+  <text x="470" y="326" class="label">CHOOSE EXACTLY ONE FITTING CATEGORY</text>
+
+  <rect class="box" x="260" y="205" width="380" height="80" fill="#243756" stroke="#6fa8ff"/>
+  <text x="450" y="238" class="head" text-anchor="middle">User request</text>
+  <text x="450" y="265" class="body" text-anchor="middle">task shape · context · authority</text>
+
+  <rect class="box" x="90" y="340" width="300" height="100" fill="#23344e" stroke="#7d94bb"/>
+  <text x="240" y="377" class="head" text-anchor="middle">Known or domain-owned</text>
+  <text x="240" y="407" class="body" text-anchor="middle">local proof · authoritative domain tool</text>
+
+  <rect class="box" x="510" y="340" width="300" height="100" fill="#153e4c" stroke="#42d4c3"/>
+  <text x="660" y="377" class="head" text-anchor="middle">Public discovery / URL</text>
+  <text x="660" y="407" class="body" text-anchor="middle">native search → fetch primary source</text>
+
+  <rect class="box" x="90" y="480" width="300" height="100" fill="#3a294d" stroke="#bf8cff"/>
+  <text x="240" y="517" class="head" text-anchor="middle">Cited synthesis</text>
+  <text x="240" y="547" class="body" text-anchor="middle">Perplexity early for breadth/reasoning</text>
+
+  <rect class="box" x="510" y="480" width="300" height="100" fill="#183a60" stroke="#55aaff"/>
+  <text x="660" y="517" class="head" text-anchor="middle">Rendered interaction</text>
+  <text x="660" y="547" class="body" text-anchor="middle">agent-managed browser + mechanics</text>
+
+  <rect class="box" x="300" y="620" width="300" height="100" fill="#48331f" stroke="#f2b65a"/>
+  <text x="450" y="657" class="head" text-anchor="middle">Protected public extraction</text>
+  <text x="450" y="687" class="body" text-anchor="middle">stateless extractor → hosted browser</text>
+
+  <rect class="box" x="260" y="750" width="380" height="90" fill="#1d334d" stroke="#42d4c3"/>
+  <text x="450" y="783" class="head" text-anchor="middle">Provider + proof gate</text>
+  <text x="450" y="811" class="body" text-anchor="middle">fit · privacy · authority · proven · then local priority</text>
+
+  <rect class="box" x="260" y="855" width="380" height="50" fill="#173f3d" stroke="#42d4c3"/>
+  <text x="450" y="887" class="head" text-anchor="middle">Execute → verify intended result</text>
+
+  <!-- Right panel context rail -->
+  <path class="auto" d="M1215 310V365"/>
+  <path class="auto" d="M1215 465V520"/>
+  <path class="consent" d="M1215 620V700"/>
+  <path class="consent" d="M1008 245H935V750H995"/>
+  <text x="946" y="345" class="label">EXPLICIT REQUEST · WATCH · EXCEPTIONAL SENSITIVITY</text>
+
+  <rect class="box" x="1005" y="210" width="420" height="100" fill="#183a60" stroke="#55aaff"/>
+  <text x="1215" y="247" class="head" text-anchor="middle">Agent-managed browser</text>
+  <text x="1215" y="277" class="body" text-anchor="middle">ordinary rendered/authenticated unattended lane</text>
+
+  <rect class="box" x="1005" y="365" width="420" height="100" fill="#213650" stroke="#6fa8ff"/>
+  <text x="1215" y="402" class="head" text-anchor="middle">Proven local browser / app</text>
+  <text x="1215" y="432" class="body" text-anchor="middle">full local profile or app-specific context</text>
+
+  <rect class="box" x="1005" y="520" width="420" height="100" fill="#173f3d" stroke="#42d4c3"/>
+  <text x="1215" y="557" class="head" text-anchor="middle">Computer use / GUI</text>
+  <text x="1215" y="587" class="body" text-anchor="middle">self-sufficient if display + permissions are live</text>
+
+  <rect class="box" x="995" y="700" width="440" height="120" fill="#43272f" stroke="#ff8b78" stroke-dasharray="10 7"/>
+  <text x="1215" y="738" class="head" text-anchor="middle">Shared personal tab</text>
+  <text x="1215" y="768" class="body" text-anchor="middle">human initiation · exact tab · context pinned</text>
+  <text x="1215" y="796" class="small" text-anchor="middle">direct override when explicitly requested; otherwise last context lane</text>
+
+  <rect class="box" x="950" y="850" width="530" height="45" fill="#1b273a" stroke="#617594"/>
+  <text x="1215" y="879" class="small" text-anchor="middle">Solid = autonomous path · Dashed = consent-bound path</text>
+
+  <!-- Cross-cutting human gate -->
+  <path class="gate" d="M70 955H1530"/>
+  <rect class="box" x="180" y="975" width="1240" height="95" fill="#552c2c" stroke="#ff8b78"/>
+  <text x="800" y="1012" class="head" text-anchor="middle">Human gate can interrupt any lane</text>
+  <text x="800" y="1042" class="body" text-anchor="middle">2FA · passkey · account/login CAPTCHA · payment · irreversible approval · missing authority</text>
+  <text x="800" y="1065" class="small" text-anchor="middle">State the exact action, hand off visibly, then resume. Never collapse a lane failure into “the web is blocked.”</text>
+</svg>
