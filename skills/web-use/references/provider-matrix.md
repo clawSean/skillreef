@@ -11,7 +11,7 @@ account, login, install, balance, and proof state live only in
 | Cited research | installed specialist cited-research skill → native search plus primary-source synthesis | use specialist early when breadth/reasoning/completeness matters |
 | Managed interaction/auth | OpenClaw managed profile → another live-proven managed profile | verify profile/account live |
 | Protected public extraction | stateless anti-bot extractor → deeper hosted browser → installed crawl/actor provider | choose mode/provider by blocker, breadth, and cost |
-| Local visible browser/app | highest-ranked installed context-fit app with live capture/control proof | local registry owns exact order |
+| Local visible browser/app | lowest-priority-number installed context-fit app with live capture/control proof | local registry owns exact order; skip any row that fails fit or proof |
 | Shared current tab | the explicitly shared tab/provider | user selection pins provider; no generic preference chain |
 | Native GUI/OS | installed computer-use provider with active display/permissions | preflight display, permission, and target capture |
 | Domain structured data | owning domain API/MCP/skill | domain owner defines its provider order |
@@ -29,6 +29,14 @@ Only `proven` providers may be automatic fallbacks. A
 `configured-unproven` provider can be tested when the task justifies a bounded
 canary. Installation, config mutation, and service restart remain separately
 approval-gated.
+
+## Local priority contract
+
+Every provider-registry row has an explicit positive-integer `Priority`.
+Lower numbers are preferred **within the same category**, after task fit,
+privacy, authority, and proof gates pass. Use gaps such as `10, 20, 30` so a
+new provider can be inserted without rewriting unrelated rows. Never compare
+priority numbers across categories.
 
 ## Cost posture
 
