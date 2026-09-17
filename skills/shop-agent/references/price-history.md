@@ -99,7 +99,9 @@ For true history:
   managed or protected backend will fail.
 - if protected, route through `web-use` protected-site logic
 - if the fallback needs login, CAPTCHA/2FA, a visible browser, or an extension-capable browser, use `web-use` browser-context routing
-- current host-independent protected-extraction order: **Browserless first** (`/stealth/bql` or `/unblock`), then **TinyFish Browser API / CDP session** if needed
+- delegate protected-public transport and provider ordering to `web-use`'s
+  extraction-backends/provider-registry references; this domain reference must
+  not hardcode a Browserless/TinyFish ladder
 - do **not** assume TinyFish Agent API is the right path for CCC-style history pages
 - if still blocked, say so plainly and offer manual/browser-assisted checking
 

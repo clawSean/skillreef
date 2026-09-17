@@ -8,16 +8,23 @@ The primary interactive lane is the Mac managed `openclaw` browser. Historical
 VPS login state is not current proof. If Amazon shows `Hello, sign in`:
 
 1. Verify the active Mac browser profile and live page.
-2. Fetch the Amazon login fields from the `Amazon` item in the Sean 1Password
-   vault only inside an approved runtime path.
+2. If this installation has an approved secret-manager route for the intended
+   account, retrieve the login fields only inside that runtime path.
 3. Fill the form without printing, logging, saving, or placing credentials in
-   process arguments.
+   process arguments. Never assume another agent's vault, account, or profile.
 4. If Amazon requests 2FA, CAPTCHA, or trusted-device confirmation, stop for
-   the reviewer's interactive step.
+   the user's interactive step.
 5. Verify the account header, then resume the original task.
 
 Use an attached visible/extension-capable browser for Keepa/CCC, co-interaction,
-or manual authentication. Never copy the profile or credentials to the VPS.
+or user-present authentication. Never copy the profile or credentials to the
+VPS or a hosted extraction provider.
+
+## Web-use boundary
+
+This reference owns Amazon-specific page semantics and account safety. Load
+`web-use` for transport selection, browser context, protected-public fallback,
+and escalation; do not invent a separate provider ladder here.
 
 ## Search for a product
 

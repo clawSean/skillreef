@@ -1,6 +1,6 @@
 ---
 name: bottom-feeder
-description: Knowledge research pipeline for OpenClaw. Selects topics (context-driven, seeds, knowledge gaps, or external signals), researches with all available tools, synthesizes durable notes, and writes/updates files in knowledge/topics and knowledge/research. Modes — routine (1-2 topics), burn (N topics), fleet (external topic list, parallel dispatch). Use when asked to build or refresh knowledge files, run a scheduled knowledge-crawl, detect knowledge gaps, or run budget-aware research passes. Provider-agnostic (Anthropic, OpenAI, Venice/Diem, etc.).
+description: Knowledge research pipeline for OpenClaw. Selects topics (context-driven, seeds, knowledge gaps, or external signals), researches across relevant source categories, synthesizes durable notes, and writes/updates files in knowledge/topics and knowledge/research. Modes — routine (1-2 topics), burn (N topics), fleet (external topic list, parallel dispatch). Use when asked to build or refresh knowledge files, run a scheduled knowledge-crawl, detect knowledge gaps, or run budget-aware research passes. Provider-agnostic (Anthropic, OpenAI, Venice/Diem, etc.).
 ---
 
 # Bottom Feeder
@@ -9,6 +9,11 @@ Bottom Feeder owns topic selection, research orchestration, synthesis, quality
 gates, and durable knowledge writes. Load `web-use` for generic retrieval,
 browser context, provider selection/fallback, and not-blocked escalation; this
 skill must not maintain a competing universal provider ladder.
+
+Bottom Feeder may choose source categories and evidence requirements. It must
+not choose a generic search/browser/scraper provider, require every tool, or
+treat a checked-in provider list as authoritative. `web-use` owns transport,
+provider selection, fallback, capability proof, and selective reference loading.
 
 4-stage pipeline: select → collect → synthesize → write.
 Depth over breadth. Write after every topic. Never batch.
@@ -19,7 +24,10 @@ Provider-agnostic — works with Anthropic, OpenAI, Venice/Diem, or local models
 1. `config/defaults.yaml`
 2. `config/topics.md` — seed topic list
 3. If present, `config/next-topic.md` — force-priority override
-4. If present, `config/run-policy.md` — hard constraints for the current run (derive a fresh one from `config/run-policy.md.example`)
+4. If the caller explicitly supplies a run policy, load it as the current
+   generation/execution constraints. Do not treat an ambient or stale
+   `config/run-policy.md` as authoritative; derive a fresh policy from
+   `config/run-policy.md.example` when needed.
 5. If present, `config/signals.yaml` — external signal sources like Asana/Jira/Linear/GitHub (see `references/topic-selection/external-signals.md`)
 
 ## Modes
@@ -29,16 +37,19 @@ Provider-agnostic — works with Anthropic, OpenAI, Venice/Diem, or local models
 - Quiet completion unless the user asked for a report.
 
 ### Burn (explicit request)
-- N topics, all available sources enabled, heavier model.
+- N topics, broader relevant source categories as justified, heavier model.
 - Steps:
   1. Run `scripts/provider-usage.sh` (best-effort, continues on failure).
   2. Run `scripts/check-balance.sh` if you have balance JSON to parse (supports `remaining`, `balance`, `credits`, or `venice.data.diem`).
   3. Keep reserve from config: use `min_reserve_usd` when set (>0), otherwise fall back to legacy `min_reserve_diem`.
-  4. Optional: run `scripts/check-provider-health.sh` to verify each provider in the fallback chain is reachable before launch.
+  4. Optional: run `scripts/check-provider-health.sh` to verify the configured
+     generation-model fallback chain is reachable before launch.
   5. Execute in batched-parallel or supervised mode (see `references/execution/execution-modes.md`). Do **not** spawn all topics at once — that is the #1 cause of rate-limit cascades.
   6. Write after every topic (incremental write — never batch).
   7. Stop gracefully if balance or provider limit is hit.
-  8. If a `provider_fallback` chain is declared, honor it strictly (see `references/execution/provider-fallback.md`).
+  8. If a generation-model fallback chain is declared, honor it strictly (see
+     `references/execution/provider-fallback.md`). This does not route web
+     search, browser, extraction, or other collection transports.
   9. If multiple auth profiles are available, monitor for exhaustion and note when rotation is needed.
   10. Set cron safety nets per `references/output/burn-continuity.md`.
   11. After 80%+ complete, shift to strategic synthesis.
@@ -70,14 +81,19 @@ Before selecting topics, decide **how** the run will execute (full decision guid
 If a run-policy declares `execution_mode`, use it. Otherwise infer from `mode` (routine → single, burn → batched, explicit long run → supervised).
 
 ### Provider fallback (when configured)
-If `config/run-policy.md` or `config/defaults.yaml` declares a `provider_fallback` chain, enforce it per `references/execution/provider-fallback.md`:
+If an explicitly supplied run policy or `config/defaults.yaml` declares a
+`provider_fallback` chain, enforce it per `references/execution/provider-fallback.md`
+for generation/model providers only:
 - Track consecutive failures per provider.
 - On qualified failure (rate_limit / cooldown / auth / transport), rotate to the next provider.
 - Log every rotation with reason, timestamp, and provider change in the run-progress file.
 - If **all** providers in the chain are exhausted, stop and ask the user whether to wait, extend the chain, or abort.
 
 ### Provider lock (strict mode)
-If `config/run-policy.md` specifies `provider_lock: <provider>` and **no** fallback chain, enforce the lock strictly and stop on failure. Do not silently switch providers. Use this only when provider compliance is a hard requirement (legal/billing/policy). Prefer fallback chains in normal operation.
+If an explicitly supplied run policy specifies `provider_lock: <provider>` and
+**no** fallback chain, enforce the lock strictly for generation and stop on
+failure. Do not silently switch providers. This never overrides `web-use`
+routing for collection.
 
 ## Pipeline
 
@@ -111,7 +127,10 @@ Source strategy by topic type:
 - **Market/competitive topics:** web search + structured APIs, then social for sentiment.
 - **Strategic/synthesis topics:** local knowledge + internal tools, then web to validate.
 
-**Cost awareness:** routine mode uses 1-2 search queries + local knowledge. Burn/fleet mode uses everything aggressively.
+**Cost awareness:** routine mode starts with local knowledge and the lightest
+web-use route that fits. Burn/fleet may broaden source categories and fetch
+depth when the evidence plan justifies it; they still do not invoke every
+provider by ritual.
 
 ### Stage 3: Synthesize + quality gate
 
@@ -165,7 +184,8 @@ For **supervised** or long burn runs, schedule checkpoint jobs (cron or equivale
 
 - Never spend down to zero unless the user explicitly says to.
 - Skip duplicate rewrites when no meaningful updates exist.
-- Prefer local/free sources before paid ones.
+- Prefer local/free source categories or providers when reliability and fitness
+  are equivalent; let `web-use` make the provider decision.
 - Weak sources → write a partial with `[INCOMPLETE: reason]` tags and clear uncertainty notes.
 - Split oversized output into follow-up research files; keep files readable.
 - Log all sources used (tool, URL, date) in every output file.
@@ -178,7 +198,8 @@ For **supervised** or long burn runs, schedule checkpoint jobs (cron or equivale
 ## Quick manual run recipe
 
 1. Pick one topic from `config/topics.md`
-2. Load `web-use`; run the lightest dependable discovery/research route
+2. Load `web-use`; choose the lightest dependable discovery/research route for
+   the topic's source category
 3. Synthesize into `knowledge/topics/<slug>.md`
 4. Log run note in `memory/daily/YYYY-MM-DD.md`
 5. Report: topic, files changed, estimated cost mode used

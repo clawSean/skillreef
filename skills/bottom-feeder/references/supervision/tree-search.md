@@ -28,7 +28,7 @@ Before collecting sources, draft 3–5 candidate branches:
 branch_id: short-slug
 question: "What are we trying to learn?"
 why_it_matters: "Why this branch is useful to the reviewer / OpenClaw / Edge / product system"
-source_plan: [knowledge-search, brave, browser]
+source_plan: [local_knowledge, public_discovery, rendered_browser]
 expected_artifact: knowledge/topics/foo.md
 risk: low|medium|high
 estimated_cost_units: 0.25
@@ -54,7 +54,8 @@ Pick the top branch by weighted score. Default weights:
 
 For each selected branch:
 1. Run duplicate/staleness check in `knowledge/`.
-2. Collect sources according to the branch plan.
+2. Collect the branch's source categories; load `web-use` to choose concrete
+   providers and transports.
 3. Synthesize a draft artifact.
 4. Run `references/supervision/quality-score.md`.
 5. If score passes: write artifact and log branch outcome.

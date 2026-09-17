@@ -110,5 +110,6 @@ pattern and message templates.
    **Fix:** supervised mode with 30-min checkpoint crons.
 4. **Provider lock with no fallback** → one cooldown window burns the
    whole run.
-   **Fix:** configure `provider_fallback` in run-policy (see
+   **Fix:** configure a generation-model `provider_fallback` in an explicitly
+   supplied run policy (see
    `references/execution/provider-fallback.md`).

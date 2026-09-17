@@ -1,6 +1,7 @@
 # 🦞 Bottom Feeder
 
-**A knowledge research pipeline skill for OpenClaw** that researches topics using all available tools and writes durable knowledge files.
+**A knowledge research pipeline skill for OpenClaw** that researches topics
+across relevant source categories and writes durable knowledge files.
 
 Small sips by default. Fleet mode when you need scale. 🌊
 
@@ -14,7 +15,7 @@ A practical pipeline:
 
 1. **Execution planning** — single / batched / supervised (how the run physically executes)
 2. **Topic selection** — context-driven (your projects, people, decisions), seed lists, knowledge gaps, or optional external signals
-3. **Research collection** — uses ALL available tools: web search, page fetching, local knowledge, internal tools (Asana, Slack, etc.), code repos, APIs, social, MCP tools
+3. **Research collection** — chooses relevant evidence categories: web search/page fetching, local knowledge, internal tools (Asana, Slack, etc.), code repos, APIs, social, and MCP tools. `web-use` selects the concrete transport/provider.
 4. **Synthesis** — durable, actionable, self-contained markdown with quality gates
 5. **Output writing + run logging** — to `knowledge/topics/` or `knowledge/research/`, with an audit trail in `knowledge/.runs/`
 6. **Checkpoint monitoring** — for long runs
@@ -26,8 +27,8 @@ A practical pipeline:
 | Mode | Topics | Sources | Parallelism |
 |------|--------|---------|-------------|
 | **Routine** (default) | 1-2 | Cost-conscious | Sequential |
-| **Burn** | N (explicit) | All available | Sequential or batched |
-| **Fleet** | External list | All available | Preferred when available |
+| **Burn** | N (explicit) | Broader relevant categories | Sequential or batched |
+| **Fleet** | External list | Per-topic evidence plan | Preferred when available |
 
 **Fleet mode** accepts a topic list file (markdown or plain text), dispatches topics via sub-agents when available, falls back to serial when not. The orchestrator assigns, tracks, and reports.
 
@@ -84,10 +85,11 @@ Output goes to:
 
 1. Copy this folder into `workspace/skills/bottom-feeder`
 2. Customize `config/topics.md` or let context-driven selection find topics
-3. (Optional) Copy templates for advanced runs:
-   - `config/run-policy.md.example` → `config/run-policy.md`
+3. (Optional) For one explicitly requested advanced run, copy and edit the
+   policy template; do not keep an old policy active between runs:
+   - `config/run-policy.md.example` → a caller-supplied run-policy path
    - `config/signals.yaml.example` → `config/signals.yaml`
-4. Test: "Run bottom feeder" (routine mode, 1 topic, Brave-only)
+4. Test: "Run bottom feeder" (routine mode, 1 topic, web-use-routed discovery)
 5. Review output. Calibrate.
 6. Scale: "Run bottom feeder on [topic1, topic2, ...]" or fleet mode with a topic file
 
@@ -96,7 +98,7 @@ Output goes to:
 ## Key docs
 
 - `references/execution/execution-modes.md` — single / batched / supervised
-- `references/execution/provider-fallback.md` — fallback chains
+- `references/execution/provider-fallback.md` — generation-model fallback chains
 - `references/execution/checkpoint-monitoring.md` — long-run checkpoints
 - `references/execution/recovery-patterns.md` — failure & drift recovery
 - `references/topic-selection/context-driven.md` — primary topic selection
@@ -136,7 +138,10 @@ Budget tracking is **informational only** — it never blocks runs.
 Replace the default topics with what matters to your team. Organize by priority tiers — the agent picks the highest-value topics first. The more specific your seeds, the better the output. Context-driven selection (mining your PM tools, conversations, and team profiles) usually beats any curated list.
 
 ### Sources
-Default: Brave search + local knowledge. Optional: Perplexity (deep synthesis), Twitter (sentiment), CoinGecko/CoinMarketCap (crypto data), browser (page extraction). See `references/research-sources.md` for the full source strategy.
+Default categories: local knowledge + public discovery. Optional categories:
+cited synthesis, internal tools, structured domain data, social sentiment,
+rendered browser, and protected public extraction. `web-use` owns the concrete
+provider/order decision; see `references/research-sources.md`.
 
 ### Execution & reliability
 - Start with `execution_mode: single` in routine mode

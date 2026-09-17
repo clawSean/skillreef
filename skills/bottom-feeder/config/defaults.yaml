@@ -56,12 +56,13 @@ subagent_timeout_seconds: 900
 # For supervised runs: how often checkpoint monitors fire (minutes).
 checkpoint_interval_minutes: 30
 
-# ── Provider fallback ───────────────────────────────────────────
-# Optional ordered fallback chain. Triggered when the primary provider
-# returns qualified failures (rate_limit, cooldown, auth, transport).
+# ── Generation-model fallback ──────────────────────────────────
+# Optional ordered fallback chain for the model/runtime doing synthesis and
+# orchestration. Web search, browser, extraction, and other collection
+# providers are selected by web-use, not by this file.
 # See references/execution/provider-fallback.md for full semantics.
 #
-# Each entry is a provider identifier your orchestrator understands.
+# Each entry is a generation-provider identifier your orchestrator understands.
 # Examples: anthropic, openai, google, venice, local-ollama
 #
 # Leave empty [] to disable fallback (strict primary-only).
@@ -80,18 +81,19 @@ fallback_cooldown_minutes: 10
 # operational pressure. See references/topic-selection/external-signals.md.
 enable_external_signals: false
 
-# ── Source defaults ─────────────────────────────────────────────
-# Starting suggestions, NOT an exhaustive list. Use any available tool.
-# See references/research-sources.md for full source strategy.
+# ── Source-category defaults ───────────────────────────────────
+# These are evidence categories, not provider names. web-use selects the
+# concrete transport/provider after the category and task are known.
 default_sources:
-  - brave
-  - knowledge-search
+  - local_knowledge
+  - public_discovery
 optional_sources:
-  - perplexity
-  - twitter
-  - coingecko
-  - coinmarketcap
-  - browser
+  - cited_synthesis
+  - internal_tools
+  - structured_domain_data
+  - social_sentiment
+  - rendered_browser
+  - protected_public_extraction
 
 # ── Output defaults ────────────────────────────────────────────
 write_topics_dir: knowledge/topics

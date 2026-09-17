@@ -61,7 +61,15 @@ payload="$(jq -n \
   '{preset: $preset, input: $input}')"
 
 response_file="$(mktemp)"
-trap 'rm -f "$response_file"; unset api_key' EXIT
+payload_file="$(mktemp)"
+curl_config="$(mktemp)"
+chmod 600 "$payload_file" "$curl_config"
+printf '%s' "$payload" >"$payload_file"
+# Keep the bearer out of curl's process argv. curl reads this 0600 config file
+# and the file is removed on every exit path.
+printf 'url = "https://api.perplexity.ai/v1/agent"\nrequest = "POST"\nheader = "Authorization: Bearer %s"\nheader = "Content-Type: application/json"\ndata-binary = "@%s"\n' \
+  "$api_key" "$payload_file" >"$curl_config"
+trap 'rm -f "$response_file" "$payload_file" "$curl_config"; unset api_key' EXIT
 
 set +e
 http_code="$(curl -sS \
@@ -69,10 +77,7 @@ http_code="$(curl -sS \
   --max-time 900 \
   -o "$response_file" \
   -w '%{http_code}' \
-  -X POST 'https://api.perplexity.ai/v1/agent' \
-  -H "Authorization: Bearer $api_key" \
-  -H 'Content-Type: application/json' \
-  --data-binary "$payload")"
+  --config "$curl_config")"
 curl_status=$?
 set -e
 unset api_key

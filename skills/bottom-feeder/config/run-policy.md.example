@@ -1,9 +1,10 @@
 # Bottom Feeder Run Policy (Example / Template)
 
-> Copy to `config/run-policy.md` in your workspace and edit.
-> When present, the agent treats this file as **mandatory** for the active run.
+> Copy to a run-specific policy path and pass it explicitly for that run.
+> Do not leave stale policy files active between runs.
 
-This file declares **hard constraints** for a single run: which provider(s),
+This file declares **hard constraints** for a single run: which generation
+provider/model(s),
 how long, how to execute, and when to stop. It is intentionally separate from
 `defaults.yaml` so you can override defaults without editing them.
 
@@ -21,7 +22,7 @@ subagent_timeout_seconds: 900    # per-subagent lifetime
 checkpoint_interval_minutes: 30  # only used when execution_mode=supervised
 
 # ------------------------------------------------------------------
-# Provider chain
+# Generation-model provider chain
 # ------------------------------------------------------------------
 # Strict lock (stop on failure). Leave empty to allow fallback.
 provider_lock: ""                # e.g. "anthropic" or ""
@@ -35,7 +36,7 @@ provider_fallback:
   # - venice
 
 # Optional: constrain which models may be used for synthesis/writing.
-# Research tools (Brave, Perplexity, etc.) are not constrained.
+# Web/research tools are not constrained here; `web-use` owns their routing.
 allowed_models:
   - sonnet
   - opus
@@ -81,8 +82,8 @@ announce_completion: true
 - **`subagent_timeout_seconds`** should be large enough for 1 topic
   (research + synthesis + write) but small enough that a stuck worker
   doesn't block the whole run. 600–1200 seconds is a good range.
-- Research source tools (Brave, Perplexity, Twitter, CoinGecko, browser, etc.)
-  are **not** constrained by `provider_lock` — only generation/synthesis is.
+- Research source tools are **not** constrained by `provider_lock` — only
+  generation/synthesis is. Load `web-use` for their routing.
 - Log every provider rotation and every subagent death in the run-progress file.
 
 ## Minimal example (single-agent routine)

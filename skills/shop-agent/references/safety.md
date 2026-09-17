@@ -29,9 +29,15 @@ Before any action that spends money:
 
 ## Credential handling
 
-- Never ask for passwords or payment details
-- Never type credentials into any field
-- If login is needed: pause and tell the user to log in manually
+- Never ask the user to paste passwords or payment details into chat.
+- When the approved workflow has a configured secret manager, credentials may be
+  retrieved at runtime and entered directly into the live browser form. Never
+  print, log, save, or pass them in command arguments; do not copy them into a
+  browser profile or hosted extraction provider.
+- If no approved secret-manager route exists, pause for the user to authenticate
+  in the visible browser.
+- Always pause for user-present 2FA, passkeys, CAPTCHA, trusted-device checks,
+  or account-security challenges.
 - Report payment method by last 4 digits only ("Visa ending 1234")
 - Never screenshot or capture full payment/address details
 

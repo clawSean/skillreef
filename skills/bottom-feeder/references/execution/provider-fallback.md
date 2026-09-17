@@ -1,10 +1,15 @@
-# provider-fallback
+# Generation-provider fallback
 
-Use fallback chains to keep Bottom Feeder productive when a provider is rate-limited or unavailable.
+Use fallback chains to keep Bottom Feeder's **generation/orchestration model**
+productive when that model provider is rate-limited or unavailable. This file
+does not select web-search, browser, extraction, or research providers; those
+belong to `web-use`.
 
 ## Why
 
-Long runs often fail from provider cooldowns (429), auth incidents, or transient outages. A single locked provider can burn an entire run window with zero output.
+Long runs often fail from model-provider cooldowns (429), auth incidents, or
+transient outages. A single locked generation provider can burn an entire run
+window with zero output.
 
 ## Config
 

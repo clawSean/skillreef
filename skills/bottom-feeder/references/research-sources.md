@@ -9,13 +9,16 @@ a competing provider ladder here.
 
 ## Source Categories
 
-### 1. Web Search (any provider)
-Search engines, AI-assisted search, news aggregators. Use whatever search tools are available (web_search, perplexity, etc.). Run 2-3 differently-worded queries per topic to catch different angles.
+### 1. Public discovery and current facts
+Search engines, AI-assisted search, news aggregators, and known-URL fetches.
+Describe the evidence need to `web-use`; it selects the concrete provider and
+does not require a fixed number of queries. Add queries only when uncertainty,
+source diversity, or contradiction risk warrants them.
 
 Capture: title, URL, key claim, publication date.
 
 Default module hint:
-- Let `web-use` select the configured native search provider.
+- Let `web-use` select the native search/fetch provider or specialist leapfrog.
 - Use about 5 results by default, with locale matched to the topic.
 - Routine runs may skip web lookup when local/internal authoritative sources
   already answer the question.
@@ -23,7 +26,8 @@ Default module hint:
 ### 2. Page Fetching & Extraction
 When search snippets are insufficient, fetch and read full pages. Use browser tools for JS-rendered content, fetch tools for static pages.
 
-Routine mode: 2-3 pages max. Burn/fleet: fetch aggressively.
+Routine mode: fetch only the pages needed to answer the question. Burn/fleet
+may widen fetch depth when the evidence plan justifies it.
 
 Default module hint:
 - Browser extraction is optional, not the default.
@@ -60,8 +64,11 @@ Default module hint:
 - Do not treat tweets as the sole truth source.
 - Pair social signal with at least one primary, structured, or non-social source.
 
-### 8. Deep Synthesis Providers
-Use Perplexity or similar cited-synthesis tools only when the topic needs deeper cross-source synthesis, contradiction hunting, or richer citation discovery.
+### 8. Deep synthesis / cited research
+When the topic needs difficult cross-source synthesis, contradiction hunting,
+or richer citation discovery, ask `web-use` to route to its cited-research
+specialist (currently the standalone Perplexity skill when installed). Do not
+reimplement that provider's API or preset policy here.
 
 Capture: key claims, cited URLs, unresolved contradictions.
 
@@ -81,12 +88,14 @@ MCP tools, skills, CLI utilities — if it's available and relevant, use it. The
 
 ## Cost Awareness
 
-- **Routine:** Local knowledge first, 1-2 search queries, selective page fetches.
-- **Burn/fleet:** Everything. Multiple queries, aggressive fetching, all relevant APIs, full internal tool mining.
+- **Routine:** Local knowledge first, then the lightest fitting web-use route.
+- **Burn/fleet:** Broaden relevant source categories and depth according to the
+  evidence plan; never invoke every provider by ritual.
 
 ## Anti-Patterns
 
-- Using only one search provider when multiple are available.
+- Treating “use multiple providers” or “use everything” as a ritual rather than
+  selecting the smallest dependable evidence mix.
 - Skipping internal tools for team-related topics.
 - Treating this list as exhaustive — if you have a relevant tool, use it.
 - Fetching pages you don't need in routine mode.
