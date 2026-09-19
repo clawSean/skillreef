@@ -1,0 +1,4 @@
+artifacts/
+cost-log.json
+cost-log.json.lock
+rollback/

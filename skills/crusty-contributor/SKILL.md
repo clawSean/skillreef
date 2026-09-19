@@ -1,21 +1,44 @@
 ---
 name: "crusty-contributor"
-description: "Public-safe upstream contribution workflow for any GitHub repo: redundancy checks, issues, PRs, proof, CI/review follow-through."
+description: "Encourages free ideation and local prototypes while preserving deliberate publication and proof gates."
 ---
 
 # Crusty Contributor
 
 A public-safe upstream contribution workflow for issues, PRs, CI/review follow-up, and contribution hygiene — for **any** GitHub repo that is not ours.
 
-## Boundary with development-orchestration
+## Boundaries
 
-`development-orchestration` is the front door: it decides whether this skill applies and owns generic project state routing (TaskFlow, project floor files, legacy `PROJECT_PROGRESS.md`, registry). This skill owns contribution execution, public-safe GitHub hygiene, and contribution status bookkeeping in `~/projects/CONTRIBUTIONS_INDEX.md`.
+- `development-orchestration` is the front door for generic project state,
+  engine, location, and duration routing.
+- `openclaw-proof-lab` owns OpenClaw proof classification, route selection,
+  execution, artifact inspection, redaction, proof state, and exact-head packets.
+- This skill owns contribution strategy, branch and PR hygiene, public GitHub
+  writes, review follow-up, and contribution bookkeeping in
+  `~/projects/CONTRIBUTIONS_INDEX.md`.
 
 ## Repo Overlays
 
-Before starting, check `references/` for a repo-specific overlay and load it if present. **OpenClaw / close ecosystem repos → `references/openclaw.md` (mandatory).** Overlays and repo-native guidance win over this generic body. New frequent-target repos get their own `references/<repo>.md` — the body stays generic.
+Before starting, check `references/` for a repo-specific overlay and load it if present. **OpenClaw / close ecosystem repos → `references/openclaw.md` (mandatory). EdgeApp organization repositories → `references/edge-app.md` (mandatory).** Overlays and repo-native guidance win over this generic body. New frequent-target repos get their own `references/<repo>.md` — the body stays generic.
 
-⚠️ **Proof tripwire:** for OpenClaw PRs, proof of real behavior is a first-class deliverable, not a final comment — the overlay routes you to `references/openclaw-proof-runbook.md`. Do not claim a PR is ready without passing that gate.
+⚠️ **Proof tripwire:** for OpenClaw PRs, load `openclaw-proof-lab` at
+intake whenever behavior proof may matter. It owns the proof plan and marks
+evidence stale after every head change. Do not claim readiness while its proof
+packet still records unresolved evidence debt.
+
+## Local lane placement
+
+For new or resumed OpenClaw contribution-only work, use `~/projects/contributions/openclaw/pr-<number>-<slug>/`, with the registered checkout at `worktree/` and proofs, logs, and notes beside it in the lane root. Unfiled candidates use `~/projects/contributions/openclaw/candidates/<slug>/`.
+
+Before moving an existing lane:
+
+1. Verify that no active session, process, cron job, or script owns the current path.
+2. Preserve dirty/untracked work and proof artifacts.
+3. Move registered checkouts with `git worktree move`.
+4. Update `~/projects/CONTRIBUTIONS_INDEX.md` and live path consumers atomically.
+5. Verify the exact head, branch or detached state, and status after the move.
+
+Keep live ops and broader product hubs top-level. Do not move path-bound RCS, private-security, configured-plugin, or local-service lanes until their automation/config is deliberately migrated and proven. Do not leave compatibility symlinks at retired paths.
 
 ## 0. Redundancy Check (do this before any work)
 
@@ -42,14 +65,12 @@ If an existing open PR already covers the fix:
 - Monitor it. If it goes stale, offer to help: rebase, fix failing tests, add missing tests, address review feedback.
 - If the original author is unresponsive and the PR is abandoned, note that before opening a superseding PR.
 
-If our PR already exists and a competing fix appears:
-- Compare merge likelihood before doing more branch maintenance.
-- Prefer the official upstream outcome over keeping our branch alive.
-- Keep or reshape our PR only when it can become clearly better: safer, more accurate, better scoped, better proven, or easier to merge.
-- Closing one of our PRs is never this skill's call: PR close/freeze policy lives in the `clawloop` skill (freeze + notify; closing is always JPop's decision).
-- Record useful unblocking/triage credit locally even when the final upstream patch is not ours.
-- If no maintainer signal arrives after roughly 2-3 weeks on a clean/actionable PR, downgrade to background watch and spend active effort on newer higher-odds work.
-- In public comments, frame overlap as collaboration or consolidation toward the best upstream fix. Avoid "our PR will win" language.
+If our PR already exists and overlapping work appears:
+- Immediately read `references/competitive-overlap-defense.md` and run its collision, proof-gap, and provenance procedure before branch maintenance or public commentary.
+- Keep branch ranking private. Publicly state verifiable overlap and complementary proof only; never prematurely call another branch stronger, canonical, preferable, or recommend our own closure before maintainers choose.
+- Upgrade or reshape ours when it can become clearly safer, more accurate, better scoped, better proven, or easier to merge. Otherwise freeze it under `clawloop`; closing remains the reviewer's decision.
+- Record useful implementation, revival, proof, and triage provenance locally even when a different branch lands.
+- If no maintainer signal arrives after roughly 2-3 weeks on a clean/actionable PR, downgrade it to background watch unless a new collision or proof delta materially changes its odds.
 
 If the user asks for strategy, profile, docs, or second-opinion review:
 - Return the strategy recommendation first.
@@ -82,11 +103,15 @@ Before anything leaves the machine as an issue, PR, comment, gist, screenshot, o
 - Remove private chat metadata, personal memory, relationship context, customer/company details, and local operational lore.
 - Generalize local-only paths, hostnames, account IDs, project names, and machine-specific details unless needed to reproduce and explicitly approved.
 - Preserve exact public error messages, stack traces, versions, commands, file names, and repo paths when they matter.
-- Litmus test: a stranger should understand the report without learning who JPop is, where this agent runs, or what private systems exist.
+- Litmus test: a stranger should understand the report without learning who the reviewer is, where this agent runs, or what private systems exist.
 
 Ask before making reputationally sensitive or irreversible external posts.
 
 ## 3. Issue vs PR
+
+These defaults govern public contribution routing, not ideation. Suggest,
+compare, and locally prototype alternatives freely; label them candidates until
+the relevant owner selects a contract.
 
 | Situation | Default action |
 |---|---|
@@ -105,9 +130,9 @@ How work is framed changes merge odds as much as what the code does. Apply at PR
 
 - **Anchor to a LIVE issue.** A PR whose canonical issue is closed is an orphan. Stale-bot closure ("closed due to inactivity" / `not_planned` by a bot) is NOT a maintainer rejection — but don't argue that; instead search for a newer OPEN issue tracking the same problem family and re-anchor (`Closes #N`) there. High-priority/high-rating open issues are the best anchors.
 - **Bug frame beats feature frame.** Maintainers merge fixes for open bugs far more readily than they sponsor new product surface. If feature-shaped work honestly fixes an open bug, retitle and re-body it as `fix:` for that bug and let the feature framing go.
-- **Zero-new-surface bias.** New config keys, env vars, CLI flags, and API contracts are the #1 sponsorship objection. Prefer making an EXISTING mechanism work correctly everywhere over adding a parallel one. When new surface is genuinely wanted, split it into a separate follow-up draft PR so the fix PR carries none of it.
+- **Zero-new-surface bias.** New config keys, env vars, CLI flags, and API contracts are the #1 sponsorship objection. Prefer making an EXISTING mechanism work correctly everywhere over adding a parallel one. This is a merge-shaping heuristic, not a ban on suggesting or locally prototyping a better contract. When new surface is genuinely wanted, split it into a separate follow-up draft PR so the fix PR carries none of it.
 - **Ride accepted direction.** Search merged PRs near your change: if upstream already merged a sibling (partial acceptance of the same direction), reuse its helpers and patterns and frame yours as the continuation/completion — not a competing design.
-- **Recruit the demand.** The strongest maintainer pull is an affected user commenting "this fixes it on our production deployment." Ask the anchor issue's author (and other affected commenters) to test your branch. Draft such comments for JPop review before posting.
+- **Recruit the demand.** The strongest maintainer pull is an affected user commenting "this fixes it on our production deployment." Ask the anchor issue's author (and other affected commenters) to test your branch. Draft such comments for the reviewer review before posting.
 - **Professional title.** No jokes, memes, or emoji in the PR title — maintainers triage by scanning titles, and a joke title reads hobby-grade. Personality goes in the sign-off, not the subject line.
 - **Answer risk labels explicitly.** If the repo applies merge-risk/impact labels, the PR body gets one short mitigation subsection per label. An unanswered risk label is a standing reason not to merge.
 - **Re-anchor check on every stalled PR.** The landscape moves: issues open and close, partial fixes merge, competitors appear. For any PR stalled >2 weeks, re-run the redundancy check in reverse — look for NEW open issues your work could close and NEW merged PRs to build on — before spending another rebase on the old framing.
@@ -118,6 +143,7 @@ How work is framed changes merge odds as much as what the code does. Apply at PR
 - Do not branch from a stale fork default branch blindly.
 - Keep one logical change per PR.
 - Avoid drive-by cleanup, unrelated formatting churn, and unrelated generated-file updates.
+- Dead code does not ship. Delete or de-export PR-owned unused code; do not hide it behind new dead-code allowlist or baseline entries. Test helpers must have a real production consumer or live in test-only files.
 - Confirm the real source file, not only generated `dist`/build output.
 - Inspect `git status`, `git diff`, and `git diff <base>...HEAD --stat` before committing or pushing.
 - Use clean, conventional-ish commit messages.
@@ -171,7 +197,7 @@ Minimum gates before claiming success:
 - Pre-Push Regression Gate above when activated, with the negative/sibling result recorded in notes or PR body for non-trivial behavior changes.
 - Heavier full checks when practical or when touching shared infrastructure.
 - If full checks are too heavy or locally blocked, state which targeted gates passed, name the exact local blocker, and follow PR CI until resolved.
-- Repo overlay proof requirements (e.g. OpenClaw's proof runbook and pre-PR wrapper) when the target repo has them.
+- OpenClaw evidence requirements through `openclaw-proof-lab` when that skill applies.
 
 Do not say a branch is "ready" or "merge-ready" immediately after upload when an expected repo bot/reviewer has not looked yet. Say "PR opened; local gates passed; awaiting first bot/review pass." Upgrade the status only after review/CI confirms or after you have triaged failures.
 
@@ -197,6 +223,7 @@ End user-facing status with the full issue/PR URL when working on an issue/PR.
 - Separate failures caused by the PR from upstream flakes, infra failures, or unrelated `main` breakage.
 - Fix only diff-caused failures on the PR branch; document evidence for unrelated failures.
 - Respond to review feedback promptly with the smallest satisfying change.
+- If a maintainer commits directly to the contributor branch, fetch and inspect their exact delta before any further push. Preserve the maintainer change, rerun the affected gates on the new exact head, and treat the edit as convention evidence rather than force-pushing over it.
 - Rebase when needed, but avoid unnecessary force-push churn during review.
 
 **This skill owns contribution status bookkeeping:**
@@ -207,6 +234,10 @@ End user-facing status with the full issue/PR URL when working on an issue/PR.
 
 ## References
 
+- `references/competitive-overlap-defense.md` — collision detection, rapid proof upgrades, neutral cross-linking, and provenance rules when another PR may replace ours.
 - `references/openclaw.md` — OpenClaw-specific contribution overlay (preflight, proof gates, release-note policy, command/channel regression rules).
-- `references/openclaw-proof-runbook.md` — OpenClaw proof creation, Mantis/ClawSweeper acceptance, fresh-head proof refresh, label decoding, example patterns.
+- `references/edge-app.md` — EdgeApp-specific contribution overlay (repo ownership, contract gates, Git workflow, validation, private-source safety).
+- `openclaw-proof-lab` — OpenClaw proof lifecycle, exact-head packets,
+  route selection, artifact inspection, redaction, and optional proof-subagent
+  contract.
 - `references/pr-template.md` — copyable PR body/checklist.

@@ -7,9 +7,37 @@ Use when the target is `openclaw/openclaw` or a close OpenClaw ecosystem contrib
 - Read repo `AGENTS.md`, `CLAUDE.md`, and `CONTRIBUTING.md`.
 - Branch from current `openclaw/openclaw:main`; contribute through the fork unless told otherwise.
 - Keep PRs surgical and user-facing.
-- Use targeted tests first, then `pnpm check:changed` or CI when appropriate.
+- Read the current upstream `.agents/skills/openclaw-testing/SKILL.md` before choosing test commands; read `.agents/skills/openclaw-qa-testing/SKILL.md`, `.agents/skills/crabbox/SKILL.md`, or the relevant proof skill only when that surface needs it.
+- Use targeted tests first. Do not preserve historical command strings as contracts when current repo guidance has a cheaper or safer lane.
 - For routing/auth/command/channel PRs, run the Pre-Push Regression Gate (skill body §5) plus the OpenClaw-specific rules below before opening or updating the PR.
 - Update `~/projects/CONTRIBUTIONS_INDEX.md` and relevant `PROJECT_PROGRESS.md` for important PRs.
+
+## Deterministic maintenance preflight
+
+Before every conflict-repair or maintenance push, run the canonical wrapper
+against the maintenance epoch's immutable base:
+
+```bash
+~/.openclaw/workspace/scripts/openclaw-pre-pr.sh \
+  --repo "$WORKTREE" \
+  --base "$BASE_SHA" \
+  --no-fetch \
+  --epoch-id "$EPOCH_ID" \
+  --receipt "$RECEIPT_PATH"
+```
+
+- The coordinator fetches `main` once and distributes the resulting 40-character
+  `BASE_SHA`; workers never fetch or substitute a newer base inside the epoch.
+- The wrapper delegates lane selection to the checkout's current
+  `scripts/check-changed.mjs`; do not duplicate the hosted CI matrix in prompts.
+- The receipt must bind epoch, base, head, merge tree, selected lanes,
+  dependency state, gate outcomes, timings, and exit status. A head change makes
+  the receipt stale.
+- Repository-policy checks are deterministic. Use an LLM only for conflict
+  intent, risk review, or ambiguous hosted-CI attribution. Proof Lab separately
+  owns exact-head runtime behavior evidence.
+- A nonzero gate blocks publication. Name external or dependency blockers; do
+  not replace a failed deterministic gate with reviewer confidence.
 
 ## Canonical guidance
 
@@ -54,18 +82,18 @@ If **our PR is stale, duplicated, or has a stronger competing PR**:
 - Read the newest issue/PR comments, ClawSweeper review, linked PRs, recently merged adjacent work, and current-main source before rebasing or repairing.
 - Decide whether the goal is still to land our branch or to help the official upstream fix land.
 - Keep our branch only if it can be made clearly preferable on maintainer terms: narrower root cause, safer compatibility posture, stronger proof, cleaner CI, or better docs/product wording.
-- Close our branch when another PR already merged, has stronger maintainer signal, or is the canonical root-cause shape.
+- Freeze our branch and recommend closure when another PR already merged, has stronger maintainer signal, or is the canonical root-cause shape; actual closure remains user-only under the `clawloop` policy.
 - Preserve the lesson/status in `~/projects/CONTRIBUTIONS_INDEX.md` or the project notes so useful triage still counts.
 - If a clean/actionable PR gets no maintainer signal for roughly 2-3 weeks, move it to background watch unless new evidence raises merge probability.
 - When commenting publicly on overlap, offer consolidation/help and avoid language about beating, winning, or outcompeting another contributor.
 
 ### Close-reason audit discipline
 
-When auditing old Sean/JPop OpenClaw PRs, keep the factual packet separate from the lesson synthesis:
+When auditing old the author/reviewer OpenClaw PRs, keep the factual packet separate from the lesson synthesis:
 
 - Build or read the lossless GitHub-backed audit artifact first: PR metadata, timeline close/merge events, issue comments, review bodies, and review comments.
 - Do not infer the root cause from labels or local project notes alone; GitHub PRs do not expose a structured close-reason field.
-- Do not update this overlay with takeaway lessons until JPop has reviewed the factual packet, optional model reviews have converged, and the agreed causes are explicit.
+- Do not update this overlay with takeaway lessons until the reviewer has reviewed the factual packet, optional model reviews have converged, and the agreed causes are explicit.
 - Before deleting any local worktree, preserve local-only proof logs, draft bodies, screenshots, transcripts, or untracked artifacts that are not already in GitHub comments, project logs, or the audit artifact.
 
 When doing a strategy or second-opinion pass, stop at recommendations first. External PR comments, pushes, or closes need explicit execution intent from the user or a prior still-active request.
@@ -83,7 +111,16 @@ If the **bug is fixed in a newer OpenClaw release** than what's installed:
 - Add focused tests near existing tests for the touched package/extension.
 - Use `pnpm` when `pnpm-lock.yaml` is present.
 - Run targeted Vitest configs directly when wrapper filtering is awkward.
-- For docs/changelog-only changes, `git diff --check` plus relevant formatter/docs sanity is usually enough; escalate only if runtime/build behavior changed.
+- For docs/changelog-only changes, run `git diff --check`, the repo-required docs checks, and the Docs truth gate below; run runtime/build checks only if behavior changed.
+
+## Docs truth gate
+
+For OpenClaw docs changes, passing automated docs checks is necessary but not sufficient:
+
+- Read `docs/AGENTS.md` and any more-specific guidance for every touched subtree; enforce literal conventions, not just whether the renderer accepts the text. In Mintlify docs, internal section links—including same-page references—use canonical root-relative `/route#anchor` form rather than bare `#anchor`.
+- Treat every workaround or API instruction as an operational contract. Verify and state the actor, credential or token, required membership/permission, target, and effect. Do not present a human UI/CLI path and an API path as interchangeable when caller prerequisites differ.
+- Trace external-platform claims to current source plus primary vendor docs or reproducible evidence. Separate what OpenClaw does from what the platform permits, and narrow claims to the evidence.
+- On the exact final head, run the required docs checks and `git diff --check`, regenerate/check derived docs, then reread the rendered paragraph specifically for who-can-do-what ambiguity.
 
 ## Command/channel regression rules
 
@@ -96,37 +133,22 @@ For OpenClaw command/channel PRs specifically (adapt for other repos' routing/ev
 
 ## Proof Creation Gate
 
-For `openclaw/openclaw` PRs, treat proof as a first-class deliverable, not a final comment.
-Read `references/openclaw-proof-runbook.md` whenever any of these are true:
+For OpenClaw behavior proof, load `openclaw-proof-lab`. It owns proof
+classification, state, route selection, execution, artifact inspection,
+redaction, current-head packets, and the optional proof-subagent contract.
 
-- the PR changes user-visible behavior, routing, channel delivery, config/startup/upgrade behavior, auth/security boundaries, provider/API behavior, node-host behavior, or cross-session state
-- ClawSweeper, Mantis, Codex, Barnacle, or a maintainer asks for proof, context, evidence, screenshots, recordings, live observations, or real behavior proof
-- the PR has or needs labels such as `proof: supplied`, `proof: sufficient`, `proof: 📸 screenshot`, `proof: 🎥 video`, `status: 📣 needs proof`, `status: ⏳ waiting on author`, `mantis: telegram-visible-proof`, `clawsweeper:automerge`, `clawsweeper:merge-ready`, or any `clawsweeper:needs-*` label
-- the branch was rebased, amended, or force-pushed after proof was posted
+Load it whenever the PR changes user-visible behavior, routing, delivery,
+config/startup/update behavior, auth/security, provider behavior, native apps,
+persistent state, or another surface whose real behavior affects review. Also
+load it whenever a reviewer, bot, label, or head change creates proof debt.
 
-Before asking for re-review, produce a fresh-head proof packet: current head SHA, changed surface, focused tests, live/real-environment proof when needed, negative/sibling checks, known gaps, and whether any red CI is branch-caused or unrelated. Update the PR body Evidence section for durable context; use comments only for short re-review notes or artifact links.
+This overlay and Crusty Contributor retain branch/PR strategy, public GitHub
+writes, body updates, artifact publication, re-review requests, and contribution
+bookkeeping. Receive and inspect the Proof Lab packet before publishing it.
 
-### Pre-PR wrapper
-
-For OpenClaw upstream PR work from Sean's workspace, run the deterministic pre-PR wrapper before every push (initial submission, rebases, and CI-fix pushes alike; if a run is genuinely impossible — e.g. unhydrated worktree — say so explicitly in the PR notes instead of silently skipping):
-
-```bash
-~/.openclaw/workspace/scripts/openclaw-pre-pr.sh --repo <openclaw-worktree>
-```
-
-Use `--plan-only` first for heavy or uncertain branches, and add `--pr-body <path>` when a draft PR body exists so the upstream real-behavior proof policy is checked locally. This wrapper delegates to upstream OpenClaw scripts and is the preferred enforcement entrypoint.
-
-#### Deferred mirror tooling (decision 2026-07-04, revisit on trigger)
-
-The wrapper's OpenGrep and workflow-sanity mirror lanes are deliberately **not installed** on the VPS — they self-skip with a printed notice and the GitHub-hosted lanes remain canonical. Evidence at decision time: zero OpenGrep failures across our entire PR history, and zero workflow-touching PRs ever authored, so the mirrors would never have fired. Worst case without them is one extra push + re-review cycle after a red hosted lane.
-
-Install triggers — set up the same day any of these become true:
-
-- a PR of ours actually fails hosted OpenGrep → install `opengrep`
-- we start authoring `.github/workflows/`, pre-commit, or zizmor changes → install `actionlint` + `pre-commit`
-- we take on security-pattern-heavy work where a post-push security-lint surprise is expensive → install `opengrep` proactively
-
-The wrapper prints when it skips a mirror, so there is no silent gap — this note exists so "should we install it?" isn't re-litigated from scratch each time.
+Proof Lab's routing reference owns current ClawPop, Crabbox, hosted, Mantis,
+macOS, iOS Simulator, and pre-PR-wrapper status. Do not duplicate those
+machine or rollout facts here.
 
 ## Release-note rule
 
