@@ -10,12 +10,24 @@ Write the decision before seeing results:
 - baseline and candidate exact provider/model routes
 - required work lanes
 - unacceptable failures
-- maximum spend and wall time
+- approved workload, wall-time limits and a soft spend estimate
+- any independently enforced hard spend ceiling (optional, never implied)
 - minimum acceptable quality/reliability
 - whether the result is local guidance or a publishable claim
 
 Do not change the success rule after seeing which model wins. If the decision
 changes, start a new run ID.
+
+## Personal-screening exception
+
+The bounded v5 quick path covers only three coding/repo tasks at n=3. It may
+summarize **requested-route** scores with effective-identity gaps clearly shown;
+this does not satisfy the full evidence envelope below. Read
+`personal-campaign-safety.md` for isolated config preparation, native runtime
+qualification and explicit limits. Mock checks are harness evidence only.
+A missing hard dollar cap is not a blocker for an approved fixed workload;
+missing exact auth/runtime handoff is. Native zero-default usage fields are not
+proof of observed token usage or free inference.
 
 ## 2. Freeze the protocol
 

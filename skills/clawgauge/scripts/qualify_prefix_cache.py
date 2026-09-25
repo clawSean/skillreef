@@ -282,6 +282,7 @@ def chat_request(
     base_url: str,
     model: str,
     messages: List[Dict[str, str]],
+    max_tokens: int,
     timeout: float,
     tenant: Optional[str],
 ) -> Tuple[Dict[str, Any], float]:
@@ -289,7 +290,7 @@ def chat_request(
         "model": model,
         "messages": messages,
         "temperature": 0,
-        "max_tokens": 24,
+        "max_tokens": max_tokens,
         "enable_thinking": False,
     }
     started = time.monotonic()
@@ -321,7 +322,7 @@ def protocol_description(args: argparse.Namespace, run_id: str) -> Dict[str, Any
         "minimum_reused_tokens": args.minimum_reused_tokens,
         "run_id": run_id,
         "temperature": 0,
-        "max_tokens": 24,
+        "max_tokens": args.max_tokens,
         "thinking": False,
         "cross_task_reuse": False,
         "persistence": "process-memory-only",
@@ -419,15 +420,15 @@ def qualification_report(
             {"role": "user", "content": "Reply exactly: CACHE_WARM_OK"},
         ]
         cold, cold_wall = chat_request(
-            base_url, args.model, cold_messages, args.timeout, tenant
+            base_url, args.model, cold_messages, args.max_tokens, args.timeout, tenant
         )
         after_cold = process_snapshot(base_url)
         warm, warm_wall = chat_request(
-            base_url, args.model, warm_messages, args.timeout, tenant
+            base_url, args.model, warm_messages, args.max_tokens, args.timeout, tenant
         )
         after_warm = process_snapshot(base_url)
         replay, replay_wall = chat_request(
-            base_url, args.model, warm_messages, args.timeout, tenant
+            base_url, args.model, warm_messages, args.max_tokens, args.timeout, tenant
         )
         after_replay = process_snapshot(base_url)
         if args.runtime == "mlx-vlm":
@@ -719,6 +720,7 @@ def main() -> int:
     parser.add_argument("--cache-epoch", required=True)
     parser.add_argument("--prefix-words", type=int, default=8000)
     parser.add_argument("--minimum-reused-tokens", type=int, default=1000)
+    parser.add_argument("--max-tokens", type=int, default=24)
     parser.add_argument("--timeout", type=float, default=600)
     parser.add_argument("--max-rss-bytes", type=int)
     parser.add_argument("--run-id")
@@ -742,6 +744,8 @@ def main() -> int:
             raise ValueError("--prefix-words must be >= 1")
         if args.minimum_reused_tokens < 1:
             raise ValueError("--minimum-reused-tokens must be >= 1")
+        if args.max_tokens < 1:
+            raise ValueError("--max-tokens must be >= 1")
         if args.timeout <= 0:
             raise ValueError("--timeout must be > 0")
         if args.max_rss_bytes is not None and args.max_rss_bytes < 1:

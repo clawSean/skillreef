@@ -36,6 +36,7 @@ class State:
         self.hybrid_prompt_memo = False
         self.response_model = "mock-model"
         self.response_models = None
+        self.max_tokens_seen = []
         self.prompt_memo: Dict[str, dict] = {}
         for key, value in overrides.items():
             setattr(self, key, value)
@@ -84,6 +85,7 @@ def handler_for(state: State) -> type[BaseHTTPRequestHandler]:
                 return
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length))
+            state.max_tokens_seen.append(payload.get("max_tokens"))
             messages = payload.get("messages", [])
             prompt_key = json.dumps(messages, sort_keys=True, separators=(",", ":"))
             warm = any(
@@ -230,6 +232,16 @@ def main() -> int:
             assert report["warm"]["request_id"] != report["replay"]["request_id"]
             checks += 5
 
+        with mock_server() as (base_url, state):
+            report = run_qualifier(
+                root, "max-tokens-override", base_url, "mlx-lm", 0,
+                "--max-tokens", "1024",
+            )
+            assert report["ok"] is True
+            assert report["protocol"]["max_tokens"] == 1024
+            assert state.max_tokens_seen == [1024, 1024, 1024]
+            checks += 3
+
         with mock_server(warm_cached=10) as (base_url, _state):
             report = run_qualifier(root, "warm-floor", base_url, "mlx-lm", 2)
             assert report["checks"]["warm_cached_token_floor"] is False
@@ -316,6 +328,7 @@ def main() -> int:
             ("mutable-revision", "--model-revision", "main", "immutable"),
             ("bad-runtime-version", "--runtime-version", "latest", "major.minor.patch"),
             ("bad-mlx-version", "--mlx-version", "0.32", "major.minor.patch"),
+            ("bad-max-tokens", "--max-tokens", "0", "max-tokens"),
         ):
             args = [
                 sys.executable, str(QUALIFIER), "--base-url", "http://127.0.0.1:9/v1",
@@ -324,7 +337,10 @@ def main() -> int:
                 "--model-revision", "a" * 40, "--cache-epoch", f"epoch-{label}",
                 "--plan",
             ]
-            args[args.index(flag) + 1] = value
+            if flag in args:
+                args[args.index(flag) + 1] = value
+            else:
+                args.extend([flag, value])
             completed = subprocess.run(args, text=True, capture_output=True, check=False)
             assert completed.returncode == 2 and expected_message in completed.stderr
             checks += 1

@@ -1611,6 +1611,26 @@ def main() -> int:
         assert "ClawGauge truthfulness tests: PASS" in truth_test.stdout
         checks += 1
 
+        personal_campaign_test = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "test_personal_campaign.py"),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert personal_campaign_test.returncode == 0, personal_campaign_test.stderr
+        assert "ClawGauge personal campaign safety tests: PASS" in personal_campaign_test.stdout
+        checks += 1
+
+        config_test = subprocess.run(
+            [sys.executable, str(SCRIPTS / "test_personal_campaign_config.py")],
+            text=True, capture_output=True, check=False,
+        )
+        assert config_test.returncode == 0, config_test.stderr
+        checks += 1
+
         cache_qualification_test = run(str(SCRIPTS / "test_cache_qualification.py"))
         assert "ClawGauge cache qualification tests: PASS" in cache_qualification_test.stdout
         checks += 1

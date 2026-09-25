@@ -1,6 +1,6 @@
 # Reference Resource Assessment
 
-JPop's criticism was correct: the GPT 5.5 vs Grok run only produced binary QA pass/fail plus wall time. That is useful harness evidence, but it is not the useful score comparison the benchmark project was supposed to produce.
+The reviewer's criticism was correct: the GPT 5.5 vs Grok run only produced binary QA pass/fail plus wall time. That is useful harness evidence, but it is not the useful score comparison the benchmark project was supposed to produce.
 
 ## What The Resources Actually Say
 

@@ -1,6 +1,6 @@
 ---
 name: "clawgauge"
-description: "Fail-closed local-cache admission and decision-grade model comparison"
+description: "Lean fail-closed requested-route capability campaigns for personal model screening"
 ---
 
 # ClawGauge
@@ -54,13 +54,65 @@ other references named by the relevant workflow step.
 
 Different routes may legitimately win different lanes.
 
+## Personal two-requested-route quick path
+
+For a narrow personal coding screen, read
+`references/personal-campaign-safety.md` first. This path is not system-wide
+qualification or a model-isolation experiment.
+
+1. Copy `templates/personal-campaign.json` into a new private run directory.
+   Freeze two exact requested routes, non-secret account labels, the prepared
+   config hash, pinned ShellBench checkout/Python and optional soft cost estimate.
+2. Plan without Gateway/provider contact:
+
+```sh
+python3 skills/clawgauge/scripts/run_personal_campaign.py \
+  --manifest <campaign.json> --run-dir <run-dir>
+```
+
+3. Review the frozen 18 cells: three coding/repo tasks × three repetitions × two
+   routes, serial and counterbalanced, zero retries. Resolve factual blockers
+   and complete the safety reference's native startup and route qualification
+   before approved live execution:
+
+```sh
+python3 skills/clawgauge/scripts/run_personal_campaign.py \
+  --manifest <campaign.json> --run-dir <run-dir> --execute --armed
+```
+
+4. Summarize per-task scores, worst-of-n, retained failures and proof gaps:
+
+```sh
+python3 skills/clawgauge/scripts/analyze_personal_campaign.py \
+  --run-dir <run-dir> --out <run-dir>/personal-comparison.md \
+  --json <run-dir>/personal-comparison.json
+```
+
+Mutable HOME/state/workspaces are disposable; immutable inputs, native results
+and receipts stay in the evidence directory. Deadlines bound work plus cleanup
+grace. Memoized whole answers are disabled, not confused with prefix caching.
+Attempted campaigns require a new run directory, not a retry/resume.
+
+`requested-route-screening` can produce directional coding evidence; requested
+controls are not effective route proof. The strict tier blocks because no
+independent route observer exists. Exact subscription handoff is unsupported;
+API startup is a separate unproven qualification, never a silent replacement.
+Missing usage/cost provenance stays n/a. Hard dollar enforcement is not required
+or claimed. Quality failures remain evidence; infrastructure gaps stay visible.
+
+The ordinary agent/system-fit path is not launched here. The six cards in
+`references/personal-system-fit-v1.md` are optional manual prompts, not completed
+trials. Run the full QA/evidence workflow before any adoption claim.
+
 ## Workflow
 
 ### 1. Freeze the decision
 
 Before results, record baseline/candidate exact routes, target lanes,
 unacceptable failures, minimum quality/reliability/worst-of-n floors, optional
-pass^k requirement, cache profile, maximum spend, and stopping rule.
+pass^k requirement, cache profile, soft spend estimate, and stopping rule.
+Record a hard spend ceiling only when independently enforced; its absence does
+not block an approved bounded personal screen.
 
 If live spend may be material and no budget was given, finish the plan and ask
 once before provider calls. Read-only discovery and provider-free checks may

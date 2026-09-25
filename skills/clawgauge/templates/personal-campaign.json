@@ -1,0 +1,96 @@
+{
+  "schema": "clawgauge.personal-campaign.v5",
+  "campaign_id": "replace-me",
+  "pass_env": [],
+  "routes": [
+    {
+      "id": "baseline",
+      "provider": "provider",
+      "model": "provider/exact-baseline-model",
+      "adapter": "openclaw",
+      "reasoning": "replace-requested-state",
+      "fast": false,
+      "fallback": false,
+      "tools_profile": "default",
+      "auth_account": "replace-non-secret-account-label",
+      "required_observed_controls": [
+        "effective_provider_model",
+        "auth_account",
+        "reasoning",
+        "fast",
+        "fallback"
+      ],
+      "evidence_tier": "requested-route-screening",
+      "independently_observed_controls": [
+
+      ],
+      "auth_preparation": {
+        "kind": "subscription-handoff",
+        "provider_endpoint": "https://replace-with-explicit-provider-endpoint.example/v1",
+        "credential_env": null,
+        "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "id": "candidate",
+      "provider": "provider",
+      "model": "provider/exact-candidate-model",
+      "adapter": "openclaw",
+      "reasoning": "replace-requested-state",
+      "fast": false,
+      "fallback": false,
+      "tools_profile": "default",
+      "auth_account": "replace-non-secret-account-label",
+      "required_observed_controls": [
+        "effective_provider_model",
+        "auth_account",
+        "reasoning",
+        "fast",
+        "fallback"
+      ],
+      "evidence_tier": "requested-route-screening",
+      "independently_observed_controls": [
+
+      ],
+      "auth_preparation": {
+        "kind": "subscription-handoff",
+        "provider_endpoint": "https://replace-with-explicit-provider-endpoint.example/v1",
+        "credential_env": null,
+        "config_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "repetitions": 3,
+  "tasks": [
+    "t1-bugfix-discount",
+    "t2-add-tests-normalizer",
+    "t2-config-loader"
+  ],
+  "automatic_retries": 0,
+  "shellbench": {
+    "root": "~/projects/shellbench",
+    "commit": "884dd1bb55112c93292e1633081d62504ba49905",
+    "python": "~/projects/shellbench/.venv/bin/python"
+  },
+  "gateway": {
+    "url": "ws://127.0.0.1:28791",
+    "executable": "/absolute/path/to/openclaw",
+    "config_source": "/absolute/run-dir/operator-staged-openclaw.json",
+    "token_env": ""
+  },
+  "bounds": {
+    "cell_timeout_seconds": 180,
+    "campaign_timeout_seconds": 4200,
+    "kill_grace_seconds": 10
+  },
+  "floors": {
+    "minimum_mean_score": 0.6,
+    "minimum_reliability": 0.67,
+    "minimum_worst_of_n": 0.4
+  },
+  "soft_accounting": {
+    "estimated_usd": null,
+    "warning_minutes": 45,
+    "note": "Estimate only. Missing observed usage or pricing remains n/a."
+  }
+}
