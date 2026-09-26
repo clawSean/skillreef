@@ -6,6 +6,14 @@
 
 Gauge models as working agents, not just leaderboard entries.
 
+## One project, three names
+
+- **ClawGauge** is the skill, product, and canonical project home.
+- **ClawBench** is an upstream/historical ShellBench package and result-schema
+  name, not a separate project maintained here.
+- **Clawosseum** is ClawGauge's internal restricted synthetic runner, not a
+  second project.
+
 This OpenClaw skill combines:
 
 - **ShellBench** for deterministic capability, trajectory quality, repeated
@@ -57,6 +65,11 @@ and distinguishes requested controls from independently observed identity.
 Provider-free lifecycle/native-schema checks do not establish real-provider
 readiness; subscription handoff and native route qualification remain separate
 prerequisites. No hard dollar cap, OS sandbox, or benchmark winner is claimed.
+
+The first host-contained Clawosseum campaign is indexed in
+[`live-run-index.md`](references/live-run-index.md). Its local evidence and
+host-specific runtime resources stay in the canonical skill tree and are
+excluded from public distributions.
 
 The main helpers are:
 

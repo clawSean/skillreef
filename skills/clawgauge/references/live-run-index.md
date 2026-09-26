@@ -18,3 +18,16 @@ machine and should preserve:
 Publish only deliberately scrubbed evidence. The public mirror excludes both
 historical run directories. Historical VPS paths and former compatibility
 symlinks are not part of the current Mac workflow.
+
+## Current contained campaign
+
+`20260926T0453-clawosseum-sol6-grok47/` is the first host-contained
+any-authorized-chat campaign. The internal runner component was Clawosseum; the
+campaign and all evidence belong to ClawGauge.
+
+- 18/18 serial cells completed in 18 fresh SSH-sandbox workspaces.
+- Exact routes and zero fallback were observed for every cell.
+- `xai/grok-4.7`: `9/9`.
+- `openai/gpt-6-sol`: `8/9`.
+- Containment proof, manifest, result, summary, and per-cell receipts are all in
+  that run directory.

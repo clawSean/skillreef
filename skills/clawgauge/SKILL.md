@@ -9,6 +9,10 @@ ClawGauge answers: **which exact model route is best for which work lane in
 this OpenClaw system, with what confidence and tradeoffs?** It does not invent a
 universal leaderboard winner.
 
+Treat ClawGauge as the only project identity. `ClawBench` is an
+upstream/historical ShellBench package or schema label; `Clawosseum` is the
+restricted synthetic runner component. Neither creates a second project home.
+
 Read `references/evaluation-method.md` before a consequential run. Load only the
 other references named by the relevant workflow step.
 
@@ -387,3 +391,5 @@ python3 skills/clawgauge/scripts/test_decision_grade.py
 
 Keep run artifacts under `skills/clawgauge/runs/<run-id>/`; publish only
 deliberately scrubbed evidence. Historical VPS paths are not current runtime.
+The maintainer's live source keeps current project state, local runtime inputs,
+and historical project docs in private AID files that public builds exclude.
