@@ -19,7 +19,7 @@ shapes instead of pointer chains.
 - `mermaid` - Mermaid diagram authoring and rendering workflow.
 - `moltmaster` - Controlled OpenClaw OAuth/auth-profile refresh operations with dry-run, backups, and provider guardrails.
 - `pdf-to-markdown` - Convert PDFs to Markdown with Docling.
-- `plugin-creator` - Create, design, review, and troubleshoot OpenClaw plugins, slash commands, message presentation buttons, and interactive handlers.
+- `plugin-creator` - OpenClaw skill/plugin lifecycle routing for creating, updating, publishing, and auditing existing skills, plugins, and procedures. Runtime skill name: `openclaw-skill-plugin-lifecycle`.
 - `ralph-wiggum` - Bounded iteration loop for small projects and prototypes with verification after each slice.
 - `shell-swap` - Mass-switch OpenClaw model settings with codex/gpt/claude lane aliases.
 - `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-use` for product/price data and browser context.
