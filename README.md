@@ -14,6 +14,7 @@ shapes instead of pointer chains.
 - `bottom-feeder` - Knowledge crawling and note synthesis for durable topic/research files.
 - `claude-foreman` - Dispatch heavy coding work to Claude CLI while OpenClaw orchestrates.
 - `interactive-sessions` - Design and operate button-driven Telegram/Slack chat sessions, games, wizards, polls, and guided workflows.
+- `imessage-ui` - Readable iMessage composition, native replies/tapbacks/effects/polls, delivery-safe mutations, and exact outbound reconciliation.
 - `knowledge-search` - Local semantic knowledge-base search with ChromaDB + Ollama.
 - `mermaid` - Mermaid diagram authoring and rendering workflow.
 - `moltmaster` - Controlled OpenClaw OAuth/auth-profile refresh operations with dry-run, backups, and provider guardrails.
