@@ -58,7 +58,7 @@ before changing rules.
   block boundaries, a standalone `<br><br>` paragraph, or spacer entities.
 - Use literal `•` prose/status rows with inline breaks for calibrated baseline
   alignment; do not substitute Markdown `-` during repairs. Reserve semantic lists
-  for nesting, tasks, or runtime requirements. Retest leaked tags on that route.
+  for nesting, tasks, or runtime requirements.
 - Literal lists are compact by default. If every item is **90 visible characters
   or fewer**, use one source-adjacent `<br>` between items. If any item exceeds
   90, use `<br><br>` between every item. Count rendered characters, including
@@ -75,11 +75,13 @@ before changing rules.
 - Use inline code for simple one-line values, never newline/escape-sequence
   examples: the latter leaked backticks in a client canary. Use prose or fenced
   code for those examples; use named links for navigation.
-- Content-heavy sends use two purposeful rich structures; skip decorative blocks.
+- **Rich by default:** use as many supported features as fit—headings, lists,
+  quotes, details, tables, dividers, links, controls, decorative blocks. No
+  numeric cap; maximize useful variety.
 
 ### Copyability
 
-- Proactively treat exact values as copy-worthy.
+- Treat exact values as copyable.
 - For 1–256 characters, keep the answer rich and send a separate legacy
   inline-code companion with native `📋 Copy`. Prefer typed `copy-text`;
   otherwise use the local token resolver without exposing the token.
