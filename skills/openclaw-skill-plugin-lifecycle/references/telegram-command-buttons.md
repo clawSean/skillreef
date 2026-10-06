@@ -1,7 +1,7 @@
 # Telegram Command Buttons in OpenClaw
 
 **Date:** 2026-05-01  
-**Context:** Research seed for a future `plugin-creator` skill and interactive session tooling.
+**Context:** Research seed for the OpenClaw skill/plugin lifecycle skill and interactive session tooling.
 
 ## Short Version
 
@@ -221,7 +221,7 @@ For “tap A or B, then run the right branch” in a plugin:
 
 Practical rule: **try `/think` style if the SDK exposes it; otherwise use presentation buttons + interactive handler. Do not build a `/models` clone for two buttons.**
 
-## Implementation Notes for Future `plugin-creator` Skill
+## Implementation Notes for the OpenClaw Skill/Plugin Lifecycle Skill
 
 - Start with a boring working slash command before adding buttons.
 - In one-shot prompts, explicitly tell the coding agent to inspect the installed SDK types before using `argsMenu`.
@@ -232,7 +232,7 @@ Practical rule: **try `/think` style if the SDK exposes it; otherwise use presen
 
 ## Related Project Links
 
-- `projects/plugin-creator/research/one-shot-extension-prompt.md`
+- `skills/openclaw-skill-plugin-lifecycle/references/one-shot-extension-prompt.md`
 - `projects/interactive-sessions/README.md`
 - `skills/telegram-ui/SKILL.md`
 - `projects/interactive-sessions/research/slack-interactivity.md`

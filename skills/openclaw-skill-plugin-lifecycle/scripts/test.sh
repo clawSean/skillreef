@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Baseline structural tests for the plugin-creator skill.
+# Baseline structural tests for the OpenClaw skill/plugin lifecycle skill.
 # Run: bash scripts/test.sh
 set -euo pipefail
 
@@ -45,6 +45,12 @@ if [ "$FM_NAME" = "$EXPECTED_NAME" ]; then
   pass "frontmatter name is the expected OpenClaw-specific skill name ('$FM_NAME')"
 else
   fail "frontmatter name ('$FM_NAME') does not match expected name ('$EXPECTED_NAME')"
+fi
+
+if [ "$(basename "$SKILL_DIR")" = "$FM_NAME" ]; then
+  pass "skill directory matches the runtime name"
+else
+  fail "skill directory does not match the runtime name"
 fi
 
 if [ "$FM_NAME" != "plugin-creator" ]; then

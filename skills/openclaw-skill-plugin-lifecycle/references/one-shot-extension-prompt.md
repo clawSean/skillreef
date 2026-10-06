@@ -228,6 +228,6 @@ api.registerInteractiveHandler({
 
 ## Related References
 
-- `projects/plugin-creator/research/telegram-command-buttons.md`
-- `projects/plugin-creator/README.md`
+- `skills/openclaw-skill-plugin-lifecycle/references/telegram-command-buttons.md`
+- `skills/openclaw-skill-plugin-lifecycle/SKILL.md`
 - `projects/interactive-sessions/README.md`

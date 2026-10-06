@@ -221,7 +221,7 @@ Do a tiny proof-of-concept next: one plugin command `/branchdemo`, two buttons, 
 - Tapping Branch A/B reaches the plugin handler.
 - Handler can edit/clear buttons and post the branch result.
 
-If that works, fold the resulting working plugin skeleton into `plugin-creator` as the canonical one-shot example.
+If that works, fold the resulting working plugin skeleton into `openclaw-skill-plugin-lifecycle` as the canonical one-shot example.
 
 
 ## Addendum: Even Simpler Pattern for Slash-Equivalent Branches
