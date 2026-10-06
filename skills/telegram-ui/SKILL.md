@@ -26,9 +26,9 @@ before changing rules.
 ## 2. Choose the delivery path
 
 - **Ordinary conversation:** use the standard final path; manually sending then
-  suppressing it can bypass reply-time TTS. Inline `<br>` is route-scoped: use
-  it only when that exact path passes a canary; otherwise separate literal rows
-  with source blank lines or use a semantic list.
+  suppressing it can bypass reply-time TTS. Inline breaks are route-scoped:
+  use `<br>` or `<br><br>` only when that exact path passes a canary. Source
+  blank lines do not guarantee visual air; use semantic lists for literal rows.
 - **Controls/actions:** use `message` for controls, edits, files, media, topics,
   or out-of-band sends. Verify the active schema;
   keep bodies portable unless a rich island helps.
@@ -40,8 +40,8 @@ before changing rules.
 ### Structure and spacing
 
 - **Hard default: every authored prose paragraph or thought break gets one empty
-  visual row.** Serialize it as source-adjacent `<br><br>`; plain `\n\n` is not
-  a visual separator. Client wrapping needs no markup.
+  visual row.** On a calibrated path, use source-adjacent `<br><br>`; plain
+  `\n\n` is not a visual separator. Client wrapping needs no markup.
 - Pick each separator by boundary:
   - `heading/block ↔ body`: real source blank line for syntax only; rely on the
     block's native spacing and do not add `<br><br>`.
@@ -50,23 +50,20 @@ before changing rules.
   - `literal item → literal item`: the list-wide density below.
 - Multiple headings are fine; each starts at start or after real `\n\n`.
   Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from block-level HTML islands.
-- Never send prose paragraphs separated only by source blank lines. Before rich
-  `message` sends, serialize each prose break as `<br><br>` on the same source
-  line, even when the next row continues the thought.
+- Never send prose paragraphs separated only by source blank lines. In rich
+  `message` sends, keep each prose break source-adjacent to `<br><br>`.
 - On a break-canary path, separate literal `•` rows with the density rule's
   source-adjacent inline breaks; bare source newlines can collapse and are never
   separators. Otherwise use source paragraphs. Never use one `<br>` for prose or
   block boundaries, a standalone `<br><br>` paragraph, or spacer entities.
 - Use literal `•` prose/status rows with inline breaks for calibrated baseline
   alignment; do not substitute Markdown `-` during repairs. Reserve semantic lists
-  for nesting, tasks, or runtime requirements. Leaked tags require a canary,
-  not an assumed send-route restriction.
+  for nesting, tasks, or runtime requirements. Retest leaked tags on that route.
 - Literal lists are compact by default. If every item is **90 visible characters
   or fewer**, use one source-adjacent `<br>` between items. If any item exceeds
   90, use `<br><br>` between every item. Count rendered characters, including
   spaces but excluding formatting syntax and URL destinations. This proxies an
-  item wrapping beyond two typical mobile lines. Use semantic lists only for
-  nesting, tasks, or runtime requirements—not merely to change density.
+  item wrapping beyond two typical mobile lines.
 
 ### Scanability
 
@@ -75,7 +72,9 @@ before changing rules.
   with one source blank line for syntax, relying on native heading spacing; never
   add `<br>`. Limit bold to 1–3 inline scan
   anchors under 20% of body words; never bold whole paragraphs or lists.
-- Put exact reusable values in inline code and use named links for navigation.
+- Use inline code for simple one-line values, never newline/escape-sequence
+  examples: the latter leaked backticks in a client canary. Use prose or fenced
+  code for those examples; use named links for navigation.
 - Content-heavy sends use two purposeful rich structures; skip decorative blocks.
 
 ### Copyability
@@ -106,7 +105,7 @@ Apps use a direct-link URL plus browser fallback; true `web-app` is private-chat
 only after surface proof.
 
 Use typed actions inside `presentation.blocks`; top-level `buttons` are stripped.
-Mirror choices in the message because labels may truncate. Open
+Mirror choices in the message. Open
 [payload recipes](references/payload-recipes.md) for exact schemas and limits.
 
 ## 5. Handle media and special branches

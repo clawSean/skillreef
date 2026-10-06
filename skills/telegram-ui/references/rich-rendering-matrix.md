@@ -170,6 +170,18 @@ exact route passes a canary.
 
 Observed result: use a separate legacy inline-code + native-button companion for 1–256 characters. Above that, use an independent plain legacy message and Telegram's whole-message Copy action.
 
+### T25: DM rich fixture battery, 2026-10-06
+
+- OpenClaw 2026.9.7; Telegram for macOS 12.9 build 282526; the reviewer DM topic 47616; native `message` route, **not** ordinary final or iOS.
+- P1 (29300) source blank paragraphs visibly collapsed; P2 (29301) source-adjacent inline double breaks produced one empty row.
+- H1 (29302) headings and body stayed distinct with native spacing; heading levels did not show a clear size hierarchy. F1 (29303) bold, italic, strike, underline, mark, sub, and sup visibly rendered.
+- L1/L4 (29304/29307) semantic lists rendered; L2 (29305) literal bullets stayed compact; L3 (29306) used a uniform empty row between items. Mobile 90-character cutoff remains unverified.
+- C2 (29309) fenced code, Q1 (29310) quote, A1 (29311) named link, B1 (29312) details/aside/divider, T1 (29313) tasks, T2 (29314) table, and U1 (29315) URL control visibly rendered. C1 (29308) inline code showed no obvious code styling at this scale.
+- X1/X1b (29316/29318) newline-escape examples in inline backticks rendered as stray backticks on separate lines; the transformation stage is unproven. X2b (29319) kept the tag example literal and its subsequent blank row visible. Avoid inline code for escape-sequence examples pending isolation.
+- Retina crops: paragraphs/headings (local evidence), list density (local evidence), code/break (local evidence), rich blocks (local evidence).
+
+Observed result: Mac `message` syntax is substantially proven; iPhone rendering and the ordinary-final route are **not** proven by this battery.
+
 ## Table history and battery
 
 ### Historical failure
@@ -181,30 +193,18 @@ cause. This proves tables are not portable across unknown clients.
 
 ### T7 regression battery
 
-Record OpenClaw version, rich-message state, client platform/version/build,
-chat surface, message IDs, and Retina screenshots.
-
-1. **T7a — plain:** 5 columns, header, 3 body rows, plain cells. Pass only when
-   every row/cell is visible and horizontal scrolling works where required.
-2. **T7b — formatting isolation:** repeat T7a with bold in row one and inline
-   code values. Diagnostic only; compare with T7a.
-3. **T7c — raw HTML:** caption, two headers, three plain rows. Pass only when no
-   markup leaks and every row is visible.
+Record OpenClaw version, rich state, client build, surface, IDs, and Retina screenshots.
+1. **T7a — plain:** 5 columns, header, 3 body rows; pass only when every cell is visible and scrolling works.
+2. **T7b — formatting isolation:** repeat T7a with bold and inline code; compare with T7a.
+3. **T7c — raw HTML:** caption, two headers, three rows; pass only if all rows render without leaked markup.
 
 ## Structure regression battery
 
-Send each probe separately. Do not combine Markdown and raw HTML lanes.
-
-1. **T1 paragraphs:** three Markdown paragraphs separated by blank source lines.
-2. **T2a bullets:** three Markdown `-` items.
-3. **T2b numbers:** three Markdown numbered items in a separate message.
-4. **T3 newlines:** three lines separated by single literal newlines.
-5. **T4 paragraph blocks:** three adjacent `p` blocks. Diagnostic only; current rich HTML treats `p` as transparent rather than a dependable spacing island.
-6. **T5 breaks:** `line1<br>line2<br/>line3`, then a separate `<br><br>` gap comparison. Expect no leaked tags and the intended visual gap.
-7. **T6 combined structure:** heading, details, checkbox list, and a plain prose block; verify every block independently.
-8. **T13 marker A/B:** semantic `ul` and literal `•` in separate same-font messages with identical text.
-9. **T22 literal separator A/B:** bare newlines, source-adjacent `<br>`, and a semantic list in separate messages with identical text.
-10. **T23 final-route A/B:** through the ordinary final path, compare separate literal-row paragraphs, source-adjacent `<br>`, and a semantic list.
+Send probes separately; do not combine Markdown and raw HTML lanes.
+1. **T1–T3:** blank-source-line paragraphs, Markdown bullets, numbered items, then literal newlines.
+2. **T4–T6:** adjacent `p` blocks (diagnostic), single/double breaks, then heading/details/tasks/prose; check each block.
+3. **T13/T22:** semantic `ul` versus literal `•`; then bare newline versus source-adjacent `<br>` versus semantic list.
+4. **T23:** on the ordinary-final path, compare source-separated literal rows, inline `<br>`, and semantic list.
 
 ## Dead or failed features
 
