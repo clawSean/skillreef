@@ -39,21 +39,20 @@ before changing rules.
 
 ### Structure and spacing
 
-- **Hard default: every authored prose/block break gets one empty visual row.**
-  This covers paragraphs, sentence rows, and heading boundaries. Literal bullets
-  follow the density rule. Client wrapping needs no markup.
+- **Hard default: every authored prose paragraph or thought break gets one empty
+  visual row.** Serialize it as source-adjacent `<br><br>`; plain `\n\n` is not
+  a visual separator. Client wrapping needs no markup.
 - Pick each separator by boundary:
-  - `heading/block → body`: real source blank line.
-  - `prose/literal list → prose`: inline `<br><br>` after the final item. Keep
-    following text on the same physical source line with no intervening whitespace:
-    `Last item.<br><br>Next paragraph.`
+  - `heading/block ↔ body`: real source blank line for syntax only; rely on the
+    block's native spacing and do not add `<br><br>`.
+  - `prose → prose`: `First.<br><br>Next paragraph.`
+  - `literal list → prose`: `Last item.<br><br>Next paragraph.`
   - `literal item → literal item`: the list-wide density below.
 - Multiple headings are fine; each starts at start or after real `\n\n`.
   Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from block-level HTML islands.
-- In prose, use inline `<br><br>` at every authored line or paragraph break:
-  `First.<br><br>**Next:**`. This is mandatory even when the next row continues
-  the same thought. Source blank lines and adjacent `p` blocks do not reliably
-  create visible air.
+- Never send prose paragraphs separated only by source blank lines. Before rich
+  `message` sends, serialize each prose break as `<br><br>` on the same source
+  line, even when the next row continues the thought.
 - On a break-canary path, separate literal `•` rows with the density rule's
   source-adjacent inline breaks; bare source newlines can collapse and are never
   separators. Otherwise use source paragraphs. Never use one `<br>` for prose or
@@ -72,8 +71,9 @@ before changing rules.
 ### Scanability
 
 - Use medium emoji density and one in each button label.
-- A standalone prose title is a native `###` heading, not bold alone; follow it
-  with a real source blank line, never `<br>`. Limit bold to 1–3 inline scan
+- A standalone prose title is a native `###` heading, not bold alone. Follow it
+  with one source blank line for syntax, relying on native heading spacing; never
+  add `<br>`. Limit bold to 1–3 inline scan
   anchors under 20% of body words; never bold whole paragraphs or lists.
 - Put exact reusable values in inline code and use named links for navigation.
 - Content-heavy sends use two purposeful rich structures; skip decorative blocks.
