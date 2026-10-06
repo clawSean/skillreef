@@ -15,8 +15,9 @@ Operating rules live in `SKILL.md`; dated results live in
    - **Unsupported-message banner:** the client cannot display this rich body.
    - **Rendered but cramped/misaligned:** the rich path works; isolate markup or
      client layout with the matching canary.
-   - **Literal tags:** the body used a tag outside the active path's contract or
-     a rich-only island entered a legacy caption/HTML path.
+   - **Literal tags:** the body used a tag outside the active path's contract,
+     including markup proven on `message(action=send)` entering an ordinary
+     final, caption, or legacy-HTML path.
    - **Missing controls:** inspect presentation schema and delivery result; body
      richness does not create buttons.
 4. Run only the smallest discriminating canary from
@@ -31,13 +32,14 @@ Operating rules live in `SKILL.md`; dated results live in
   formulas, rich media, and structural HTML islands.
 - **Spacing regression on a client that still renders rich bodies:** follow the
   separator boundary map and list-density rule in
-  [SKILL.md](../SKILL.md#structure-and-spacing). Check especially that the final
-  prose/literal-list item and following prose use a source-adjacent inline break,
-  real source blank lines terminate structural islands, and no break is glued to
-  them. Avoid a standalone break paragraph because it compounds the gap.
+  [SKILL.md](../SKILL.md#structure-and-spacing). Use semantic markup for a
+  structured list. Use inline breaks in literal-bullet rows only after the exact
+  delivery path passes its break canary; otherwise make every literal row a
+  separate source paragraph. Terminate structural islands with real source
+  blank lines and avoid standalone break paragraphs.
 - **Table truncation or leaked markup:** immediately resend every relevant row
-  as literal-`•` blocks using the same whole-list density rule, then suspend
-  tables on that exact surface until T7 passes.
+  as literal-`•` blocks with explicit inline breaks and the same whole-list
+  density, then suspend tables on that exact surface until T7 passes.
 - **Missing button/action:** keep the choice or exact value visible in text. Do
   not fabricate a look-alike callback or use a token-bearing raw Bot API command.
 

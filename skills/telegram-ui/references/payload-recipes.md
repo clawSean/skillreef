@@ -34,12 +34,9 @@ Use stable lowercase snake_case callback values. Mirror options in the message.
 Top-level `buttons` are stripped; `presentation` does not replace `message`.
 Telegram auto-chunks three buttons per row, so keep 3+ button labels short.
 
-## Copy Text — future payload shape
-
-The availability, limit, and fallback rule is owned by
-[SKILL.md](../SKILL.md#copyability). This shape is intentionally non-executable
-until that capability gate passes.
-
+## Copy Text
+The availability, limit, and fallback rule is owned by [SKILL.md](../SKILL.md#copyability).
+Use this typed shape when the active schema exposes `copy-text`:
 ```json
 {
   "action": "send",
@@ -50,6 +47,15 @@ until that capability gate passes.
   }] }
 }
 ```
+**Temporary legacy companion:** keep the main answer rich and send a separate
+legacy `sendMessage` with this Telegram wire shape:
+```json
+{ "chat_id": "<current_chat_id>", "message_thread_id": "<topic_id_if_any>", "text": "<code>EXACT_VALUE</code>", "parse_mode": "HTML", "reply_markup": { "inline_keyboard": [[{ "text": "📋 Copy", "copy_text": { "text": "EXACT_VALUE" } }]] } }
+```
+Resolve the token only inside the authenticated process; never expose or persist
+it. Escape visible HTML separately from the JSON copy value. Limit: 1–256 characters.
+Above that, send one plain legacy message for whole-message **Copy**; avoid
+`<pre>`/rich code blocks. Files are additive only for real artifacts.
 
 ## URL button
 
