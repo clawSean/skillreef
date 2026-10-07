@@ -182,14 +182,16 @@ Observed result: use a separate legacy inline-code + native-button companion for
 
 Observed result: Mac `message` syntax is substantially proven; iPhone rendering and the ordinary-final route are **not** proven by this battery.
 
+### T26: fresh-topic ordinary-final spacing regression, 2026-10-07
+Fresh forum topic, owner-supplied screenshot: two replies joined prose paragraphs. Stored source used plain `\n\n` despite loading the skill; authoring failure, not discovery. Client build unrecorded.
+No ordinary-final `<br><br>` canary was done; T25's explicit-message proof does not transfer (see T23). Runtime guard remains unactivated.
+
 ## Table history and battery
 
 ### Historical failure
 
-In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the
-renderer with every row intact, but an unrecorded client displayed one body row.
-Bold and inline code inside cells were present but were never isolated as the
-cause. This proves tables are not portable across unknown clients.
+In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the renderer intact, but an unrecorded client displayed one body row.
+Bold and inline code inside cells were not isolated as the cause; tables are not portable across unknown clients.
 
 ### T7 regression battery
 
@@ -215,6 +217,4 @@ Send probes separately; do not combine Markdown and raw HTML lanes.
 
 ## Evidence discipline
 
-A successful API response proves delivery, not visual rendering. Change an
-operating rule only after exact-client inspection. Keep dated outcomes here;
-do not duplicate them in `SKILL.md` or the compatibility guide.
+A successful API response proves delivery, not visual rendering. Change a rule only after exact-client inspection; keep dated outcomes here, not in `SKILL.md` or the compatibility guide.

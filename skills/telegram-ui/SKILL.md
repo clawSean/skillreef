@@ -5,9 +5,9 @@ description: "Use for every Telegram reply, control, poll, reaction, media send,
 
 # Telegram UI
 
-After compaction or resume, re-read this before any substantial Telegram final.
+After compaction or resume, re-read before a substantial Telegram final.
 Use it on the first pass for every visible Telegram message. Reading is not completion;
-do not add a second model pass.
+do not add a second model pass. Fresh topics: use proven breaks, not `\n\n`.
 
 ## 1. Read the current surface
 
@@ -62,8 +62,8 @@ before changing rules.
 - Literal lists are compact by default. If every item is **90 visible characters
   or fewer**, use one source-adjacent `<br>` between items. If any item exceeds
   90, use `<br><br>` between every item. Count rendered characters, including
-  spaces but excluding formatting syntax and URL destinations. This proxies an
-  item wrapping beyond two typical mobile lines.
+  spaces but excluding formatting syntax and URL destinations. This predicts
+  wrapping beyond two mobile lines.
 
 ### Scanability
 
@@ -100,9 +100,9 @@ before changing rules.
 
 ## 4. Choose the interaction
 
-Use a reaction for acknowledgement, `replyTo` for a specific message, buttons
-for choices, a poll for a vote, edit for prior status, and pin for important
-output. Never replace discrete buttons with a plain-text menu. Group/topic Mini
+Use a reaction to acknowledge, `replyTo` to target, buttons for choices, a poll
+for voting, edit for status, and pin for important output. Never replace discrete
+buttons with a plain-text menu. Group/topic Mini
 Apps use a direct-link URL plus browser fallback; true `web-app` is private-chat
 only after surface proof.
 
