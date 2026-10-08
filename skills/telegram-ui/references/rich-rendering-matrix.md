@@ -149,7 +149,6 @@ literal-bullet rich paragraph. Use a semantic list for structured bullets; use
 source-adjacent inline `<br>` or `<br><br>` for literal prose/status rows.
 
 ### T23: ordinary-final single-break leak
-
 - A 2026-09-23 MedClaw group final used four literal `•` rows separated by
   source-adjacent `<br>`. Telegram iOS displayed every tag literally while
   still rendering the heading, bold, and inline code.
@@ -163,7 +162,6 @@ use separate source paragraphs for literal rows or a semantic list until that
 exact route passes a canary.
 
 ### T24: copyability lanes
-
 - 2026-10-05: A (28840), legacy inline code + native `copy_text`, worked on the reviewer's mobile and desktop; exact builds unrecorded.
 - B (28841), legacy `<pre>`, worked only on desktop. C (28843), rich inline code, and D (28842), rich code block, failed on both observed clients.
 - E (28878) proved only that the API can attach a native Copy button to an existing rich message; client behavior remains unreported.
@@ -171,7 +169,6 @@ exact route passes a canary.
 Observed result: use a separate legacy inline-code + native-button companion for 1–256 characters. Above that, use an independent plain legacy message and Telegram's whole-message Copy action.
 
 ### T25: DM rich fixture battery, 2026-10-06
-
 - OpenClaw 2026.9.7; Telegram for macOS 12.9 build 282526; the reviewer DM topic 47616; native `message` route, **not** ordinary final or iOS.
 - P1 (29300) source blank paragraphs visibly collapsed; P2 (29301) source-adjacent inline double breaks produced one empty row.
 - H1 (29302) headings and body stayed distinct with native spacing; heading levels did not show a clear size hierarchy. F1 (29303) bold, italic, strike, underline, mark, sub, and sup visibly rendered.
@@ -186,10 +183,13 @@ Observed result: Mac `message` syntax is substantially proven; iPhone rendering 
 Fresh forum topic, owner-supplied screenshot: two replies joined prose paragraphs. Stored source used plain `\n\n` despite loading the skill; authoring failure, not discovery. Client build unrecorded.
 No ordinary-final `<br><br>` canary was done; T25's explicit-message proof does not transfer (see T23). Runtime guard remains unactivated.
 
+### T27: ordinary-final inline-break leak recurred, 2026-10-08
+Owner-supplied iPhone screenshot of a private DM topic shows bold rendered but each inline `<br>` displayed literally inside a status list. Stored ordinary-final source confirms the tags. Platform message ID and iOS build unrecorded. This reproduces T23; T25's explicit-`message` proof and the inactive optional guard do not cover it.
+Observed result: suspend inline break tags in ordinary finals; use semantic lists/native blocks. Limit `<br>`/`<br><br>` to route-calibrated explicit rich `message` sends.
+
 ## Table history and battery
 
 ### Historical failure
-
 In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the renderer intact, but an unrecorded client displayed one body row.
 Bold and inline code inside cells were not isolated as the cause; tables are not portable across unknown clients.
 

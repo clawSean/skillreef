@@ -3,11 +3,11 @@ name: "telegram-ui"
 description: "Use for every Telegram reply, control, poll, reaction, media send, topic action, or rendering repair; produce readable rich output."
 ---
 
-# Telegram UI
+# Telegram
 
-After compaction or resume, re-read before a substantial Telegram final.
-Use it on the first pass for every visible Telegram message. Reading is not completion;
-do not add a second model pass. Fresh topics: use proven breaks, not `\n\n`.
+After compaction/resume, re-read before a substantial final. Use on the first
+pass for every Telegram message; reading is not completion. **Ordinary finals:
+never emit `<br>` or `<br><br>`; they have leaked literally on iOS.**
 
 ## 1. Read the current surface
 
@@ -25,24 +25,23 @@ before changing rules.
 
 ## 2. Choose the delivery path
 
-- **Ordinary conversation:** use the standard final path; manually sending then
-  suppressing it can bypass reply-time TTS. Inline breaks are route-scoped:
-  use `<br>` or `<br><br>` only when that exact path passes a canary. Source
-  blank lines do not guarantee visual air; use semantic lists for literal rows.
+- **Ordinary conversation:** use the standard final path; sending then
+  suppressing it can bypass reply-time TTS. Never use inline breaks on ordinary
+  finals: that route failed on iOS. Use semantic lists for rows and native
+  heading/block spacing for sections. Source blanks terminate blocks but may
+  not create visible prose spacing.
 - **Controls/actions:** use `message` for controls, edits, files, media, topics,
-  or out-of-band sends. Verify the active schema;
-  keep bodies portable unless a rich island helps.
-- **Copy control:** use `message.presentation.blocks` for a schema-exposed
-  clipboard action.
+  or out-of-band sends. Verify the active schema; keep bodies portable.
+- **Copy control:** use `message.presentation.blocks` for clipboard actions.
 
 ## 3. Compose the body
 
 ### Structure and spacing
 
-- **Hard default: every authored prose paragraph or thought break gets one empty
-  visual row.** On a calibrated path, use source-adjacent `<br><br>`; plain
-  `\n\n` is not a visual separator. Client wrapping needs no markup.
-- Pick each separator by boundary:
+- **Only on a calibrated `message` rich-text path:** give each authored prose
+  break one empty visual row with source-adjacent `<br><br>`; plain `\n\n` is
+  not a visual separator. On ordinary finals, use native blocks or concise prose.
+- On a calibrated break path, pick each separator by boundary:
   - `heading/block ↔ body`: real source blank line for syntax only; rely on the
     block's native spacing and do not add `<br><br>`.
   - `prose → prose`: `First.<br><br>Next paragraph.`
@@ -50,15 +49,17 @@ before changing rules.
   - `literal item → literal item`: the list-wide density below.
 - Multiple headings are fine; each starts at start or after real `\n\n`.
   Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from block-level HTML islands.
-- Never send prose paragraphs separated only by source blank lines. In rich
-  `message` sends, keep each prose break source-adjacent to `<br><br>`.
+- In calibrated rich `message` sends, keep each prose break source-adjacent to
+  `<br><br>`. Ordinary finals may use source blank lines for Markdown structure,
+  not as a promise of visual spacing.
 - On a break-canary path, separate literal `•` rows with the density rule's
-  source-adjacent inline breaks; bare source newlines can collapse and are never
-  separators. Otherwise use source paragraphs. Never use one `<br>` for prose or
-  block boundaries, a standalone `<br><br>` paragraph, or spacer entities.
-- Use literal `•` prose/status rows with inline breaks for calibrated baseline
-  alignment; do not substitute Markdown `-` during repairs. Reserve semantic lists
-  for nesting, tasks, or runtime requirements.
+  inline breaks; bare source newlines can collapse and are never separators.
+  On ordinary finals, use semantic Markdown or HTML lists, not literal rows.
+  Never use one `<br>` for prose or block boundaries, standalone `<br><br>`,
+  or spacer entities.
+- Use literal `•` prose/status rows with inline breaks only on a calibrated
+  `message` route. Reserve semantic lists for nesting, tasks, runtime
+  requirements, **and ordinary finals**.
 - Literal lists are compact by default. If every item is **90 visible characters
   or fewer**, use one source-adjacent `<br>` between items. If any item exceeds
   90, use `<br><br>` between every item. Count rendered characters, including
@@ -67,7 +68,7 @@ before changing rules.
 
 ### Scanability
 
-- Use medium emoji density and one in each button label.
+- Use medium emojis; one per button label.
 - A standalone prose title is a native `###` heading, not bold alone. Follow it
   with one source blank line for syntax, relying on native heading spacing; never
   add `<br>`. Limit bold to 1–3 inline scan
