@@ -15,30 +15,32 @@ never emit `<br>` or `<br><br>`; they have leaked literally on iOS.**
    supported blocks, math, media, and markup.
 2. If absent, inspect the selected account's `channels.telegram.richMessages`;
    never infer it from another account.
-3. With rich on, ordinary finals and `message` text use the default
-   Markdown-to-rich-block path. Legacy HTML and captions remain separate.
+3. With rich on, finals and `message` use Markdown-to-rich blocks. Legacy HTML
+   and captions remain separate.
 
 - **This workspace:** ❔ not determined — check the setting in your config, then update this line. <!-- LOCAL-STATUS -->
-See the [rendering matrix](references/rich-rendering-matrix.md) for dated
-calibration. If runtime conflicts, follow runtime and rerun the matching canary
-before changing rules.
+See the [rendering matrix](references/rich-rendering-matrix.md). If runtime conflicts,
+follow runtime and rerun the canary.
 
 ## 2. Choose the delivery path
 
-- **Ordinary conversation:** use the standard final path; sending then
-  suppressing it can bypass reply-time TTS. Never use inline breaks on ordinary
-  finals: that route failed on iOS. Use semantic lists for rows and native
-  heading/block spacing for sections. Source blanks terminate blocks but may
-  not create visible prose spacing.
-- **Controls/actions:** use `message` for controls, edits, files, media, topics,
-  or out-of-band sends. Verify the active schema; keep bodies portable.
+- **Ordinary conversation without prose breaks:** use the standard final path;
+  sending then suppressing it can bypass reply-time TTS. Never use inline breaks
+  on ordinary finals: that route failed on iOS. Use semantic lists and native
+  blocks for structure.
+- **Rich prose needing a visible blank line:** use `message(action="send")` on
+  the calibrated rich route and finish without duplicating the reply in an
+  ordinary final. Source blanks in ordinary finals collapse on iOS; break tags
+  there leak literally. This path may bypass reply-time TTS.
+- **Controls/actions:** use `message` for controls, edits, media, topics, or
+  out-of-band sends. Verify the active schema.
 - **Copy control:** use `message.presentation.blocks` for clipboard actions.
 
 ## 3. Compose the body
 
 ### Structure and spacing
 
-- **Only on a calibrated `message` rich-text path:** give each authored prose
+- **On the calibrated `message` rich-text path:** give each authored prose
   break one empty visual row with source-adjacent `<br><br>`; plain `\n\n` is
   not a visual separator. On ordinary finals, use native blocks or concise prose.
 - On a calibrated break path, pick each separator by boundary:
@@ -51,7 +53,7 @@ before changing rules.
   Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from block-level HTML islands.
 - In calibrated rich `message` sends, keep each prose break source-adjacent to
   `<br><br>`. Ordinary finals may use source blank lines for Markdown structure,
-  not as a promise of visual spacing.
+  not visual spacing.
 - On a break-canary path, separate literal `•` rows with the density rule's
   inline breaks; bare source newlines can collapse and are never separators.
   On ordinary finals, use semantic Markdown or HTML lists, not literal rows.
@@ -68,7 +70,7 @@ before changing rules.
 
 ### Scanability
 
-- Use medium emojis; one per button label.
+- Use emojis; one per button.
 - A standalone prose title is a native `###` heading, not bold alone. Follow it
   with one source blank line for syntax, relying on native heading spacing; never
   add `<br>`. Limit bold to 1–3 inline scan
@@ -113,8 +115,7 @@ Mirror choices in the message. Open
 
 ## 5. Handle media and special branches
 
-- Captions are short Markdown-ish bodies with literal line breaks; send rich
-  explanation separately.
+- Captions are short Markdown-ish bodies with literal line breaks.
 - Forum/topic thumbnails default to true 1:1 with the subject in a centered
   safe area unless another ratio is requested.
 - Prefer the injected voice transcript. If absent, say so and follow the active
@@ -123,8 +124,8 @@ Mirror choices in the message. Open
 - Open only the active specialty branch: [admin controls](references/telegram-admin-control.md),
   [forum topics](references/telegram-forum-topics.md), or
   [Mini Apps](references/telegram-mini-apps.md).
-- For renderer problems use [client compatibility](references/rich-message-client-compat.md);
-  for dated proof/canaries use the [rendering matrix](references/rich-rendering-matrix.md).
+- Renderer problems: [client compatibility](references/rich-message-client-compat.md);
+  proof: [rendering matrix](references/rich-rendering-matrix.md).
 
 ## 6. Verify delivery and renderer claims
 

@@ -187,22 +187,22 @@ No ordinary-final `<br><br>` canary was done; T25's explicit-message proof does 
 Owner-supplied iPhone screenshot of a private DM topic shows bold rendered but each inline `<br>` displayed literally inside a status list. Stored ordinary-final source confirms the tags. Platform message ID and iOS build unrecorded. This reproduces T23; T25's explicit-`message` proof and the inactive optional guard do not cover it.
 Observed result: suspend inline break tags in ordinary finals; use semantic lists/native blocks. Limit `<br>`/`<br><br>` to route-calibrated explicit rich `message` sends.
 
-## Table history and battery
+### T28: ordinary-final blank paragraphs still collapse, 2026-10-08
+Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering source-blank-separated prose without an empty row. iOS build unrecorded. This repeats T26 after the no-break-tag rule; exact message IDs remain in private daily memory.
+The same owner confirmed by screenshot that an explicit rich `message` canary, with source-adjacent `<br><br>`, rendered one empty visual row and no literal tags in the same topic. This proves the iPhone route distinction; it does not prove reply-time TTS.
 
+## Table history and battery
 ### Historical failure
-In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the renderer intact, but an unrecorded client displayed one body row.
-Bold and inline code inside cells were not isolated as the cause; tables are not portable across unknown clients.
+In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the renderer intact, but an unrecorded client displayed one body row. Bold and inline code inside cells were not isolated as the cause; tables are not portable across unknown clients.
 
 ### T7 regression battery
 
-Record OpenClaw version, rich state, client build, surface, IDs, and Retina screenshots.
 1. **T7a — plain:** 5 columns, header, 3 body rows; pass only when every cell is visible and scrolling works.
 2. **T7b — formatting isolation:** repeat T7a with bold and inline code; compare with T7a.
 3. **T7c — raw HTML:** caption, two headers, three rows; pass only if all rows render without leaked markup.
 
 ## Structure regression battery
 
-Send probes separately; do not combine Markdown and raw HTML lanes.
 1. **T1–T3:** blank-source-line paragraphs, Markdown bullets, numbered items, then literal newlines.
 2. **T4–T6:** adjacent `p` blocks (diagnostic), single/double breaks, then heading/details/tasks/prose; check each block.
 3. **T13/T22:** semantic `ul` versus literal `•`; then bare newline versus source-adjacent `<br>` versus semantic list.
