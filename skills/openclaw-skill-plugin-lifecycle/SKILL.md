@@ -51,6 +51,20 @@ Never edit SkillReef or another generated public mirror directly.
 - Public skill outputs come only from the scrubbed publication pipeline in
   `knowledge/procedures/code-publishing.md`.
 
+## Autonomous Workshop reviews
+
+Autonomous Workshop reviews can run outside the normal foreground skill
+bootstrap, so listing this skill in `AGENTS.md` is not sufficient. Use a thin,
+scoped host adapter that dynamically supplies this canonical skill and a
+current external-skill owner index to per-turn `propose` and `auto` reviews and
+the weekly `auto` review. It must select runs by runtime identity, fail closed
+when the context is missing, and keep policy here instead of copying it into
+plugin code.
+
+This context gate does not provide Git commits, rollback, or recovery for
+automatic edits. Prove those separately before relying on `auto` mode. See
+`references/workshop-autonomous-governance.md`.
+
 ## Plugin source rules
 
 - Prefer the runtime-loaded plugin tree when it is safe and self-contained.
@@ -129,6 +143,7 @@ example that may have drifted.
 ## References
 
 - `references/authoring-governance.md`
+- `references/workshop-autonomous-governance.md`
 - `references/openclaw-plugin-manifest-build.md`
 - `references/one-shot-extension-prompt.md`
 - `references/telegram-command-buttons.md`
