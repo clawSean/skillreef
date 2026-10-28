@@ -150,6 +150,14 @@
           "repository": "clawSean/telegram-ui"
         }
       }
+    },
+    "plugins": {
+      "workshop-governance-context": {
+        "repository": "EdgeClaws/openclaw-workshop-governance",
+        "checkout": "~/projects/openclaw-workshop-governance",
+        "vendor": "skills/openclaw-skill-plugin-lifecycle/assets/workshop-governance-plugin",
+        "lock": "skills/openclaw-skill-plugin-lifecycle/references/workshop-governance-plugin.lock.json"
+      }
     }
   }
 }

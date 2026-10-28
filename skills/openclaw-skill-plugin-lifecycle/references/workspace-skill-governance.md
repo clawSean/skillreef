@@ -56,6 +56,8 @@ installs, live config changes, plugin activation, or Gateway reload/restart.
   including its canonical source class and mirror directory.
 - `publication.standalone.skills`: additional GitHub mirrors built from the
   same scrubbed output.
+- `publication.plugins`: canonical plugin repositories plus any deterministic
+  copy vendored into a skill bundle for portable setup.
 
 Absence from the publication maps means local Git only. Publication metadata
 does not itself authorize a push; the active request and lifecycle rules still

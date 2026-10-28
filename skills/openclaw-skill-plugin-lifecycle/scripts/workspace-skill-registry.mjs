@@ -202,6 +202,42 @@ function validate(registry, registryPath, workspaceArg) {
     }
   }
 
+  const plugins = object(
+    publication.plugins ?? {},
+    "publication.plugins",
+    errors,
+  );
+  for (const [pluginId, entryValue] of Object.entries(plugins)) {
+    const entry = object(entryValue, `publication plugin ${pluginId}`, errors);
+    if (!validSkill.test(pluginId)) {
+      errors.push(`invalid publication plugin id: ${pluginId}`);
+    }
+    if (typeof entry.repository !== "string" || !entry.repository.includes("/")) {
+      errors.push(`plugin repository for ${pluginId} must be an owner/repo slug`);
+    }
+    if (typeof entry.checkout !== "string" || !entry.checkout.trim()) {
+      errors.push(`plugin checkout for ${pluginId} is required`);
+    }
+    for (const field of ["vendor", "lock"]) {
+      const value = entry[field];
+      const normalized =
+        typeof value === "string" ? path.normalize(value) : undefined;
+      if (
+        !normalized ||
+        path.isAbsolute(normalized) ||
+        normalized === ".." ||
+        normalized.startsWith(`..${path.sep}`)
+      ) {
+        errors.push(`plugin ${field} for ${pluginId} must stay inside the workspace`);
+      } else if (
+        enforceCanonicalPaths &&
+        !fs.existsSync(path.join(workspaceDir, normalized))
+      ) {
+        errors.push(`plugin ${field} does not exist for ${pluginId}: ${value}`);
+      }
+    }
+  }
+
   if (errors.length) fail(errors.join("\n"));
   return { authorization, publication, workspaceDir };
 }
@@ -212,9 +248,13 @@ const registryArg = args.shift() ?? defaultRegistry;
 let workspaceArg;
 let principalArg;
 let skillArg;
+let pluginArg;
 if (action === "authorize") {
   principalArg = args.shift();
   skillArg = args.shift();
+  workspaceArg = args.shift();
+} else if (action === "plugin-checkout") {
+  pluginArg = args.shift();
   workspaceArg = args.shift();
 } else {
   workspaceArg = args.shift();
@@ -252,6 +292,14 @@ switch (action) {
   case "standalone-root":
     console.log(expandHome(validated.publication.standalone.checkoutRoot));
     break;
+  case "plugin-checkout": {
+    const entry = validated.publication.plugins?.[pluginArg];
+    if (!pluginArg || !entry) {
+      fail(`unknown publication plugin: ${pluginArg ?? "(missing)"}`);
+    }
+    console.log(expandHome(entry.checkout));
+    break;
+  }
   case "authorize": {
     if (!principalArg || !skillArg) {
       fail("authorize requires <principal> <skill> after the registry path");

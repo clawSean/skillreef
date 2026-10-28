@@ -4,6 +4,8 @@ set -euo pipefail
 skill_dir="$(cd "$(dirname "$0")/.." && pwd)"
 workspace_dir="$(cd "$skill_dir/../.." && pwd)"
 skill_file="$skill_dir/SKILL.md"
+vendor_dir="$skill_dir/assets/workshop-governance-plugin"
+vendor_script="$skill_dir/scripts/workshop-governance-plugin-vendor.mjs"
 failures=0
 
 check() {
@@ -24,6 +26,12 @@ rejects() {
   return 0
 }
 
+in_dir() {
+  local dir="$1"
+  shift
+  (cd "$dir" && "$@")
+}
+
 check "SKILL.md exists" test -s "$skill_file"
 check "required lifecycle name" grep -q '^name: openclaw-skill-plugin-lifecycle$' "$skill_file"
 check "description makes loading mandatory" grep -q '^description: Required before any OpenClaw skill' "$skill_file"
@@ -33,7 +41,12 @@ check "optimization reference exists" test -s "$skill_dir/references/skill-optim
 check "workspace governance reference exists" test -s "$skill_dir/references/workspace-skill-governance.md"
 check "workspace registry exists" test -s "$skill_dir/references/workspace-skill-registry.json"
 check "Workshop adapter setup exists" test -s "$skill_dir/references/workshop-governance-enforcement.md"
+check "Workshop adapter vendor exists" test -s "$vendor_dir/openclaw.plugin.json"
+check "Workshop adapter vendor lock exists" test -s "$skill_dir/references/workshop-governance-plugin.lock.json"
 check "workspace registry validates" node "$skill_dir/scripts/workspace-skill-registry.mjs" validate
+check "Workshop adapter vendor lock verifies" node "$vendor_script" verify
+check "Workshop adapter vendor tests pass" in_dir "$vendor_dir" npm test
+check "Workshop adapter package dry-run passes" in_dir "$vendor_dir" npm pack --dry-run
 check "workspace owner may edit any skill" node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" workspace-owner home-control
 check "registered editor may edit exact shopping skill" node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" person:example-collaborator shop-agent
 check "registered editor is denied an unlisted skill" rejects node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" person:example-collaborator home-control
@@ -57,6 +70,12 @@ if [[ -f "$workspace_dir/knowledge/procedures/code-publishing.md" &&
   check "publishing procedure points to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/knowledge/procedures/code-publishing.md"
   check "development router points to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/skills/development-orchestration/SKILL.md"
   check "publisher reads canonical registry" grep -q 'workspace-skill-registry.json' "$workspace_dir/scripts/publish-skillreef.sh"
+  plugin_checkout="$(node "$skill_dir/scripts/workspace-skill-registry.mjs" plugin-checkout "$skill_dir/references/workspace-skill-registry.json" workshop-governance-context)"
+  if [[ -d "$plugin_checkout/.git" ]]; then
+    check "Workshop adapter vendor matches upstream" node "$vendor_script" check "$plugin_checkout"
+  else
+    printf 'SKIP: upstream Workshop adapter checkout unavailable\n'
+  fi
 else
   printf 'SKIP: private workspace integration checks (portable bundle)\n'
 fi

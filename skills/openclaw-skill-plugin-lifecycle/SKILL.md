@@ -103,6 +103,9 @@ Gateway reload/restart.
   and use `skill_workshop` for proposals; never hand-edit proposal storage.
   For autonomous-review policy delivery, read
   [Workshop governance adapter setup](references/workshop-governance-enforcement.md).
+  Its installable adapter is vendored under
+  `assets/workshop-governance-plugin/`; the shared repository remains the
+  editable upstream and the vendor lock prevents drift.
 - **OpenClaw plugins:** use the focused references in this bundle, then inspect
   current installed docs and SDK declarations. Start with
   [manifest/build](references/openclaw-plugin-manifest-build.md); load

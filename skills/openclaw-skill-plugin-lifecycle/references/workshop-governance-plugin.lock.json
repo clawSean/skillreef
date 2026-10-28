@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "pluginId": "workshop-governance-context",
+  "repository": "EdgeClaws/openclaw-workshop-governance",
+  "upstreamCommit": "edc3a95914606c3bf3052bcff62ee1ec3dec56b6",
+  "version": "0.3.0",
+  "vendoredPath": "skills/openclaw-skill-plugin-lifecycle/assets/workshop-governance-plugin",
+  "treeSha256": "92b41b2ac54cbda3da81636b8705a67743752a9b04f86b69029dea7893572c57",
+  "fileCount": 9
+}
