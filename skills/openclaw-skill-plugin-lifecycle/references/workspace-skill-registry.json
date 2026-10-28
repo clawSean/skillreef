@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "authorization": {
+    "workspaceOwner": {
+      "principal": "workspace-owner",
+      "resolve": {
+        "kind": "openclaw-owner-authority",
+        "declarations": [
+          "USER.md",
+          "IDENTITY.md"
+        ]
+      }
+    },
+    "defaults": {
+      "workspaceSkillEditors": [
+        "workspace-owner"
+      ],
+      "newSkillDestination": "workshop",
+      "autonomousSkillDestination": "workshop"
+    },
+    "principals": {
+      "person:example-collaborator": {
+        "resolve": {
+          "kind": "host-injected-principal-id",
+          "principalId": "person:example-collaborator"
+        }
+      }
+    },
+    "skillEditorExceptions": {
+      "food-ordering": [
+        "person:example-collaborator"
+      ],
+      "shop-agent": [
+        "person:example-collaborator"
+      ]
+    }
+  },
+  "publication": {
+    "skillreef": {
+      "repository": "clawSean/skillreef",
+      "checkout": "~/projects/clawSean/skillreef",
+      "skills": {
+        "asana-formatting": {
+          "mirror": "asana-formatting",
+          "source": "workspace"
+        },
+        "bottom-feeder": {
+          "mirror": "bottom-feeder",
+          "source": "workspace"
+        },
+        "canva-mcp": {
+          "mirror": "canva-mcp",
+          "source": "workshop"
+        },
+        "claude-foreman": {
+          "mirror": "claude-foreman",
+          "source": "workspace"
+        },
+        "clawgauge": {
+          "mirror": "clawgauge",
+          "source": "workspace"
+        },
+        "crusty-contributor": {
+          "mirror": "crusty-contributor",
+          "source": "workspace"
+        },
+        "imessage-ui": {
+          "mirror": "imessage-ui",
+          "source": "workspace"
+        },
+        "interactive-sessions": {
+          "mirror": "interactive-sessions",
+          "source": "workspace"
+        },
+        "knowledge-search": {
+          "mirror": "knowledge-search",
+          "source": "workspace"
+        },
+        "mermaid": {
+          "mirror": "mermaid",
+          "source": "workspace"
+        },
+        "moltmaster": {
+          "mirror": "moltmaster",
+          "source": "workspace"
+        },
+        "openclaw-skill-plugin-lifecycle": {
+          "mirror": "openclaw-skill-plugin-lifecycle",
+          "source": "workspace"
+        },
+        "pdf-to-markdown": {
+          "mirror": "pdf-to-markdown",
+          "source": "workspace"
+        },
+        "perplexity-search": {
+          "mirror": "perplexity-search",
+          "source": "workspace"
+        },
+        "ralph-wiggum": {
+          "mirror": "ralph-wiggum",
+          "source": "workspace"
+        },
+        "shell-swap": {
+          "mirror": "shell-swap",
+          "source": "workspace"
+        },
+        "shop-agent": {
+          "mirror": "shop-agent",
+          "source": "workspace"
+        },
+        "shrimp": {
+          "mirror": "shrimp",
+          "source": "workspace"
+        },
+        "telegram-ui": {
+          "mirror": "telegram-ui",
+          "source": "workspace"
+        },
+        "web-use": {
+          "mirror": "web-use",
+          "source": "workspace"
+        }
+      }
+    },
+    "standalone": {
+      "checkoutRoot": "~/projects/clawSean",
+      "skills": {
+        "bottom-feeder": {
+          "directory": "bottom-feeder",
+          "repository": "clawSean/bottom-feeder"
+        },
+        "claude-foreman": {
+          "directory": "claude-foreman",
+          "repository": "clawSean/claude-foreman"
+        },
+        "clawgauge": {
+          "directory": "clawgauge",
+          "repository": "clawSean/clawgauge"
+        },
+        "imessage-ui": {
+          "directory": "imessage-ui",
+          "repository": "clawSean/imessage-ui"
+        },
+        "shell-swap": {
+          "directory": "shell-swap",
+          "repository": "clawSean/shell-swap"
+        },
+        "telegram-ui": {
+          "directory": "telegram-ui",
+          "repository": "clawSean/telegram-ui"
+        }
+      }
+    }
+  }
+}

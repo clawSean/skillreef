@@ -1,99 +1,74 @@
 #!/usr/bin/env bash
-# Baseline structural tests for the OpenClaw skill/plugin lifecycle skill.
-# Run: bash scripts/test.sh
 set -euo pipefail
 
-SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_FILE="$SKILL_DIR/SKILL.md"
-PASS=0
-FAIL=0
+skill_dir="$(cd "$(dirname "$0")/.." && pwd)"
+workspace_dir="$(cd "$skill_dir/../.." && pwd)"
+skill_file="$skill_dir/SKILL.md"
+failures=0
 
-pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
-fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
-
-echo "=== openclaw-skill-plugin-lifecycle baseline tests ==="
-
-# 1. SKILL.md exists and is non-empty
-if [ -s "$SKILL_FILE" ]; then
-  pass "SKILL.md exists and is non-empty"
-else
-  fail "SKILL.md missing or empty"
-fi
-
-# 2. SKILL.md has YAML frontmatter with required fields
-if head -1 "$SKILL_FILE" | grep -q '^---$'; then
-  pass "SKILL.md starts with frontmatter delimiter"
-else
-  fail "SKILL.md missing frontmatter opening ---"
-fi
-
-# Extract frontmatter (between first and second ---)
-FRONTMATTER=$(sed -n '2,/^---$/ { /^---$/d; p; }' "$SKILL_FILE")
-
-for field in name description; do
-  if echo "$FRONTMATTER" | grep -q "^${field}:"; then
-    pass "frontmatter has '${field}' field"
+check() {
+  local label="$1"
+  shift
+  if "$@"; then
+    printf 'PASS: %s\n' "$label"
   else
-    fail "frontmatter missing '${field}' field"
+    printf 'FAIL: %s\n' "$label"
+    failures=$((failures + 1))
   fi
-done
+}
 
-# 3. name field is the intentional unique OpenClaw-specific skill name.
-FM_NAME=$(echo "$FRONTMATTER" | grep '^name:' | sed 's/^name:[[:space:]]*//' | tr -d '"')
-EXPECTED_NAME="openclaw-skill-plugin-lifecycle"
-if [ "$FM_NAME" = "$EXPECTED_NAME" ]; then
-  pass "frontmatter name is the expected OpenClaw-specific skill name ('$FM_NAME')"
-else
-  fail "frontmatter name ('$FM_NAME') does not match expected name ('$EXPECTED_NAME')"
-fi
-
-if [ "$(basename "$SKILL_DIR")" = "$FM_NAME" ]; then
-  pass "skill directory matches the runtime name"
-else
-  fail "skill directory does not match the runtime name"
-fi
-
-if [ "$FM_NAME" != "plugin-creator" ]; then
-  pass "frontmatter name does not collide with Codex's built-in plugin-creator skill"
-else
-  fail "frontmatter name collides with Codex's built-in plugin-creator skill"
-fi
-
-if grep -Fq 'openclaw skills workshop apply <proposal-id> --json' "$SKILL_FILE" && \
-   grep -Fq 'there is no separate' "$SKILL_FILE"; then
-  pass "legacy skill approval routes through the operator CLI without an adoption step"
-else
-  fail "legacy skill operator apply route is missing"
-fi
-
-# 4. All files referenced in SKILL.md exist
-REF_FILES=$(grep -oE '`references/[^`]+`' "$SKILL_FILE" | tr -d '`' | sort -u)
-for ref in $REF_FILES; do
-  if [ -f "$SKILL_DIR/$ref" ]; then
-    pass "referenced file '$ref' exists"
-  else
-    fail "referenced file '$ref' NOT FOUND"
+rejects() {
+  if "$@"; then
+    return 1
   fi
-done
+  return 0
+}
 
-# 5. Reference files are non-empty
-for ref in "$SKILL_DIR"/references/*.md; do
-  bname=$(basename "$ref")
-  if [ -s "$ref" ]; then
-    pass "references/$bname is non-empty"
-  else
-    fail "references/$bname is empty"
-  fi
-done
+check "SKILL.md exists" test -s "$skill_file"
+check "required lifecycle name" grep -q '^name: openclaw-skill-plugin-lifecycle$' "$skill_file"
+check "description makes loading mandatory" grep -q '^description: Required before any OpenClaw skill' "$skill_file"
+check "governance reference exists" test -s "$skill_dir/references/authoring-governance.md"
+check "git provenance reference exists" test -s "$skill_dir/references/git-provenance.md"
+check "optimization reference exists" test -s "$skill_dir/references/skill-optimization-audit.md"
+check "workspace governance reference exists" test -s "$skill_dir/references/workspace-skill-governance.md"
+check "workspace registry exists" test -s "$skill_dir/references/workspace-skill-registry.json"
+check "Workshop adapter setup exists" test -s "$skill_dir/references/workshop-governance-enforcement.md"
+check "workspace registry validates" node "$skill_dir/scripts/workspace-skill-registry.mjs" validate
+check "workspace owner may edit any skill" node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" workspace-owner home-control
+check "registered editor may edit exact shopping skill" node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" person:example-collaborator shop-agent
+check "registered editor is denied an unlisted skill" rejects node "$skill_dir/scripts/workspace-skill-registry.mjs" authorize "$skill_dir/references/workspace-skill-registry.json" person:example-collaborator home-control
+check "skill preserves practical authoring preferences" grep -q 'Do not overengineer routine authoring' "$skill_file"
+check "skill routes to SOUL preferences" grep -q 'SOUL.md' "$skill_file"
+check "skill routes to USER preferences" grep -q 'USER.md' "$skill_file"
+check "skill routes to IDENTITY preferences" grep -q 'IDENTITY.md' "$skill_file"
+check "lifecycle owns direct workspace-owner edits" grep -q 'workspace owner controls every live skill' "$skill_file"
+check "lifecycle supports exact registered editors" grep -q 'skillEditorExceptions' "$skill_file"
+check "lifecycle defaults new teammate skills to Workshop" grep -q 'create it in the requester.*Workshop collection' "$skill_file"
+check "registry keeps one default owner" grep -q '"workspaceSkillEditors"' "$skill_dir/references/workspace-skill-registry.json"
+check "lifecycle gates every affected Workshop tree" grep -q 'Every nonempty live `workshop-skills/` tree' "$skill_file"
+check "lifecycle prefers verified hot reload" grep -q 'prefer a supported, bounded hot' "$skill_file"
+check "obsolete feedback authority removed" test ! -e "$workspace_dir/memory/feedback/auto-apply-skill-workshops.md"
 
-# 6. No broken markdown headings (# with no space)
-BAD_HEADINGS=$(grep -nE '^#{1,6}[^#[:space:]]' "$SKILL_FILE" || true)
-if [ -z "$BAD_HEADINGS" ]; then
-  pass "no malformed markdown headings in SKILL.md"
+if [[ -f "$workspace_dir/knowledge/procedures/code-publishing.md" &&
+      -f "$workspace_dir/scripts/publish-skillreef.sh" ]]; then
+  check "AGENTS routes directly to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/AGENTS.md"
+  check "AGENTS covers Workshop self-creation" grep -q 'Workshop self-creation is permitted and encouraged' "$workspace_dir/AGENTS.md"
+  check "legacy procedure points to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/knowledge/procedures/skill-optimization-audit.md"
+  check "publishing procedure points to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/knowledge/procedures/code-publishing.md"
+  check "development router points to lifecycle skill" grep -q 'skills/openclaw-skill-plugin-lifecycle/SKILL.md' "$workspace_dir/skills/development-orchestration/SKILL.md"
+  check "publisher reads canonical registry" grep -q 'workspace-skill-registry.json' "$workspace_dir/scripts/publish-skillreef.sh"
 else
-  fail "malformed markdown headings in SKILL.md: $BAD_HEADINGS"
+  printf 'SKIP: private workspace integration checks (portable bundle)\n'
 fi
 
-echo ""
-echo "Results: $PASS passed, $FAIL failed"
-[ "$FAIL" -eq 0 ] && exit 0 || exit 1
+while IFS= read -r ref; do
+  check "referenced file $ref exists" test -f "$skill_dir/$ref"
+done < <(grep -oE 'references/[A-Za-z0-9._/-]+\.md' "$skill_file" | sort -u)
+
+while IFS= read -r ref; do
+  check "referenced registry $ref exists" test -f "$skill_dir/$ref"
+done < <(grep -oE 'references/[A-Za-z0-9._/-]+\.json' "$skill_file" | sort -u)
+
+check "no malformed headings" test -z "$(grep -nE '^#{1,6}[^#[:space:]]' "$skill_file" || true)"
+
+exit "$failures"

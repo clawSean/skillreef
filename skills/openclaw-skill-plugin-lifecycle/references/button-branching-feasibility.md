@@ -1,6 +1,6 @@
 # Plugin Button Branching Feasibility — Preliminary Research
 
-**Date:** 2026-05-01  
+**Date:** 2026-05-01
 **Question:** Can an OpenClaw plugin expose a chat slash command that offers two buttons and branches based on the button tapped?
 
 ## Short Answer

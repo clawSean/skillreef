@@ -1,6 +1,6 @@
 # Telegram Command Buttons in OpenClaw
 
-**Date:** 2026-05-01  
+**Date:** 2026-05-01
 **Context:** Research seed for the OpenClaw skill/plugin lifecycle skill and interactive session tooling.
 
 ## Short Version

@@ -1,137 +1,194 @@
 ---
-name: "openclaw-skill-plugin-lifecycle"
-description: "Create, update, publish, or audit existing OpenClaw skills/plugins/procedures with Workshop lifecycle, one source, current SDK checks, and proof."
+name: openclaw-skill-plugin-lifecycle
+description: Required before any OpenClaw skill, plugin, extension, reusable procedure, or durable authoring-package creation, update, publication, audit, or retirement.
 ---
 
 # OpenClaw Skill + Plugin Lifecycle
 
-Use before creating, changing, publishing, or auditing an OpenClaw skill,
-plugin/extension, reusable procedure, or durable project package.
+Load this skill before changing any skill, plugin, extension, reusable
+procedure, or durable authoring package. It owns governance and provenance;
+specialized creator skills own implementation details.
 
-## Classify first
+## Working principles
 
-Read `references/authoring-governance.md`, then choose the smallest artifact:
+- Prefer the smallest useful artifact and the shortest process that proves the
+  requested outcome. Do not overengineer routine authoring.
+- Prioritize usability and delivered value. Handle recoverable friction as part
+  of the work instead of inventing approval gates or blockers.
+- Treat edge cases in proportion to demonstrated risk. Preserve real safety,
+  authority, privacy, and recovery constraints, but do not let speculative or
+  nuanced edge cases prevent reasonable progress.
+- Reuse a proven owner or implementation before adding another abstraction.
+- These principles are not exhaustive. Every change or proposal must also
+  follow the current `SOUL.md`, `USER.md`, `IDENTITY.md`, `AGENTS.md`, relevant
+  contact/group/project records, active conversation instructions, and the
+  artifact owner's requirements.
 
-- **Procedure:** reusable instructions in `knowledge/procedures/`.
-- **Skill:** triggerable agent behavior. Mutations go through Skill Workshop.
-- **Plugin:** runtime code, commands, tools, handlers, providers, or UI.
-- **Project unit:** multi-session state under `~/projects/<unit>/`.
-- **Upstream contribution:** add `crusty-contributor` and the contribution board.
+## 1. Classify and locate the owner
 
-## Default workflow
+Read [authoring governance](references/authoring-governance.md). When requester
+authority or publication applies, also read [workspace skill governance](references/workspace-skill-governance.md)
+and its machine-readable
+[registry](references/workspace-skill-registry.json). Then choose the smallest
+reusable artifact and its canonical source:
 
-1. Read the existing artifact and nearby references.
-2. Check `~/projects/PROJECT_REGISTRY.md`,
-   `~/projects/CONTRIBUTIONS_INDEX.md`, and
-   `CAPABILITIES_INDEX.md` before creating another identity.
-3. For a skill, create/update/revise a Workshop proposal, inspect it, and apply
-   only with explicit user approval. If agent-side apply rejects a legacy skill,
-   use the documented operator path:
-   `openclaw skills workshop apply <proposal-id> --json`; there is no separate
-   adoption step.
-4. For a plugin, identify one canonical editable source and verify the current
-   runtime source with `openclaw plugins list --json`.
-5. Check current local OpenClaw docs/source before copying an old example.
-6. Start with the smallest working behavior; add buttons/state/channel-specific
-   logic only when required.
-7. Verify through the real path: discover/load, command/tool invocation,
-   callback routing, and relevant offline tests.
-8. Update project state, capability ledger, daily audit, and generated public
-   mirrors only where the owning contract requires it.
+- **Procedure:** operational guidance that should not trigger as a capability.
+- **Repository/workspace skill:** a skill in a normal Git checkout, including
+  this workspace's `skills/` tree.
+- **Workshop skill:** a skill inside the active agent's `workshop-skills/` tree.
+- **OpenClaw plugin:** runtime code adding tools, commands, handlers, providers,
+  channels, hooks, or UI.
+- **Codex plugin:** a Codex plugin package and marketplace entry.
+- **Project unit:** multi-session state owning several related artifacts.
 
-Never edit SkillReef or another generated public mirror directly.
+Search the likely owner, neighboring skills/plugins, installed OpenClaw docs,
+and pending Workshop proposals before creating another identity. One behavior
+gets one authoritative owner; references point to it instead of copying rules.
 
-## Skill rules
+## 2. Resolve authority, then route by initiation
 
-- Keep `SKILL.md` lean and move long recipes/research to `references/`.
-- The applied live source is
-  `~/.openclaw/workspace/skills/<name>/`.
-- Workshop proposals are the mutation/review layer; applying a proposal changes
-  the live source. Applying requires explicit user approval.
-- Public skill outputs come only from the scrubbed publication pipeline in
+The sole default workspace owner is the person declared by `USER.md` and
+`IDENTITY.md` and admitted by OpenClaw owner authority. Do not infer ownership
+from a display name or channel-native ID. Resolve non-owner requesters through a
+trusted principal as defined by the registry; unknown identity fails closed.
+
+### Workspace-owner-led work
+
+The workspace owner controls every live skill or plugin outside
+`workshop-skills/`. Apply the requested change directly to the canonical source,
+verify it, commit it, and publish every declared registry target. Do not add a
+second approval gate or a Workshop proposal for repository-owned work.
+
+For an owner-requested Workshop change, use the current Workshop lifecycle and
+finish the requested live outcome unless the owner asks for audit-only or
+proposal-only work.
+
+### Registered-editor work
+
+An exact `skillEditorExceptions` entry permits that verified principal to update
+only the named workspace skill. The grant includes the canonical edit,
+validation, provenance commit, and declared publication mirrors. It does not
+authorize another skill, install, live config change, plugin activation, or
+Gateway reload/restart.
+
+### Other teammate-led work
+
+- **New skill:** create it in the requester's Workshop collection by default.
+- **Existing workspace/repository skill:** do not mutate the live artifact and
+  do not create a duplicate Workshop skill. Stage a complete suggestion through
+  the owning repository's branch/PR workflow, or a clearly labeled committed
+  proposal artifact when no branch workflow exists. Record the requester and
+  notify the workspace owner for the authority decision.
+- **Existing Workshop skill:** apply only after checking the request against
+  owner expectations, the complete current Workshop set, pending proposals,
+  and adjacent non-Workshop skills. Reject or consolidate conflicts and verify
+  accepted changes.
+
+### Agent-initiated work
+
+- **New skill:** create or propose it only in Workshop under the configured
+  mode. A human editor exception never grants an autonomous agent that person's
+  authority.
+- **Existing artifact outside Workshop:** stage the suggestion and ask the
+  workspace owner before live mutation.
+- **Existing Workshop skill:** autonomous maintenance is permitted under the
+  configured Workshop mode and the direct-auto Git gate below.
+
+## 3. Use the correct implementation guide
+
+- **Skills:** use the active `skill-creator` guidance for structure and quality;
+  repository-owned skills use normal file/repository tools.
+- **Workshop:** read the installed docs under
+  `~/.npm-global/lib/node_modules/openclaw/docs/tools/skill-workshop/`
+  and use `skill_workshop` for proposals; never hand-edit proposal storage.
+  For autonomous-review policy delivery, read
+  [Workshop governance adapter setup](references/workshop-governance-enforcement.md).
+- **OpenClaw plugins:** use the focused references in this bundle, then inspect
+  current installed docs and SDK declarations. Start with
+  [manifest/build](references/openclaw-plugin-manifest-build.md); load
+  [command/buttons](references/telegram-command-buttons.md),
+  [branching feasibility](references/button-branching-feasibility.md), or the
+  [one-shot implementation prompt](references/one-shot-extension-prompt.md)
+  only when that branch applies.
+- **Codex plugins:** use Codex's system `plugin-creator` skill. This is separate
+  from OpenClaw plugin authoring.
+
+Use installed docs/source as runtime authority when copied examples drift. Do
+not treat generated mirrors, caches, installed bundles, or scrubbed public
+copies as canonical editable sources.
+
+## 4. Workshop safety gates
+
+Workshop `propose` mode stages pending proposals. Workshop `auto` mode permits
+new background reviews to edit the Workshop tree directly and permits a newly
+created foreground repair proposal to be applied immediately. Changing the mode
+does not apply the existing pending backlog.
+
+Do not enable or rely on Workshop `auto` until all are true:
+
+1. Every nonempty live `workshop-skills/` tree that the configured autonomous
+   mode can edit is Git-backed.
+2. Every autonomous edit path demonstrably creates a provenance-bearing commit.
+3. Live skills and pending proposals have been checked for conflicts/duplicates.
+4. Recovery from Git history has been tested.
+
+Stock direct maintenance has no proposal rollback snapshot, post-turn scanner,
+complete edit history, or automatic Git commit. Workshop proposal revisions,
+events, and apply rollback metadata are sufficient audit records for
+proposal-only work; they do not replace Git for direct `auto` maintenance.
+Until the direct-auto gates pass, keep autonomous mode at `propose` or `off`.
+Never change the mode as a side effect of authoring work.
+
+For proposal updates, read the complete live skill first. The proposal must be
+the complete intended next `SKILL.md`, not an essay about the change. Inspect,
+evaluate when useful, apply only within the initiation rules above, and compare
+the live result byte-for-byte with the intended content.
+
+## 5. Verify the artifact
+
+Use checks proportional to the artifact:
+
+- skill: validate frontmatter, trigger routing, references, scripts, overlap,
+  and `openclaw skills check`;
+- OpenClaw plugin: validate manifest/package identity, current SDK types, build,
+  discovery/load path, focused tests, and the real interaction path when
+  authorized;
+- Codex plugin: use the Codex plugin validator and required development
+  cachebuster/reinstall flow;
+- procedure: confirm callers point to one current authority.
+
+For evidence-led skill optimization, read
+[skill optimization audit](references/skill-optimization-audit.md). Inspect the
+final diff and exclude unrelated dirty-tree changes. Valid frontmatter alone
+does not prove sound ownership, non-conflict, or behavior.
+
+Authoring or publishing does not authorize installs, dependency changes, live
+config mutation, plugin enablement, Gateway reload/restart, or external sends.
+Follow `USER.md` and the active task's authority for those actions.
+
+When authorized runtime activation is needed, prefer a supported, bounded hot
+reload and verify the new generation actually loaded. Restart only when hot
+reload is unavailable or fails and the active task explicitly authorizes the
+restart; never report disk state as live runtime state.
+
+## 6. Commit and publish with provenance
+
+Every workspace/repository skill or plugin change requires a Git commit. A
+Workshop proposal that remains in the proposal lifecycle uses Workshop's own
+immutable revisions and event provenance; direct Workshop maintenance requires
+Git. Read [Git provenance](references/git-provenance.md) before committing.
+
+- Publish every surface declared for the skill in the
+  [workspace registry](references/workspace-skill-registry.json), unless the
+  active requester limits the task to local/staged work. An unlisted skill stays
+  local after its provenance commit.
+- If no repository owns the canonical source, initialize one at the narrowest
+  stable owning root before editing.
+- Never mix unrelated working-tree changes into the commit.
+- Record whether the change was owner-requested, teammate-proposed,
+  agent-proposed, or Workshop-autonomous.
+- Publish skills/plugins only through the no-drift and scrub rules in
   `knowledge/procedures/code-publishing.md`.
 
-## Plugin source rules
-
-- Prefer the runtime-loaded plugin tree when it is safe and self-contained.
-- Use `~/projects/<unit>/` when a real project owns builds, tests,
-  rollout state, or multiple artifacts.
-- Load the project tree directly or use a deterministic build; do not maintain
-  a hand-edited runtime copy and ceremonial project clone.
-- Publishing does not authorize enabling, installing, changing config, or
-  restarting OpenClaw.
-
-## Minimal plugin interaction patterns
-
-Choose the smallest verified surface:
-
-- raw slash arguments for simple branches;
-- namespaced Telegram `callback_data` plus
-  `api.registerInteractiveHandler(...)` for visible inline menus;
-- `presentation.buttons` when channel-agnostic rendering is proven;
-- custom channel-specific callback state only for real pickers/wizards.
-
-Telegram `ctx.respond` is an object, not a callable function. Do not invent
-SDK fields such as native-only typed argument menus; inspect the installed
-`OpenClawPluginCommandDefinition` first.
-
-For minimal command plugins, button routing, manifest/build details, and known
-interaction shapes, use the reference files below.
-
-## Baseline plugin audit
-
-1. Inventory runtime status/source with `openclaw plugins list --json`.
-2. Audit only the selected custom plugin root. Do not touch bundled plugins
-   unless requested.
-3. Check:
-   - manifest/package identity and entry paths;
-   - build/test command and compiled output when required;
-   - installed SDK/type compatibility;
-   - fixture/mocked command, formatting, config, error, and callback behavior;
-   - non-destructive `openclaw plugins inspect <id>` or doctor check when useful.
-4. Patch only obvious bounded gaps.
-5. Write `BASELINE_PLUGIN_AUDIT.md` in the owning plugin/project root.
-6. Run the detected verification once from the parent context and state any
-   missing live integration proof.
-
-No worker may restart Gateway, mutate live config, send external messages, or
-call live providers unless the user separately authorizes that action.
-
-## Local docs and source
-
-Resolve the current OpenClaw root rather than assuming Linux:
-
-1. `~/.npm-global/lib/node_modules/openclaw`
-2. another path returned by `command -v openclaw` / package resolution
-3. project-local `node_modules/openclaw`
-
-Relevant local docs include:
-
-- `docs/plugins/building-plugins.md`
-- `docs/plugins/sdk-entrypoints.md`
-- `docs/plugins/message-presentation.md`
-- `docs/tools/slash-commands.md`
-
-Inspect installed SDK declarations under `dist/plugin-sdk/` before using an
-example that may have drifted.
-
-## Validation and activation
-
-- Registry refresh/discovery proof is not live runtime-reload proof.
-- Build TypeScript before claiming loadability when runtime output is required.
-- Interactive plugins need real button visibility and callback proof before
-  being called live.
-- Any approved Gateway-affecting config/restart path uses
-  `~/projects/gateway-watchdog/safe-apply.sh` with a dry run first.
-- No install, dependency change, config mutation, plugin enablement, or service
-  restart without the approval required by `USER.md`.
-
-## References
-
-- `references/authoring-governance.md`
-- `references/openclaw-plugin-manifest-build.md`
-- `references/one-shot-extension-prompt.md`
-- `references/telegram-command-buttons.md`
-- `references/button-branching-feasibility.md`
-- `knowledge/procedures/code-publishing.md`
-- `skills/development-orchestration/SKILL.md`
+Done means the live/staged state matches its authority boundary, validation
+passes, a provenance commit exists, and every required remote contains it.
