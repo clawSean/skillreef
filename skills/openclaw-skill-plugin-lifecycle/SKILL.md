@@ -136,8 +136,10 @@ Do not enable or rely on Workshop `auto` until all are true:
 4. Recovery from Git history has been tested.
 
 Stock direct maintenance has no proposal rollback snapshot, post-turn scanner,
-complete edit history, or automatic Git commit. Workshop proposal revisions,
-events, and apply rollback metadata are sufficient audit records for
+complete edit history, or automatic Git commit. The governance adapter can
+supply the Git gate only when its `autoCommitProvenance` option is explicitly
+enabled and proven against the live Workshop repository. Workshop proposal
+revisions, events, and apply rollback metadata are sufficient audit records for
 proposal-only work; they do not replace Git for direct `auto` maintenance.
 Until the direct-auto gates pass, keep autonomous mode at `propose` or `off`.
 Never change the mode as a side effect of authoring work.

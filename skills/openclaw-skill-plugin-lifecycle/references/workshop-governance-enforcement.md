@@ -23,7 +23,9 @@ change Workshop mode, or start another model review.
 
 This is a model-governance adapter, not a filesystem ACL. Git history, Workshop
 proposal records, ordinary tool policy, and operator review remain the recovery
-and audit boundaries.
+and audit boundaries. With `autoCommitProvenance` enabled, the adapter blocks a
+dirty or concurrently owned Workshop tree and commits each successful targeted
+direct-auto review with `Change-Origin: workshop-autonomous`.
 
 ## Registry layouts
 
@@ -78,7 +80,8 @@ operator's authority. Publishing or copying this skill does not grant it.
            hooks: { allowConversationAccess: true },
            config: {
              lifecycleSkillPath:
-               "skills/openclaw-skill-plugin-lifecycle/SKILL.md"
+               "skills/openclaw-skill-plugin-lifecycle/SKILL.md",
+             autoCommitProvenance: true
            }
          }
        }
@@ -98,6 +101,8 @@ operator's authority. Publishing or copying this skill does not grant it.
 7. Prove one bounded Workshop review contains
    `WORKSHOP_GOVERNANCE_CONTEXT_V2`, current lifecycle text, and the expected
    registry. A loaded-plugin receipt alone is not prompt-delivery proof.
+8. Before enabling `auto`, prove a successful targeted review creates a clean
+   provenance-bearing commit and prove recovery from that commit's Git history.
 
 Keep Workshop in `propose` or `off` until the lifecycle skill's direct-auto Git
 and recovery gates pass. The adapter does not make `auto` safe by itself.
