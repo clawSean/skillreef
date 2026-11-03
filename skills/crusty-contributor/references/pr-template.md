@@ -1,6 +1,36 @@
 # PR Body Template
 
-Use this as a starting point. Match the target repo's preferred template when one exists.
+Use this as a starting point. Insert the Merge Brief above the target repo's
+existing template and preserve every required heading exactly. The brief
+supplements, never replaces, repository-required sections.
+
+## Merge Brief
+
+<!-- Keep this first and scannable in roughly ten lines. A maintainer should be
+able to understand why this deserves attention and what decision remains in
+under one minute. Use "None" rather than omitting an applicable field. -->
+
+**Problem:** <!-- User-visible pain or concrete behavior gap. -->
+
+**Why now:** <!-- Strongest honest demand signal; distinguish independent demand,
+self-reproduction, accepted direction, operational impact, or vendor/standards pressure. -->
+
+**Value:** <!-- Who benefits and what becomes better if this lands. -->
+
+**Fix:** <!-- Smallest complete solution in plain language. -->
+
+**Scope:** <!-- Diff size/file count, main file groups, and why any excess is atomic. -->
+
+**Risk:** <!-- Main regression risk and its mitigation. -->
+
+**Proof:** <!-- Exact focused tests and real-behavior evidence; link deep receipts below. -->
+
+**Non-goals:** <!-- Explicitly excluded behavior or follow-up work. -->
+
+**Maintainer ask:** <!-- One concrete decision or action: review, accept contract, test, merge. -->
+
+<!-- Put detailed root-cause analysis, logs, matrices, and forensic receipts below
+this brief or in collapsed/linkable artifacts. Do not make reviewers excavate the pitch. -->
 
 ## Summary
 
@@ -35,6 +65,7 @@ Closes #<!-- issue number, or remove this line -->
 ## Checklist
 
 - [ ] Read repo-native contributor guidance.
+- [ ] Preserved every repository-required heading and passed its body/context validation.
 - [ ] Checked nearby conventions and relevant prior PR/issue history for the touched area.
 - [ ] Branched from current upstream default branch, not stale fork state.
 - [ ] Diff is focused; no unrelated cleanup bundled in.

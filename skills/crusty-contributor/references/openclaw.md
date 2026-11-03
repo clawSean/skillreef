@@ -1,22 +1,39 @@
 # OpenClaw Contribution Overlay
-
 Use when the target is `openclaw/openclaw` or a close OpenClaw ecosystem contribution. This overlay carries everything OpenClaw-specific; the skill body stays repo-generic.
-
 ## Quick preflight
-
 - Read repo `AGENTS.md`, `CLAUDE.md`, and `CONTRIBUTING.md`.
 - Branch from current `openclaw/openclaw:main`; contribute through the fork unless told otherwise.
 - Keep PRs surgical and user-facing.
+- Prepare an honest demand case; classify each signal as independent demand,
+  self-reproduction, adjacent accepted direction, operational impact, or
+  standards/vendor pressure. A personal/workspace skill or channel-specific
+  preference may justify a narrow affected-channel fix, but not, alone, a
+  shared/public API, cross-channel behavior, or broad architecture. Default to the narrowest current owner.
+  Expand only for architectural necessity, independent demand, or accepted upstream direction.
+  Lack of prior external demand does not block a cutting-edge contribution, but
+  unqualified self-filed issues do not count as sponsorship.
+- Freeze one first slice before implementation: user-visible behavior, narrowest
+  owner, non-goals, and projected diff. More than 150 changed lines and five files,
+  durability/schema/migration, replay/restart, multiple channels, or shared owners
+  are split triggers; exceed only for named safety/correctness needs.
+- A maintainer request to split or start small is a hard reset: branch from current `main`, rederive only the named slice, use the old branch as evidence—not architecture, and publish only when the diff matches the frozen slice or the maintainer explicitly accepts wider scope.
+- Lead every non-trivial PR body with the reviewer-first `Merge Brief` from
+  `references/pr-template.md`. Keep it to roughly ten scannable lines covering
+  problem, why now/demand signal, value, smallest complete fix, scope, risk,
+  proof, non-goals, and one maintainer ask. Put forensic receipts and long test
+  matrices below the brief or in collapsed/linkable artifacts. A maintainer
+  should be able to orient and decide what to inspect next in under one minute.
+- Insert the brief above OpenClaw's existing body structure. Preserve the exact
+  `## What Problem This Solves` and `## Evidence` headings; the brief supplements,
+  never replaces, required sections. A body write is incomplete until the fresh
+  PR context and evidence gate passes.
 - Read the current upstream `.agents/skills/openclaw-testing/SKILL.md` before choosing test commands; read `.agents/skills/openclaw-qa-testing/SKILL.md`, `.agents/skills/crabbox/SKILL.md`, or the relevant proof skill only when that surface needs it.
 - Use targeted tests first. Do not preserve historical command strings as contracts when current repo guidance has a cheaper or safer lane.
 - For routing/auth/command/channel PRs, run the Pre-Push Regression Gate (skill body §5) plus the OpenClaw-specific rules below before opening or updating the PR.
 - Update `~/projects/CONTRIBUTIONS_INDEX.md` and relevant `PROJECT_PROGRESS.md` for important PRs.
-
 ## Deterministic maintenance preflight
-
 Before every conflict-repair or maintenance push, run the canonical wrapper
 against the maintenance epoch's immutable base:
-
 ```bash
 ~/.openclaw/workspace/scripts/openclaw-pre-pr.sh \
   --repo "$WORKTREE" \
@@ -25,7 +42,6 @@ against the maintenance epoch's immutable base:
   --epoch-id "$EPOCH_ID" \
   --receipt "$RECEIPT_PATH"
 ```
-
 - The coordinator fetches `main` once and distributes the resulting 40-character
   `BASE_SHA`; workers never fetch or substitute a newer base inside the epoch.
 - The wrapper delegates lane selection to the checkout's current
@@ -38,26 +54,20 @@ against the maintenance epoch's immutable base:
   owns exact-head runtime behavior evidence.
 - A nonzero gate blocks publication. Name external or dependency blockers; do
   not replace a failed deterministic gate with reviewer confidence.
-
 ## Canonical guidance
-
 Repo files are authoritative:
-
 - `AGENTS.md` — agent/developer workflow, tests, changelog, git rules.
 - `CLAUDE.md` — Claude-specific mirror of repo guidance.
 - `CONTRIBUTING.md` — human contribution expectations.
-
 Local workspace references:
-
 - `knowledge/procedures/openclaw-upstream-contribution-playbook.md` — detailed workflow and lessons.
 - `knowledge/procedures/openclaw-taskflow-issue-intake.md` — manual TaskFlow-style funnel for turning fresh OpenClaw issues into shortlisted PR candidates; use before this overlay, not instead of it.
 - `~/projects/CONTRIBUTIONS_INDEX.md` — active PR/issue board.
 - Relevant project `PROJECT_PROGRESS.md` — live context for longer contribution tracks.
-
 ## Redundancy check (OpenClaw-specific)
-
-Run this before starting any OpenClaw contribution:
-
+This is the first per-PR action. Run it before code repair, dependency work,
+proof creation, or body/public mutation. If current main or a merged PR already
+removes the user gap, stop and record a closure recommendation.
 ```bash
 # Is the symptom already fixed in the latest release?
 gh release list --repo openclaw/openclaw --limit 5
@@ -72,7 +82,6 @@ gh pr list --repo openclaw/openclaw --search '<keywords>' --state open
 # Closed PRs (merged fixes you might have missed)
 gh pr list --repo openclaw/openclaw --search '<keywords>' --state closed --limit 10
 ```
-
 If an **open PR already targets the same bug**:
 - Don't open a new PR — contribute to the existing one.
 - Useful contributions: rebase to latest main, fix failing tests, respond to stale reviewer comments, add missing test coverage.
@@ -107,6 +116,21 @@ If the **bug is fixed in a newer OpenClaw release** than what's installed:
 - Branch from latest upstream `main`, not stale fork `main`.
 - Use the fork remote for pushes and PRs unless direct upstream access is explicitly intended.
 - Keep PR scope narrow: one bug, handler, route, doc gap, or behavior correction.
+- Re-run the merge brief whenever the head, proof state, requested decision, or
+  demand evidence materially changes; stale sales copy is a merge-readiness bug.
+- After every head or body mutation, reread the edited-in-place review comment
+  and its markers. Bind readiness to the exact head, current body/source revision,
+  and latest review source revision; never reuse cached findings.
+- Process each PR in order: live relevance/overlap -> preserve body template ->
+  repair and prove only if relevant -> refresh brief -> context/evidence gate ->
+  public write -> exact readback -> fresh rolling-review readback.
+- Treat OpenClaw's official `20`-open-PR-per-author cap as a safety limit, never
+  an output target. Mirror the enforcement query: count `is:pr is:open
+  author:<login>` separately for each author. Draft PRs count; GitHub issues do
+  not. Our reviewer-cost controls remain intentionally stricter: At 12 or more,
+  require a written portfolio-rank check; At 15 or more, keep new work
+  local/candidate-first unless the user explicitly authorizes a different
+  bounded exception. A draft does not create capacity.
 - Prefer source edits over generated `dist` edits unless generated files are intentionally part of repo workflow.
 - Add focused tests near existing tests for the touched package/extension.
 - Use `pnpm` when `pnpm-lock.yaml` is present.

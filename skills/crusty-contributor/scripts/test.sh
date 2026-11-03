@@ -5,12 +5,9 @@
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
-
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
-
 echo "=== crusty-contributor baseline tests ==="
-
 # 1. SKILL.md exists and is non-empty
 if [ -s "$SKILL_DIR/SKILL.md" ]; then
   pass "SKILL.md exists and is non-empty"
@@ -59,8 +56,6 @@ references/edge-app/repository-proof.md
 references/edge-app/proof-contract.md
 templates/edge-app-proof-packet.md
 REFS
-
-
 # 5. Edge reference files stay within the workspace reading budget
 while IFS= read -r ref; do
   lines="$(wc -l < "$SKILL_DIR/$ref" | tr -d ' ')"
@@ -77,7 +72,6 @@ references/edge-app/repository-proof.md
 references/edge-app/proof-contract.md
 templates/edge-app-proof-packet.md
 EDGE_REFS
-
 # 6. Edge proof contract is wired into the mandatory Edge route
 if grep -q 'references/edge-app/proof-contract.md' "$SKILL_DIR/references/edge-app.md"; then
   pass "Edge overlay routes every PR through the proof contract"
@@ -153,6 +147,87 @@ if grep -Fq 'Proof Lab separately' "$openclaw_overlay" &&
   pass "OpenClaw overlay keeps repository policy separate from behavior proof"
 else
   fail "OpenClaw overlay blurs repository policy and behavior proof ownership"
+fi
+
+# 10. OpenClaw mergeability policy preserves discovery while controlling first-slice cost
+mergeability_policy_ok=1
+for required in \
+  'Lack of prior external demand does not block a' \
+  'self-filed issues do not count as' \
+  '150 changed lines and five files' \
+  'are split triggers' \
+  'hard reset' \
+  'evidence—not' \
+  'maintainer explicitly accepts wider scope' \
+  'At 12 or more' \
+  'At 15 or more' \
+  'A draft does not create'; do
+  if ! grep -Fq -- "$required" "$openclaw_overlay"; then
+    mergeability_policy_ok=0
+  fi
+done
+if [ "$mergeability_policy_ok" -eq 1 ]; then
+  pass "OpenClaw overlay enforces calibrated demand, scope, and portfolio discipline"
+else
+  fail "OpenClaw mergeability policy is incomplete or over-constrained"
+fi
+
+# 10a. Local preferences cannot silently broaden an upstream product contract
+if grep -Fq 'personal/workspace skill, local automation' "$SKILL_DIR/SKILL.md" &&
+   grep -Fq 'channel preference is **self-reproduction**' "$SKILL_DIR/SKILL.md" &&
+   grep -Fq 'does not by itself' "$SKILL_DIR/SKILL.md" &&
+   grep -Fq 'justify a shared/public API, cross-channel behavior' "$SKILL_DIR/SKILL.md" &&
+   grep -Fq 'personal/workspace skill or channel-specific' "$openclaw_overlay" &&
+   grep -Fq 'Default to the narrowest current owner' "$openclaw_overlay" &&
+   grep -Fq 'split or start small is a hard reset' "$SKILL_DIR/SKILL.md" &&
+   grep -Fq 'old branch as evidence—not architecture' "$SKILL_DIR/SKILL.md"; then
+  pass "Self-reproduced local preferences cannot justify broad upstream scope"
+else
+  fail "Local-preference demand provenance or narrow-owner scope gate is missing"
+fi
+
+# 11. Reviewer-first merge briefs make relevance and review cost obvious
+merge_brief_ok=1
+for required in \
+  'Lead every non-trivial PR body with the reviewer-first `Merge Brief`' \
+  'problem, why now/demand signal, value, smallest complete fix, scope, risk,' \
+  'one maintainer ask' \
+  'stale sales copy is a merge-readiness bug'; do
+  if ! grep -Fq -- "$required" "$openclaw_overlay"; then
+    merge_brief_ok=0
+  fi
+done
+if [ "$merge_brief_ok" -eq 1 ] &&
+   grep -Fq '## Merge Brief' "$SKILL_DIR/references/pr-template.md" &&
+   grep -Fq '**Maintainer ask:**' "$SKILL_DIR/references/pr-template.md"; then
+  pass "OpenClaw PRs require a reviewer-first merge brief with one clear ask"
+else
+  fail "OpenClaw reviewer-first merge brief contract is incomplete"
+fi
+
+# 12. Merge-brief maintenance fails closed on repository and live-review invariants
+pr_template="$SKILL_DIR/references/pr-template.md"
+if grep -Eq 'supplements, never replaces.*repository-required' "$pr_template" &&
+   grep -Fq 'Preserved every repository-required heading' "$pr_template"; then
+  pass "Merge Brief supplements rather than replaces repository-required structure"
+else
+  fail "Merge Brief can replace or omit repository-required structure"
+fi
+
+if grep -Fq '## What Problem This Solves' "$openclaw_overlay" &&
+   grep -Fq '## Evidence' "$openclaw_overlay" &&
+   grep -Fq 'PR context and evidence gate' "$openclaw_overlay"; then
+  pass "OpenClaw body maintenance preserves required headings and validates context"
+else
+  fail "OpenClaw required body headings/context validation are not fail-closed"
+fi
+
+if grep -Fq 'This is the first per-PR action' "$openclaw_overlay" &&
+   grep -Fq 'before code repair, dependency work' "$openclaw_overlay" &&
+   grep -Fq 'latest review source revision; never reuse cached findings' "$openclaw_overlay"; then
+  pass "OpenClaw maintenance checks relevance first and rereads exact live review state"
+else
+  fail "OpenClaw relevance or exact live-review ordering invariant is missing"
 fi
 
 # Summary

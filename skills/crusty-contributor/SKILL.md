@@ -122,7 +122,15 @@ the relevant owner selects a contract.
 | Security/policy-sensitive report | Follow repo security policy first |
 | Root cause unclear | Issue first, or investigate before PR |
 
-When unsure, file the issue first. Small, sharp PRs beat broad speculative rewrites.
+Before sizing work, record who experiences the problem, its narrowest owner, and
+evidence for each wider boundary. A personal/workspace skill, local automation,
+or channel preference is **self-reproduction**: it proves a narrow need, not
+independent upstream demand, and does not by itself justify a shared/public API, cross-channel behavior,
+or abstraction. Default to the narrowest owner; expand only for architectural
+necessity, independent demand, or accepted direction. If expansion changes the
+public product/API/architecture, file an issue/discussion first.
+
+Freeze the first user-visible slice before implementation. A maintainer request to split or start small is a hard reset: start from current upstream, rederive only the named slice, and treat the old branch as evidence—not architecture.
 
 ### Positioning for Merge (maintainer attractiveness)
 
@@ -204,6 +212,10 @@ Do not say a branch is "ready" or "merge-ready" immediately after upload when an
 ## 6. PR Body
 
 Use `references/pr-template.md` when helpful. Strong PR body shape:
+
+- Reviewer-first merge brief at the top for non-trivial PRs: problem, why now,
+  value, smallest complete fix, scope, risk, proof, non-goals, and one maintainer
+  ask. Keep deep receipts below it so orientation never requires archaeology.
 
 - Problem / user-visible impact
 - Root cause
