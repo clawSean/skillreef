@@ -84,7 +84,7 @@ gh pr list --repo openclaw/openclaw --search '<keywords>' --state closed --limit
 ```
 If an **open PR already targets the same bug**:
 - Don't open a new PR — contribute to the existing one.
-- Useful contributions: rebase to latest main, fix failing tests, respond to stale reviewer comments, add missing test coverage.
+- Useful contributions: rebase when conflicts or a maintainer request require it, fix failing tests, respond to stale reviewer comments, add missing test coverage. Do not chase a moving upstream head.
 - If the PR is abandoned and the author is unresponsive (>2 weeks, no activity), note this explicitly before superseding.
 
 If **our PR is stale, duplicated, or has a stronger competing PR**:
@@ -167,9 +167,19 @@ persistent state, or another surface whose real behavior affects review. Also
 load it whenever a reviewer, bot, label, or head change creates proof debt.
 
 Crusty retains public writes. Before create, ready, or a behavior-changing push,
-inspect the exact-head packet and run `scripts/proof-publication-gate.sh`: only
-`satisfied`/`not_required` publish non-draft; otherwise hold locally unless a
-recorded coordination exception needs a draft. Later proof is a promotion event.
+inspect the candidate-head packet and run `scripts/proof-publication-gate.sh`.
+Publish non-draft with an honest proof-debt disclosure when proof is planned,
+attempted, externally blocked, or stale. Hold only when a repository rule,
+maintainer request, or concrete safety boundary explicitly makes proof a
+pre-publication requirement. Later proof clears debt; it is not what makes the
+contribution exist.
+
+`Exact head` means the contribution head SHA exercised by the evidence, not the
+moving tip of upstream `main`. Upstream movement alone never invalidates proof.
+When the contribution head changes, compare the effective patch and affected
+dependencies: carry the receipt forward after equivalence checks for an
+ancestry-only rebase, and rerun only the proof affected by code, conflict
+resolution, generated output, or dependency changes.
 
 Proof Lab's routing reference owns current ClawPop, Crabbox, hosted, Mantis,
 macOS, iOS Simulator, and pre-PR-wrapper status. Do not duplicate those

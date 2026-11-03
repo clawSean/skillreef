@@ -230,31 +230,30 @@ else
   fail "OpenClaw relevance or exact live-review ordering invariant is missing"
 fi
 
-# 13. OpenClaw proof state deterministically gates publication state
+# 13. OpenClaw proof state is tracked without becoming a universal publication block
 publication_gate="$SKILL_DIR/scripts/proof-publication-gate.sh"
 if [ -x "$publication_gate" ] &&
    [ "$("$publication_gate" satisfied non-draft no)" = "ready_non_draft" ] &&
    [ "$("$publication_gate" not_required non-draft no)" = "ready_non_draft" ] &&
-   [ "$("$publication_gate" blocked_external draft yes)" = "draft_coordination_only" ]; then
-  pass "satisfied/not-required proof can publish and explicit coordination can draft"
+   [ "$("$publication_gate" blocked_external draft no)" = "draft_with_proof_debt" ]; then
+  pass "proof-complete work publishes cleanly and drafts can retain explicit proof debt"
 else
-  fail "publication gate rejects a valid ready or coordination case"
+  fail "publication gate rejects a valid ready or proof-debt case"
 fi
 
-publication_blocked=0
-publication_output="$("$publication_gate" blocked_external non-draft no 2>/dev/null)" || publication_blocked=$?
-if [ "$publication_blocked" -ne 0 ] && [ "$publication_output" = "hold_local" ]; then
-  pass "blocked external proof cannot publish non-draft"
+publication_output="$("$publication_gate" blocked_external non-draft no)"
+if [ "$publication_output" = "ready_non_draft_with_proof_debt" ]; then
+  pass "external proof debt does not freeze non-draft contribution publication"
 else
-  fail "blocked external proof escaped the non-draft publication gate"
+  fail "external proof debt incorrectly freezes contribution publication"
 fi
 
-planned_draft_blocked=0
-planned_draft_output="$("$publication_gate" planned draft no 2>/dev/null)" || planned_draft_blocked=$?
-if [ "$planned_draft_blocked" -ne 0 ] && [ "$planned_draft_output" = "hold_local" ]; then
-  pass "draft publication requires a recorded coordination exception"
+required_proof_blocked=0
+required_proof_output="$("$publication_gate" attempted non-draft yes 2>/dev/null)" || required_proof_blocked=$?
+if [ "$required_proof_blocked" -ne 0 ] && [ "$required_proof_output" = "proof_blocked" ]; then
+  pass "an explicit pre-publication proof requirement still blocks publication"
 else
-  fail "planned proof escaped into an unqualified draft"
+  fail "explicit pre-publication proof requirement did not block"
 fi
 
 # Summary

@@ -3,7 +3,7 @@ set -euo pipefail
 
 state="${1:-}"
 intent="${2:-}"
-coordination_exception="${3:-no}"
+proof_required_before_publication="${3:-no}"
 
 case "$state" in
   not_required|planned|attempted|satisfied|blocked_external|stale) ;;
@@ -21,10 +21,10 @@ case "$intent" in
     ;;
 esac
 
-case "$coordination_exception" in
+case "$proof_required_before_publication" in
   no|yes) ;;
   *)
-    echo "coordination exception must be no or yes" >&2
+    echo "proof-required-before-publication must be no or yes" >&2
     exit 64
     ;;
 esac
@@ -34,10 +34,14 @@ if [[ "$state" == "satisfied" || "$state" == "not_required" ]]; then
   exit 0
 fi
 
-if [[ "$intent" == "draft" && "$coordination_exception" == "yes" ]]; then
-  echo "draft_coordination_only"
+if [[ "$proof_required_before_publication" == "yes" ]]; then
+  echo "proof_blocked"
+  exit 1
+fi
+
+if [[ "$intent" == "draft" ]]; then
+  echo "draft_with_proof_debt"
   exit 0
 fi
 
-echo "hold_local"
-exit 1
+echo "ready_non_draft_with_proof_debt"

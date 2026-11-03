@@ -213,9 +213,11 @@ Do not say a branch is "ready" or "merge-ready" immediately after upload when an
 
 For OpenClaw PRs, follow the mandatory overlay's publication-state contract.
 Proof Lab owns the current-head state; this skill gates the GitHub action with
-`scripts/proof-publication-gate.sh`. A PR cannot publish non-draft unless proof
-is `satisfied` or `not_required`; missing or externally blocked proof defaults
-to local hold, with draft reserved for an explicit coordination exception.
+`scripts/proof-publication-gate.sh`. Missing, incomplete, externally blocked,
+or stale proof is tracked and disclosed as proof debt; it does not by itself
+force a local hold or draft. Block publication only when the repository, a
+maintainer, or the changed surface's safety boundary explicitly requires that
+proof before publication.
 
 ## 6. PR Body
 
