@@ -209,6 +209,14 @@ Minimum gates before claiming success:
 
 Do not say a branch is "ready" or "merge-ready" immediately after upload when an expected repo bot/reviewer has not looked yet. Say "PR opened; local gates passed; awaiting first bot/review pass." Upgrade the status only after review/CI confirms or after you have triaged failures.
 
+### Publication state contract
+
+For OpenClaw PRs, follow the mandatory overlay's publication-state contract.
+Proof Lab owns the current-head state; this skill gates the GitHub action with
+`scripts/proof-publication-gate.sh`. A PR cannot publish non-draft unless proof
+is `satisfied` or `not_required`; missing or externally blocked proof defaults
+to local hold, with draft reserved for an explicit coordination exception.
+
 ## 6. PR Body
 
 Use `references/pr-template.md` when helpful. Strong PR body shape:

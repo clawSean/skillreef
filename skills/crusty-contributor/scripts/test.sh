@@ -230,6 +230,33 @@ else
   fail "OpenClaw relevance or exact live-review ordering invariant is missing"
 fi
 
+# 13. OpenClaw proof state deterministically gates publication state
+publication_gate="$SKILL_DIR/scripts/proof-publication-gate.sh"
+if [ -x "$publication_gate" ] &&
+   [ "$("$publication_gate" satisfied non-draft no)" = "ready_non_draft" ] &&
+   [ "$("$publication_gate" not_required non-draft no)" = "ready_non_draft" ] &&
+   [ "$("$publication_gate" blocked_external draft yes)" = "draft_coordination_only" ]; then
+  pass "satisfied/not-required proof can publish and explicit coordination can draft"
+else
+  fail "publication gate rejects a valid ready or coordination case"
+fi
+
+publication_blocked=0
+publication_output="$("$publication_gate" blocked_external non-draft no 2>/dev/null)" || publication_blocked=$?
+if [ "$publication_blocked" -ne 0 ] && [ "$publication_output" = "hold_local" ]; then
+  pass "blocked external proof cannot publish non-draft"
+else
+  fail "blocked external proof escaped the non-draft publication gate"
+fi
+
+planned_draft_blocked=0
+planned_draft_output="$("$publication_gate" planned draft no 2>/dev/null)" || planned_draft_blocked=$?
+if [ "$planned_draft_blocked" -ne 0 ] && [ "$planned_draft_output" = "hold_local" ]; then
+  pass "draft publication requires a recorded coordination exception"
+else
+  fail "planned proof escaped into an unqualified draft"
+fi
+
 # Summary
 echo ""
 echo "Results: $PASS passed, $FAIL failed"

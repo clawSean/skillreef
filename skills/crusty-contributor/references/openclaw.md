@@ -166,9 +166,10 @@ config/startup/update behavior, auth/security, provider behavior, native apps,
 persistent state, or another surface whose real behavior affects review. Also
 load it whenever a reviewer, bot, label, or head change creates proof debt.
 
-This overlay and Crusty Contributor retain branch/PR strategy, public GitHub
-writes, body updates, artifact publication, re-review requests, and contribution
-bookkeeping. Receive and inspect the Proof Lab packet before publishing it.
+Crusty retains public writes. Before create, ready, or a behavior-changing push,
+inspect the exact-head packet and run `scripts/proof-publication-gate.sh`: only
+`satisfied`/`not_required` publish non-draft; otherwise hold locally unless a
+recorded coordination exception needs a draft. Later proof is a promotion event.
 
 Proof Lab's routing reference owns current ClawPop, Crabbox, hosted, Mantis,
 macOS, iOS Simulator, and pre-PR-wrapper status. Do not duplicate those
