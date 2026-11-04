@@ -3,7 +3,6 @@
 Evidence for Telegram Bot API 10.3 rich bodies when
 `channels.telegram.richMessages: true`. Operating rules live only in
 `SKILL.md`; client diagnosis lives in `rich-message-client-compat.md`.
-
 ## Current calibrated surface
 
 - OpenClaw: 2026.9.1
@@ -190,7 +189,9 @@ Observed result: suspend inline break tags in ordinary finals; use semantic list
 ### T28: ordinary-final blank paragraphs still collapse, 2026-10-08
 Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering source-blank-separated prose without an empty row. iOS build unrecorded. This repeats T26 after the no-break-tag rule; exact message IDs remain in private daily memory.
 The same owner confirmed by screenshot that an explicit rich `message` canary, with source-adjacent `<br><br>`, rendered one empty visual row and no literal tags in the same topic. This proves the iPhone route distinction; it does not prove reply-time TTS.
-
+### T29: generic callback routing, 2026-11-04
+- OpenClaw 2026.10.3; the reviewer DM topic 58758; iOS build unrecorded. Typed callback 33297 rendered but tapped as unavailable; logs tied update `605806812` to a first-attempt `sendMessage` network failure, while source inspection independently showed typed generic callbacks use a reserved opaque prefix, reach registered handlers, and terminalize when unclaimed. Legacy-value canary 33303 returned `callback_data: tg_legacy_canary_ok` to the agent.
+Observed result: use legacy `value` inside `presentation.blocks` for ordinary agent-steering callbacks on this build; keep other supported actions typed and re-test after updates.
 ## Table history and battery
 ### Historical failure
 In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the renderer intact, but an unrecorded client displayed one body row. Bold and inline code inside cells were not isolated as the cause; tables are not portable across unknown clients.
@@ -202,7 +203,6 @@ In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the re
 3. **T7c — raw HTML:** caption, two headers, three rows; pass only if all rows render without leaked markup.
 
 ## Structure regression battery
-
 1. **T1–T3:** blank-source-line paragraphs, Markdown bullets, numbered items, then literal newlines.
 2. **T4–T6:** adjacent `p` blocks (diagnostic), single/double breaks, then heading/details/tasks/prose; check each block.
 3. **T13/T22:** semantic `ul` versus literal `•`; then bare newline versus source-adjacent `<br>` versus semantic list.

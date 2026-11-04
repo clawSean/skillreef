@@ -2,8 +2,8 @@
 
 Use these only after `SKILL.md` selects the explicit `message` path. `target`
 defaults to the current source conversation; include it only for another chat.
-All button examples use current typed actions. Legacy `value`, `url`, `webApp`,
-and `web_app` aliases are compatibility inputs, not authoring defaults.
+Button examples use typed actions except the generic callback workaround selected by `SKILL.md`.
+Legacy `url`, `webApp`, and `web_app` aliases remain compatibility inputs, not authoring defaults.
 
 ## Mention
 
@@ -23,39 +23,42 @@ plain name. Never invent an ID.
   "presentation": { "blocks": [{
     "type": "buttons",
     "buttons": [
-      { "label": "✅ Yes", "action": { "type": "callback", "value": "yes" }, "style": "success" },
-      { "label": "❌ No", "action": { "type": "callback", "value": "no" }, "style": "danger" }
+      { "label": "✅ Yes", "value": "yes", "style": "success" },
+      { "label": "❌ No", "value": "no", "style": "danger" }
     ]
   }] }
 }
 ```
 
-Use stable lowercase snake_case callback values. Mirror options in the message.
+Use this legacy `value` shape only for an ordinary callback that should return to the agent.
+A typed callback belongs to a registered interactive handler until the generic typed-callback canary passes again. Use stable lowercase snake_case callback values. Mirror options in the message.
 Top-level `buttons` are stripped; `presentation` does not replace `message`.
 Telegram auto-chunks three buttons per row, so keep 3+ button labels short.
 
 ## Copy Text
 The availability, limit, and fallback rule is owned by [SKILL.md](../SKILL.md#copyability).
-Use this typed shape when the active schema exposes `copy-text`:
+Use this Telegram-owned shape only when the active schema exposes
+`copyTextButtons`:
 ```json
 {
   "action": "send",
   "message": "Token: `TOKEN-7319`",
-  "presentation": { "blocks": [{
-    "type": "buttons",
-    "buttons": [{ "label": "📋 Copy token", "action": { "type": "copy-text", "text": "TOKEN-7319" } }]
-  }] }
+  "copyTextButtons": [{ "label": "📋 Copy token", "text": "TOKEN-7319" }]
 }
 ```
-**Temporary legacy companion:** keep the main answer rich and send a separate
-legacy `sendMessage` with this Telegram wire shape:
+Copied text is exact, supports 1–256 Unicode characters, and is not trimmed.
+Labels support 1–64 characters; every button gets its own row. Include message
+or media content, and do not combine `copyTextButtons` with `presentation`,
+legacy `interactive`, or existing Telegram controls.
+
+When the field is absent—or the value exceeds 256 characters—send one separate
+plain message so Telegram's whole-message **Copy** remains available:
 ```json
-{ "chat_id": "<current_chat_id>", "message_thread_id": "<topic_id_if_any>", "text": "<code>EXACT_VALUE</code>", "parse_mode": "HTML", "reply_markup": { "inline_keyboard": [[{ "text": "📋 Copy", "copy_text": { "text": "EXACT_VALUE" } }]] } }
+{ "action": "send", "message": "EXACT_VALUE" }
 ```
-Resolve the token only inside the authenticated process; never expose or persist
-it. Escape visible HTML separately from the JSON copy value. Limit: 1–256 characters.
-Above that, send one plain legacy message for whole-message **Copy**; avoid
-`<pre>`/rich code blocks. Files are additive only for real artifacts.
+Do not bypass the active message contract with a raw Bot API call, fake Copy with
+a callback, or place the fallback in `<pre>`/rich code blocks. Files are additive
+only for real artifacts.
 
 ## URL button
 
@@ -105,14 +108,13 @@ Private-chat shape after the canonical surface gate passes:
   "type": "select",
   "placeholder": "Choose lane",
   "options": [
-    { "label": "🔐 Security", "action": { "type": "callback", "value": "security" } },
-    { "label": "🦞 Product", "action": { "type": "callback", "value": "product" } }
+    { "label": "🔐 Security", "value": "security" },
+    { "label": "🦞 Product", "value": "product" }
   ]
 }
 ```
 
-Telegram renders selects as buttons; use a select only when a shared flow also
-targets a channel with a real dropdown.
+Telegram renders selects as buttons; use a select only when a shared flow also targets a channel with a real dropdown. The same generic-callback exception applies.
 
 ## Poll
 

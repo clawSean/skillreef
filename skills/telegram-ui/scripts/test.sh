@@ -7,13 +7,8 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 exec python3 - "$SKILL_DIR" <<'PY'
 from __future__ import annotations
-import json
-import re
-import subprocess
-import sys
-import tempfile
-from urllib.parse import unquote
-from pathlib import Path
+import json, re, subprocess, sys, tempfile
+from urllib.parse import unquote; from pathlib import Path
 root = Path(sys.argv[1]).resolve(); skill = root / "SKILL.md"; script = root / "scripts" / "test.sh"; passed = 0; failed = 0
 def check(ok: bool, label: str) -> None:
     global passed, failed
@@ -140,15 +135,21 @@ for path, _, _ in json_blocks:
     by_file[path.name] = by_file.get(path.name, 0) + 1
 check(by_file.get("payload-recipes.md", 0) >= 12, "payload-recipes.md has broad action coverage")
 check(by_file.get("telegram-forum-topics.md", 0) >= 3, "forum-topic recipes are present")
-legacy_fields: list[str] = []
+legacy_fields: list[str] = []; generic_callback_values = 0
 top_level_actions: set[str] = set(); interaction_types: set[str] = set()
 def walk(value: object, path: Path, line_no: int) -> None:
+    global generic_callback_values
     if isinstance(value, dict):
         action = value.get("action")
         if isinstance(action, dict) and isinstance(action.get("type"), str):
             interaction_types.add(action["type"])
         if "label" in value:
-            if not isinstance(action, dict) or not isinstance(action.get("type"), str) or not action["type"]:
+            copy_button = set(value) == {"label", "text"} and isinstance(value.get("text"), str)
+            generic_callback = path.name == "payload-recipes.md" and isinstance(value.get("value"), str) and bool(value["value"].strip())
+            if generic_callback:
+                generic_callback_values += 1
+                interaction_types.add("callback")
+            elif not copy_button and (not isinstance(action, dict) or not isinstance(action.get("type"), str) or not action["type"]):
                 legacy_fields.append(f"{path.relative_to(root)}:{line_no}: labeled control lacks action.type")
         for nested in value.values():
             walk(nested, path, line_no)
@@ -159,11 +160,10 @@ for path, line_no, value in decoded:
     if isinstance(value, dict) and isinstance(value.get("action"), str):
         top_level_actions.add(value["action"])
     walk(value, path, line_no)
-check(not legacy_fields, "canonical labeled controls use typed actions")
+check(not legacy_fields and generic_callback_values == 4, "labeled controls use typed actions or the four calibrated generic callbacks")
 for error in legacy_fields:
     print(f"    {error}", file=sys.stderr)
-required_actions = {"send", "poll", "edit", "react", "sticker", "sticker-search", "topic-create", "topic-edit"}
-required_types = {"callback", "url", "web-app", "copy-text"}
+required_actions = {"send", "poll", "edit", "react", "sticker", "sticker-search", "topic-create", "topic-edit"}; required_types = {"callback", "url", "web-app"}
 missing_actions = sorted(required_actions - top_level_actions); missing_types = sorted(required_types - interaction_types)
 check(not missing_actions and not missing_types, "payload recipes cover required actions and interaction types")
 if missing_actions:
@@ -207,7 +207,7 @@ check(all(term in compose for term in ("Literal lists are compact by default", "
 check(len("• " + "x" * 88) == 90 and len("• " + "x" * 89) == 91, "90-visible-character list threshold fixture is exact")
 unsafe_literal = re.compile(r"(?m)^•[^\n]*\n•"); check(bool(unsafe_literal.search("• a\n• b")) and not unsafe_literal.search("• a<br>• b") and not unsafe_literal.search("<ul><li>a</li><li>b</li></ul>") and not unsafe_literal.search(compose), "literal-bullet fixture rejects bare newline and scans the skill")
 check(all(term in compose for term in ("Multiple headings are fine", "each starts", "after real `\\n\\n`", "Never emit `<br><br>###`", "end prior block first", "inline code for simple one-line values", "newline/escape-sequence", "leaked backticks")) and not re.search(r"<br><br>[ \t]*\n", text) and not re.search(r"(?m)^#{1,6}.*<br>", text), "heading boundaries and code-span safety stay explicit")
-check(all(term in compose for term in ("copy-text", "1–256", "separate legacy", "whole-message", "local token", "Never fake Copy")), "Copy Text uses the approved companion fallback and preserves token safety")
+check(all(term in compose for term in ("copyTextButtons", "1–256", "active schema", "separate plain", "whole-message", "Do not call the Bot API", "Never fake Copy")), "Copy Text stays Telegram-local, capability-gated, and exact")
 check(all(term in compose for term in ("Unknown surfaces", "complete row-for-row compact mirror")), "table fallback and mirror remain mandatory")
 check(all(term in interaction for term in ("reaction", "replyTo", "buttons", "poll", "edit", "pin", "plain-text menu", "Group/topic Mini", "direct-link URL", "true `web-app`", "private-chat", "presentation.blocks", "top-level `buttons` are stripped", "Mirror choices")), "interaction routing and group web-app prohibition remain explicit")
 check(all(term in re.sub(r"\s+", " ", media) for term in ("Captions", "literal line breaks", "true 1:1", "centered safe area", "unless another ratio", "injected voice transcript", "If absent, say so", "never pretend", "IDs distinct")), "caption, thumbnail, transcript, and ID rules remain explicit")

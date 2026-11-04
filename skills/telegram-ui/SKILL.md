@@ -1,6 +1,6 @@
 ---
 name: "telegram-ui"
-description: "Use for every Telegram reply, control, poll, reaction, media send, topic action, or rendering repair; produce readable rich output."
+description: "Use for Telegram replies, controls, polls, reactions, media, topics, and rendering repair."
 ---
 
 # Telegram
@@ -34,7 +34,8 @@ follow runtime and rerun the canary.
   there leak literally. This path may bypass reply-time TTS.
 - **Controls/actions:** use `message` for controls, edits, media, topics, or
   out-of-band sends. Verify the active schema.
-- **Copy control:** use `message.presentation.blocks` for clipboard actions.
+- **Copy:** use Telegram `copyTextButtons` only when exposed; never use shared
+  presentation.
 
 ## 3. Compose the body
 
@@ -85,11 +86,10 @@ follow runtime and rerun the canary.
 ### Copyability
 
 - Treat exact values as copyable.
-- For 1–256 characters, keep the answer rich and send a separate legacy
-  inline-code companion with native `📋 Copy`. Prefer typed `copy-text`;
-  otherwise use the local token resolver without exposing the token.
-- Above 256, send exact text alone as a separate legacy message for whole-message
-  **Copy**; no rich/code blocks. Files are only for artifacts.
+- For 1–256 characters, keep the answer rich and add `copyTextButtons` when the
+  active schema exposes it; preserve the exact value, one button per row.
+- Otherwise, send exact text as a separate plain message for whole-message
+  **Copy**. Do not call the Bot API.
 - Never fake Copy with a callback, split values, or expose secrets.
   Shapes and fallback: [payload recipes](references/payload-recipes.md).
 
@@ -110,8 +110,9 @@ Apps use a direct-link URL plus browser fallback; true `web-app` is private-chat
 only after surface proof.
 
 Use typed actions inside `presentation.blocks`; top-level `buttons` are stripped.
-Mirror choices in the message. Open
-[payload recipes](references/payload-recipes.md) for exact schemas and limits.
+Only agent callbacks use the recipe's legacy `value` until the typed canary
+  passes. `copyTextButtons` is separate. Mirror choices in
+  text. See [payload recipes](references/payload-recipes.md).
 
 ## 5. Handle media and special branches
 
