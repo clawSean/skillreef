@@ -103,9 +103,12 @@ follow runtime and rerun the canary.
 
 ## 4. Choose the interaction
 
-Use a reaction to acknowledge, `replyTo` to target, buttons for choices, a poll
-for voting, edit for status, and pin for important output. Never replace discrete
-buttons with a plain-text menu. Group/topic Mini
+Use a reaction to acknowledge, `replyTo` to target, edit for status, and pin for
+key output. Controls are required when supported: confirmation requests
+get confirm and decline/hold buttons; **2–5 discrete choices** get one button
+each (or a poll for voting); text meant to be copied gets the Copy control above.
+Mirror controls in text. Never replace buttons with a
+plain-text menu. Hands-free voice mode remains button-free. Group/topic Mini
 Apps use a direct-link URL plus browser fallback; true `web-app` is private-chat
 only after surface proof.
 
@@ -142,12 +145,7 @@ Use first-pass composition, not a manual checklist or second model review.
 
 ## Reference boundary
 
-`SKILL.md` owns common send-time behavior. Exact action payloads live in
-[payload recipes](references/payload-recipes.md); diagnosis in
-[client compatibility](references/rich-message-client-compat.md); evidence in
-the [rendering matrix](references/rich-rendering-matrix.md); rare branches in
-[admin controls](references/telegram-admin-control.md),
-[forum topics](references/telegram-forum-topics.md), and
-[Mini Apps](references/telegram-mini-apps.md). `scripts/test.sh` validates the
-bundle. Keep dated evidence out of operating rules; change a rule only after a
-controlled canary establishes durable behavior.
+Details: [payloads](references/payload-recipes.md), [compatibility](references/rich-message-client-compat.md),
+[evidence](references/rich-rendering-matrix.md), [admin](references/telegram-admin-control.md),
+[topics](references/telegram-forum-topics.md), [Mini Apps](references/telegram-mini-apps.md).
+`scripts/test.sh` validates. Keep rules undated; require canary proof.
