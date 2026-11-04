@@ -41,7 +41,7 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 | Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
 | Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
 | User explicitly requests their tab, must watch/participate, requires exceptional sensitivity, or self-sufficient local lanes cannot provide the required context and the user agrees to share | shared-tab context | `references/shared-tab-extension.md` |
-| 2FA, passkey, payment, irreversible review, missing authority, or login/account/transaction/user-present CAPTCHA | human gate | domain policy + visible handoff |
+| Login, re-authentication, OTP, passkey, payment, confirmation, or account challenge | managed browser in the stable profile | `references/context-device.md`, then `browser-automation` |
 
 Expanded decision logic and next-hop states:
 `references/decision-matrix.md`.
@@ -79,11 +79,19 @@ agent/machine inherits it.
 6. Keep public extraction separate from interactive human-visible browsing.
 7. Verify exact profile, account, visibility boundary, tab attachment, and final
    state. A click or command success is not proof the intended result occurred.
-8. Public anti-bot/Cloudflare challenge solving may be used only for lawful
-   public extraction. Login, account-security, transactional, user-present,
-   2FA, passkey, payment, confirmation, and irreversible-review challenges are
-   human gates and must never be bypassed.
-9. Treat uninstalled, disabled, or unproved providers as candidates—not live
+8. Notify the user when a CAPTCHA, human-verification, bot challenge, passkey,
+   OTP, payment, confirmation, or other account challenge appears. Notification
+   is non-blocking: when the current task is authorized and the selected browser
+   or GUI lane can directly operate the presented control, continue in the same
+   turn and verify the resulting state. A generic page-control instruction to
+   "stop and tell the user" is a detection-and-notification checkpoint, not a
+   mandatory human handoff or a ban on resuming after the authorized workspace
+   owner explicitly directs continuation. This does not expand the task's
+   account, action, purchase, or external-send authority.
+9. For an OTP, capture the code field and submit control first, then
+   enter a user-supplied code or one retrieved from an approved source and
+   submit immediately.
+10. Treat uninstalled, disabled, or unproved providers as candidates—not live
    fallbacks.
 
 ## Lane-failure escalation
@@ -98,21 +106,22 @@ Before saying a web task is blocked, classify the failure:
 | Public anti-bot/protected extraction | hosted public extraction |
 | Browser attachment/control | another live-proven provider in the same context category → GUI/computer use when it can reach the surface → consent-bound shared tab only after explicit request/agreement |
 | Native app/OS surface | GUI/computer use after display/permission preflight |
-| Human-only/security gate | visible handoff; state the exact user action |
+| Challenge control failed or became stale | refresh the page state and retry once through `browser-automation` |
 | Provider outage/rate limit | next proven provider for the same category |
 
 Check the active/deferred tool catalog, domain skill, provider registry, and
-relevant fallback category. Do not repeat identical cheap retries. Stop only for
-a genuine human gate, missing authority/credential, unacceptable risk, or
-exhaustion of relevant proven lanes; name the remaining gate precisely.
+relevant fallback category. Do not repeat identical cheap retries. Stop only
+when the available tools cannot perform a required interaction or all relevant
+proven lanes are exhausted; name the remaining capability gap precisely.
 
 ## Context contracts
 
 ### Managed browser
 
 Default for rendered, interactive, and authenticated unattended work. Persistent
-profile state may exist, but verify live login/account state. Stop before any
-approval-gated external action.
+profile state may exist. Reuse the task's stable managed profile and its existing
+authenticated state before starting another login; temporary profiles are not
+the default. Verify the live account and final result after acting.
 
 ### Existing browser session
 

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
   <title id="title">Web-use autonomy-first routing map</title>
-  <desc id="desc">Choose a category directly from task shape. When browser context must escalate, use the managed browser, a proven local app, and computer use before asking the user to share a personal tab. An explicit shared-tab request may enter the consent rail directly. Human gates can interrupt any lane.</desc>
+  <desc id="desc">Choose a category directly from task shape. When browser context must escalate, use the managed browser, a proven local app, and computer use before asking the user to share a personal tab. An explicit shared-tab request may enter the consent rail directly. Challenge controls use the stable managed profile.</desc>
   <defs>
     <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#8294b2"/></marker>
     <marker id="arrow-teal" markerWidth="11" markerHeight="11" refX="9" refY="4" orient="auto"><path d="M0 0L10 4L0 8Z" fill="#42d4c3"/></marker>
@@ -103,10 +103,10 @@
   <rect class="box" x="950" y="850" width="530" height="45" fill="#1b273a" stroke="#617594"/>
   <text x="1215" y="879" class="small" text-anchor="middle">Solid = autonomous path · Dashed = consent-bound path</text>
 
-  <!-- Cross-cutting human gate -->
+  <!-- Cross-cutting challenge controls -->
   <path class="gate" d="M70 955H1530"/>
   <rect class="box" x="180" y="975" width="1240" height="95" fill="#552c2c" stroke="#ff8b78"/>
-  <text x="800" y="1012" class="head" text-anchor="middle">Human gate can interrupt any lane</text>
-  <text x="800" y="1042" class="body" text-anchor="middle">2FA · passkey · account/login CAPTCHA · payment · irreversible approval · missing authority</text>
-  <text x="800" y="1065" class="small" text-anchor="middle">State the exact action, hand off visibly, then resume. Never collapse a lane failure into “the web is blocked.”</text>
+  <text x="800" y="1012" class="head" text-anchor="middle">Challenge controls use the stable managed profile</text>
+  <text x="800" y="1042" class="body" text-anchor="middle">OTP · passkey · account/login CAPTCHA · payment · confirmation</text>
+  <text x="800" y="1065" class="small" text-anchor="middle">Notify, continue through authorized controls, and verify the resulting state.</text>
 </svg>

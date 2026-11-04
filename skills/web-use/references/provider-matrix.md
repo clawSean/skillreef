@@ -11,7 +11,7 @@ account, login, install, balance, and proof state live only in
 | Cited research | installed specialist cited-research skill → native search plus primary-source synthesis | use specialist early when breadth/reasoning/completeness matters |
 | Managed interaction/auth | OpenClaw managed profile → another live-proven managed profile | verify profile/account live |
 | Protected public extraction | stateless anti-bot extractor → deeper hosted browser → installed crawl/actor provider | choose mode/provider by blocker, breadth, and cost |
-| Existing browser session | lowest-priority-number context-fit `existing-session` profile with live attachment/control proof | use only when daily-profile context materially matters; an attach prompt is a human gate |
+| Existing browser session | lowest-priority-number context-fit `existing-session` profile with live attachment/control proof | use only when daily-profile context materially matters; resolve any attach prompt before control |
 | Local visible browser/app | lowest-priority-number installed context-fit app with live capture/control proof | local registry owns exact order; skip any row that fails fit or proof |
 | Native GUI/OS | installed computer-use provider with active display/permissions | preflight display, permission, and target capture |
 | Extension-relay shared tab | the explicitly requested tab on a live-proven extension profile | verify `Selected tabs`/`All tabs`, inventory, and control; absent explicit selection, relevant self-sufficient GUI lanes come first |

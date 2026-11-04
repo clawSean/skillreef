@@ -77,9 +77,9 @@ prompts, scripts, logs, committed examples, or chat.
 - Switch providers when the task fit changes; do not loop on identical calls.
 - A paid provider is acceptable when it materially improves accuracy or avoids
   wasted work, but log/verify the choice where the domain skill requires it.
-- Login/account/transaction CAPTCHAs, 2FA, passkeys, and payment approval remain
-  human gates. Public anti-bot challenge solving stays inside the narrow public
-  extraction policy above.
+- Keep login/account/transaction challenges out of hosted extraction. Route
+  CAPTCHAs, 2FA, passkeys, and payment approval through the stable managed
+  browser profile or an available local GUI lane.
 
 ## Helpers
 
