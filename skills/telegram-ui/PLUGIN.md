@@ -6,10 +6,11 @@ arbitrary message formatting safe.
 
 ## Current rules
 
-- `warn` (default): logs a rule name/count for the known
-  `<br><br>### Heading` boundary. It never changes or cancels a send.
-- `repair`: changes only the exact heading boundary to two source newlines,
-  outside obvious code/structural markup. It does **not** auto-double newlines.
+- `warn` (default): logs a rule name/count when break tags precede a Markdown
+  heading, including the source-blank-line variant. It never changes or cancels
+  a send.
+- `repair`: changes only that heading boundary to two source newlines, outside
+  code and block-level structural markup. It does **not** auto-double newlines.
 - `off`: does nothing.
 
 The hook skips non-Telegram channels and non-text content. It does not change
