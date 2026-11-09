@@ -1,8 +1,6 @@
 # Telegram Rich Rendering Matrix
 
-Evidence for Telegram Bot API 10.3 rich bodies when
-`channels.telegram.richMessages: true`. Operating rules live only in
-`SKILL.md`; client diagnosis lives in `rich-message-client-compat.md`.
+Evidence for Telegram Bot API 10.3 rich bodies when `channels.telegram.richMessages: true`. Operating rules live in `SKILL.md`; client diagnosis lives in `rich-message-client-compat.md`.
 ## Current calibrated surface
 
 - OpenClaw: 2026.9.1
@@ -188,8 +186,10 @@ Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering
 2026-11-08: Owner screenshot in Voice Notes shows ordinary final 34311 (two long numbered items and closing prose, with reply-time voice note) still lacked empty visual rows; iOS build unrecorded. After the skill routed multi-block text through explicit `message`, owner screenshot of canary 34315 showed visible gaps between the two prose paragraphs and before the compact bullets, with no leaked tags. Skill-only splitting did not itself repair ordinary-final spacing; delivery-path choice did.
 
 ### T30: malformed heading canaries, 2026-11-08
-- Owner iPhone screenshot of Voice Notes 34342–34343 shows literal `###` and oversized gaps. Authored `<br><br>` preceded a source-blank-separated heading; the warn-only hook did not alter delivery or match this nonadjacent variant. iOS build unrecorded. Corrected explicit-send control 34347 omits the break tags; delivery confirmed, client rendering pending.
+- Owner iPhone screenshot of Voice Notes 34342–34343 shows literal `###` and oversized gaps. Authored `<br><br>` preceded a source-blank-separated heading; the warn-only hook did not alter delivery or match this nonadjacent variant. iOS build unrecorded. Owner screenshot of corrected explicit-send 34347 confirms a styled heading and normal body gap without leaked markup.
 Observed result: never precede a heading with break tags, even across source blank lines. End the prior block with a real source blank line. These invalid canaries do not prove plugin repair failed.
+### T31: same-chat native Mac controls, 2026-11-08
+- Telegram for macOS 13.1.0, Voice Notes: explicit-send 34351 showed one empty row between prose paragraphs and before three compact literal bullets, with no leaked tags; 34352 showed a styled heading/body boundary and a semantic list. Native Mac capture verified both. The literal bullet baseline looked more aligned than the semantic list marker, consistent with T13; no new iPhone claim for 34351–34352.
 ### T29: generic callback routing, 2026-11-04
 - OpenClaw 2026.10.3; the reviewer DM topic 58758; iOS build unrecorded. Typed callback 33297 rendered but tapped as unavailable; logs tied update `605806812` to a first-attempt `sendMessage` network failure, while source inspection independently showed typed generic callbacks use a reserved opaque prefix, reach registered handlers, and terminalize when unclaimed. Legacy-value canary 33303 returned `callback_data: tg_legacy_canary_ok` to the agent.
 Observed result: use legacy `value` inside `presentation.blocks` for ordinary agent-steering callbacks on this build; keep other supported actions typed and re-test after updates.
