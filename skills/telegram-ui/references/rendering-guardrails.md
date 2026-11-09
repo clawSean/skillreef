@@ -16,8 +16,10 @@ boundaries. Do not apply them to captions or legacy-HTML sends.
   - `literal list → prose`: `Last item.<br><br>Next paragraph.`
   - `literal item → literal item`: the list-wide density below.
 - Multiple headings are fine; each starts at start or after real `\n\n`.
-  Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from
-  block-level HTML islands.
+  Never put `<br><br>` before a heading, even with source blank lines between
+  the tags and `###`: the heading can render literally and the gap compounds.
+  End the prior block with a real source blank line instead. Keep `<br><br>`
+  away from block-level HTML islands.
 - In calibrated rich `message` sends, keep each prose break source-adjacent to
   `<br><br>`. Ordinary finals may use source blank lines for Markdown structure,
   not visual spacing.

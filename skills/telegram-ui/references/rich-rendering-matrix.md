@@ -161,9 +161,7 @@ use separate source paragraphs for literal rows or a semantic list until that
 exact route passes a canary.
 
 ### T24: copyability lanes
-- 2026-10-05: A (28840), legacy inline code + native `copy_text`, worked on the reviewer's mobile and desktop; exact builds unrecorded.
-- B (28841), legacy `<pre>`, worked only on desktop. C (28843), rich inline code, and D (28842), rich code block, failed on both observed clients.
-- E (28878) proved only that the API can attach a native Copy button to an existing rich message; client behavior remains unreported.
+- 2026-10-05: A (28840), legacy inline code + native `copy_text`, worked on mobile and desktop (builds unrecorded); B (28841), legacy `<pre>`, worked only on desktop; C/D (28843/28842), rich code, failed on both. E (28878) proved API attachment of a native Copy button only; client behavior unreported.
 
 Observed result: use a separate legacy inline-code + native-button companion for 1–256 characters. Above that, use an independent plain legacy message and Telegram's whole-message Copy action.
 
@@ -179,17 +177,19 @@ Observed result: use a separate legacy inline-code + native-button companion for
 Observed result: Mac `message` syntax is substantially proven; iPhone rendering and the ordinary-final route are **not** proven by this battery.
 
 ### T26: fresh-topic ordinary-final spacing regression, 2026-10-07
-Fresh forum topic, owner-supplied screenshot: two replies joined prose paragraphs. Stored source used plain `\n\n` despite loading the skill; authoring failure, not discovery. Client build unrecorded.
-No ordinary-final `<br><br>` canary was done; T25's explicit-message proof does not transfer (see T23). Runtime guard remains unactivated.
+Fresh forum topic, owner-supplied screenshot: two replies joined prose paragraphs. Stored source used plain `\n\n` despite loading the skill; authoring failure, not discovery. Client build unrecorded. No ordinary-final `<br><br>` canary was done; T25's explicit-message proof does not transfer (see T23). Runtime guard remained unactivated.
 
 ### T27: ordinary-final inline-break leak recurred, 2026-10-08
 Owner-supplied iPhone screenshot of a private DM topic shows bold rendered but each inline `<br>` displayed literally inside a status list. Stored ordinary-final source confirms the tags. Platform message ID and iOS build unrecorded. This reproduces T23; T25's explicit-`message` proof and the inactive optional guard do not cover it.
 Observed result: suspend inline break tags in ordinary finals; use semantic lists/native blocks. Limit `<br>`/`<br><br>` to route-calibrated explicit rich `message` sends.
 
 ### T28: ordinary-final blank paragraphs still collapse, 2026-10-08
-Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering source-blank-separated prose without an empty row. iOS build unrecorded. This repeats T26 after the no-break-tag rule; exact message IDs remain in private daily memory.
-The same owner confirmed by screenshot that an explicit rich `message` canary, with source-adjacent `<br><br>`, rendered one empty visual row and no literal tags in the same topic. This proves the iPhone route distinction; it does not prove reply-time TTS.
+Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering source-blank-separated prose without an empty row. iOS build unrecorded. This repeats T26 after the no-break-tag rule; exact message IDs remain in private daily memory. An explicit rich `message` canary with source-adjacent `<br><br>` rendered one empty visual row and no literal tags in the same topic. This proves the iPhone route distinction, not reply-time TTS.
 2026-11-08: Owner screenshot in Voice Notes shows ordinary final 34311 (two long numbered items and closing prose, with reply-time voice note) still lacked empty visual rows; iOS build unrecorded. After the skill routed multi-block text through explicit `message`, owner screenshot of canary 34315 showed visible gaps between the two prose paragraphs and before the compact bullets, with no leaked tags. Skill-only splitting did not itself repair ordinary-final spacing; delivery-path choice did.
+
+### T30: malformed heading canaries, 2026-11-08
+- Owner iPhone screenshot of Voice Notes 34342–34343 shows literal `###` and oversized gaps. Authored `<br><br>` preceded a source-blank-separated heading; the warn-only hook did not alter delivery or match this nonadjacent variant. iOS build unrecorded. Corrected explicit-send control 34347 omits the break tags; delivery confirmed, client rendering pending.
+Observed result: never precede a heading with break tags, even across source blank lines. End the prior block with a real source blank line. These invalid canaries do not prove plugin repair failed.
 ### T29: generic callback routing, 2026-11-04
 - OpenClaw 2026.10.3; the reviewer DM topic 58758; iOS build unrecorded. Typed callback 33297 rendered but tapped as unavailable; logs tied update `605806812` to a first-attempt `sendMessage` network failure, while source inspection independently showed typed generic callbacks use a reserved opaque prefix, reach registered handlers, and terminalize when unclaimed. Legacy-value canary 33303 returned `callback_data: tg_legacy_canary_ok` to the agent.
 Observed result: use legacy `value` inside `presentation.blocks` for ordinary agent-steering callbacks on this build; keep other supported actions typed and re-test after updates.
