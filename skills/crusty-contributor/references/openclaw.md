@@ -16,6 +16,11 @@ Use when the target is `openclaw/openclaw` or a close OpenClaw ecosystem contrib
   owner, non-goals, and projected diff. More than 150 changed lines and five files,
   durability/schema/migration, replay/restart, multiple channels, or shared owners
   are split triggers; exceed only for named safety/correctness needs.
+- For cross-owner features, land the shared prerequisite first, then one channel
+  adapter or UI PR per owner. Downstream PRs depend only on landed core, not on
+  sibling PRs. The first slice fails closed on unsupported surfaces; fallback
+  persistence, reversible navigation, and generalized plugin APIs are follow-ups
+  unless current architecture or at least two real consumers require them.
 - A maintainer request to split or start small is a hard reset: branch from current `main`, rederive only the named slice, use the old branch as evidence—not architecture, and publish only when the diff matches the frozen slice or the maintainer explicitly accepts wider scope.
 - Lead every non-trivial PR body with the reviewer-first `Merge Brief` from
   `references/pr-template.md`. Keep it to roughly ten scannable lines covering

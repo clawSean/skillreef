@@ -132,6 +132,15 @@ public product/API/architecture, file an issue/discussion first.
 
 Freeze the first user-visible slice before implementation. A maintainer request to split or start small is a hard reset: start from current upstream, rederive only the named slice, and treat the old branch as evidence—not architecture.
 
+When a feature crosses existing ownership boundaries, stack it: land the shared
+prerequisite first, then one independently reviewable adapter or UI PR per
+owner. Each downstream PR should depend only on landed core, never on a sibling
+PR. For V1, explicitly refuse unsupported surfaces instead of adding fallback
+state, reversible navigation, or a general public API. Promote an abstraction
+only after two real consumers or an architectural necessity make it cheaper
+than the owner-local extension points. Preserve broad prototypes as tests,
+invariants, and demand evidence; do not keep rebasing them as the delivery base.
+
 ### Positioning for Merge (maintainer attractiveness)
 
 How work is framed changes merge odds as much as what the code does. Apply at PR creation, and re-apply whenever a PR stalls (proven on #51762, 2026-07-04):
