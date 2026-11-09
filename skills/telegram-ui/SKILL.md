@@ -100,7 +100,7 @@ Only agent callbacks use the recipe's legacy `value` until the typed canary
 - Forum/topic thumbnails default to true 1:1 with the subject in a centered
   safe area unless another ratio is requested.
 - Prefer the injected voice transcript. If absent, say so and follow the active
-  `voice-conversation` transcript-repair guidance; never pretend to hear it.
+  `clawpilot` transcript-repair guidance; never pretend to hear it.
 - Keep sticker, custom-emoji, and forum-topic icon IDs distinct.
 - Open only the active specialty branch: [admin controls](references/telegram-admin-control.md),
   [forum topics](references/telegram-forum-topics.md), or
