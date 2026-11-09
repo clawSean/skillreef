@@ -7,17 +7,17 @@ arbitrary message formatting safe.
 ## Current rules
 
 - `warn` (default): logs a rule name/count for the known
-  `<br><br>### Heading` boundary and warns when an ordinary final contains plain
-  blank-line paragraphs. It never changes or cancels a send.
+  `<br><br>### Heading` boundary. It never changes or cancels a send.
 - `repair`: changes only the exact heading boundary to two source newlines,
   outside obvious code/structural markup. It does **not** auto-double newlines.
 - `off`: does nothing.
 
-The hook skips non-Telegram channels, non-text, media, and structured controls.
+The hook skips non-Telegram channels and non-text content. It does not change
+media references or structured controls.
 It catches its own errors and never returns a cancellation. Logs never include
-message bodies. The ordinary-final paragraph warning is detection-only because
-that route has leaked break tags literally on iOS; automatic insertion there
-would make delivery less readable. The skill instead routes multi-block text
+message bodies. The hook does not auto-fix ordinary-final paragraph spacing
+because that route has leaked break tags literally on iOS; automatic insertion
+there would make delivery less readable. The skill instead routes multi-block text
 through the calibrated explicit-send path.
 
 ## Use
@@ -33,5 +33,5 @@ to `repair` only after route-specific client proof. Follow your installation's
 normal reload procedure to activate a config change.
 
 Run `npm test` in this directory for pure guard fixtures. The package has no
-runtime dependencies. The current local package has been tested offline; it is
-not installed or active on the contributor's Gateway.
+runtime dependencies. Installation and activation are host-specific; verify
+the hook and message delivery on the target Gateway before considering repair.
