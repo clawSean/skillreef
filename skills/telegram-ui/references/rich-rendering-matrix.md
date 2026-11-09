@@ -189,6 +189,7 @@ Observed result: suspend inline break tags in ordinary finals; use semantic list
 ### T28: ordinary-final blank paragraphs still collapse, 2026-10-08
 Owner-supplied iPhone screenshot in a DM topic shows an ordinary final rendering source-blank-separated prose without an empty row. iOS build unrecorded. This repeats T26 after the no-break-tag rule; exact message IDs remain in private daily memory.
 The same owner confirmed by screenshot that an explicit rich `message` canary, with source-adjacent `<br><br>`, rendered one empty visual row and no literal tags in the same topic. This proves the iPhone route distinction; it does not prove reply-time TTS.
+2026-11-08: Owner screenshot in Voice Notes shows ordinary final 34311 (two long numbered items and closing prose, with reply-time voice note) still lacked empty visual rows; iOS build unrecorded. Skill route changed to explicit `message` for multi-block text; canary 34315 awaits iPhone visual result. Skill-only splitting did not itself repair ordinary-final spacing.
 ### T29: generic callback routing, 2026-11-04
 - OpenClaw 2026.10.3; the reviewer DM topic 58758; iOS build unrecorded. Typed callback 33297 rendered but tapped as unavailable; logs tied update `605806812` to a first-attempt `sendMessage` network failure, while source inspection independently showed typed generic callbacks use a reserved opaque prefix, reach registered handlers, and terminalize when unclaimed. Legacy-value canary 33303 returned `callback_data: tg_legacy_canary_ok` to the agent.
 Observed result: use legacy `value` inside `presentation.blocks` for ordinary agent-steering callbacks on this build; keep other supported actions typed and re-test after updates.
@@ -214,7 +215,6 @@ In ClawShop on OpenClaw 2026.7.1, a 5-column/3-row Markdown table reached the re
 - `tg-reference` and Markdown footnotes leaked literal text.
 - `figure` with a `tg-spoiler` attribute did not blur the image.
 - Expandable blockquotes did not collapse in the rich-body audit; `details` was separately observed working.
-
 ## Evidence discipline
 
 A successful API response proves delivery, not visual rendering. Change a rule only after exact-client inspection; keep dated outcomes here, not in `SKILL.md` or the compatibility guide.

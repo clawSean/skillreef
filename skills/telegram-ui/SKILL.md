@@ -24,14 +24,14 @@ follow runtime and rerun the canary.
 
 ## 2. Choose the delivery path
 
-- **Ordinary conversation without prose breaks:** use the standard final path;
-  sending then suppressing it can bypass reply-time TTS. Never use inline breaks
-  on ordinary finals: that route failed on iOS. Use semantic lists and native
-  blocks for structure.
-- **Rich prose needing a visible blank line:** use `message(action="send")` on
-  the calibrated rich route and finish without duplicating the reply in an
-  ordinary final. Source blanks in ordinary finals collapse on iOS; break tags
-  there leak literally. This path may bypass reply-time TTS.
+- **One compact block:** use the standard final path. It preserves reply-time
+  TTS. Never use inline breaks on ordinary finals: that route failed on iOS.
+- **Two or more visual blocks:** use `message(action="send")` on the calibrated
+  rich route and finish without duplicating the reply in an ordinary final.
+  This includes multiple prose paragraphs, prose plus a list, or long list
+  items that need a visible blank line. Source blanks in ordinary finals
+  collapse on iOS; break tags there leak literally. Readability takes priority
+  over reply-time TTS here unless hands-free voice mode is active.
 - **Controls/actions:** use `message` for controls, edits, media, topics, or
   out-of-band sends. Verify the active schema.
 - **Copy:** use Telegram `copyTextButtons` only when exposed; never use shared
@@ -43,8 +43,8 @@ follow runtime and rerun the canary.
 
 - **Prioritize readable gaps.** For prose paragraphs on the calibrated explicit
   `message` rich-text path, use source-adjacent `<br><br>`; plain source blank
-  lines collapse visually. Ordinary finals must not use break tags; use native
-  blocks or send via the calibrated `message` route when a visible gap matters.
+  lines collapse visually. Ordinary finals must not use break tags. Route any
+  multi-block text through calibrated `message` when a visible gap matters.
 - Before writing headings, literal bullets, or code, follow the exact boundary
   and no-leak rules in [rendering guardrails](references/rendering-guardrails.md).
 
