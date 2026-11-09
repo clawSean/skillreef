@@ -41,44 +41,21 @@ follow runtime and rerun the canary.
 
 ### Structure and spacing
 
-- **On the calibrated `message` rich-text path:** give each authored prose
-  break one empty visual row with source-adjacent `<br><br>`; plain `\n\n` is
-  not a visual separator. On ordinary finals, use native blocks or concise prose.
-- On a calibrated break path, pick each separator by boundary:
-  - `heading/block ↔ body`: real source blank line for syntax only; rely on the
-    block's native spacing and do not add `<br><br>`.
-  - `prose → prose`: `First.<br><br>Next paragraph.`
-  - `literal list → prose`: `Last item.<br><br>Next paragraph.`
-  - `literal item → literal item`: the list-wide density below.
-- Multiple headings are fine; each starts at start or after real `\n\n`.
-  Never emit `<br><br>###`; end prior block first. Keep `<br><br>` away from block-level HTML islands.
-- In calibrated rich `message` sends, keep each prose break source-adjacent to
-  `<br><br>`. Ordinary finals may use source blank lines for Markdown structure,
-  not visual spacing.
-- On a break-canary path, separate literal `•` rows with the density rule's
-  inline breaks; bare source newlines can collapse and are never separators.
-  On ordinary finals, use semantic Markdown or HTML lists, not literal rows.
-  Never use one `<br>` for prose or block boundaries, standalone `<br><br>`,
-  or spacer entities.
-- Use literal `•` prose/status rows with inline breaks only on a calibrated
-  `message` route. Reserve semantic lists for nesting, tasks, runtime
-  requirements, **and ordinary finals**.
-- Literal lists are compact by default. If every item is **90 visible characters
-  or fewer**, use one source-adjacent `<br>` between items. If any item exceeds
-  90, use `<br><br>` between every item. Count rendered characters, including
-  spaces but excluding formatting syntax and URL destinations. This predicts
-  wrapping beyond two mobile lines.
+- **Prioritize readable gaps.** For prose paragraphs on the calibrated explicit
+  `message` rich-text path, use source-adjacent `<br><br>`; plain source blank
+  lines collapse visually. Ordinary finals must not use break tags; use native
+  blocks or send via the calibrated `message` route when a visible gap matters.
+- Before writing headings, literal bullets, or code, follow the exact boundary
+  and no-leak rules in [rendering guardrails](references/rendering-guardrails.md).
 
 ### Scanability
 
 - Use emojis; one per button.
 - A standalone prose title is a native `###` heading, not bold alone. Follow it
-  with one source blank line for syntax, relying on native heading spacing; never
-  add `<br>`. Limit bold to 1–3 inline scan
+  with one source blank line for syntax, relying on native heading spacing. Limit bold to 1–3 inline scan
   anchors under 20% of body words; never bold whole paragraphs or lists.
-- Use inline code for simple one-line values, never newline/escape-sequence
-  examples: the latter leaked backticks in a client canary. Use prose or fenced
-  code for those examples; use named links for navigation.
+- Use inline code for simple one-line values; use prose or fenced code for
+  newline/escape-sequence examples. Use named links for navigation.
 - **Rich by default:** use as many supported features as fit—headings, lists,
   quotes, details, tables, dividers, links, controls, decorative blocks. No
   numeric cap; maximize useful variety.
@@ -145,7 +122,7 @@ Use first-pass composition, not a manual checklist or second model review.
 
 ## Reference boundary
 
-Details: [payloads](references/payload-recipes.md), [compatibility](references/rich-message-client-compat.md),
+Details: [rendering guardrails](references/rendering-guardrails.md), [payloads](references/payload-recipes.md), [compatibility](references/rich-message-client-compat.md),
 [evidence](references/rich-rendering-matrix.md), [admin](references/telegram-admin-control.md),
 [topics](references/telegram-forum-topics.md), [Mini Apps](references/telegram-mini-apps.md).
 `scripts/test.sh` validates. Keep rules undated; require canary proof.

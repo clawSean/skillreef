@@ -32,7 +32,7 @@ Operating rules live in `SKILL.md`; dated results live in
   formulas, rich media, and structural HTML islands.
 - **Spacing regression on a client that still renders rich bodies:** follow the
   separator boundary map and list-density rule in
-  [SKILL.md](../SKILL.md#structure-and-spacing). Use semantic markup for a
+  [rendering guardrails](rendering-guardrails.md#structure-and-spacing). Use semantic markup for a
   structured list. Use inline breaks in literal-bullet rows only after the exact
   delivery path passes its break canary; otherwise make every literal row a
   separate source paragraph. Terminate structural islands with real source

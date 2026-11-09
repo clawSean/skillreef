@@ -37,7 +37,7 @@ for heading in (
 ):
     check(text.count(heading) == 1, f"unique section: {heading}")
 expected_reference_names = {
-    "payload-recipes.md",
+    "payload-recipes.md", "rendering-guardrails.md",
     "rich-message-client-compat.md",
     "rich-rendering-matrix.md",
     "telegram-admin-control.md",
@@ -190,13 +190,13 @@ for match in unsafe:
 def section(start: str, end: str) -> str:
     return text.split(start, 1)[1].split(end, 1)[0]
 surface = section("## 1. Read the current surface", "## 2. Choose the delivery path"); delivery = section("## 2. Choose the delivery path", "## 3. Compose the body")
-compose = section("## 3. Compose the body", "## 4. Choose the interaction"); interaction = section("## 4. Choose the interaction", "## 5. Handle media and special branches")
+guardrails = (root / "references" / "rendering-guardrails.md").read_text(encoding="utf-8"); compose = section("## 3. Compose the body", "## 4. Choose the interaction") + "\n" + guardrails; interaction = section("## 4. Choose the interaction", "## 5. Handle media and special branches")
 media = section("## 5. Handle media and special branches", "## 6. Verify delivery and renderer claims"); verify = section("## 6. Verify delivery and renderer claims", "## Reference boundary")
 check(all(term in surface for term in ("response_format", "runtime authority", "selected account", "never infer", "runtime conflicts")) and all(term in text for term in ("After compaction/resume", "re-read", "substantial final")), "runtime, account, and compaction recovery stay explicit")
 check(all(term in text for term in ("every Telegram message", "first", "reading is not completion")), "first-pass compliance imperative replaces review-pass reliance")
 check(all(term in delivery for term in ("standard final path", "suppressing", "reply-time TTS", "ordinary", "Never use inline breaks", "failed on iOS", "active schema", 'message(action="send")', "visible blank line", "without duplicating", "Source blanks in ordinary finals collapse on iOS")), "delivery path protects finals and routes visible prose spacing through calibrated message sends")
 check(all(term in re.sub(r"\s+", " ", compose) for term in ("calibrated `message` rich-text path", "one empty visual row", "source-adjacent", "`<br><br>`", "plain `\\n\\n` is", "On ordinary finals")), "authored prose spacing is route scoped")
-check(all(term in compose for term in ("real source", "syntax only", "native spacing", "block-level HTML islands", "native `###` heading", "not bold alone", "never", "inline scan")), "headings rely on native spacing while rich boundaries stay explicit")
+check(all(term in compose for term in ("real source", "syntax only", "native spacing", "block-level HTML islands", "Native `###` headings", "not bold alone", "never", "inline scan")), "headings rely on native spacing while rich boundaries stay explicit")
 compat_text = (root / "references" / "rich-message-client-compat.md").read_text(encoding="utf-8"); compat_flat = re.sub(r"\s+", " ", compat_text); matrix_text = (root / "references" / "rich-rendering-matrix.md").read_text(encoding="utf-8")
 boundary_terms = ("pick each separator by boundary", "`heading/block ↔ body`", "`prose → prose`", "`literal list → prose`", "`literal item → literal item`", "First.<br><br>Next paragraph.", "Last item.<br><br>Next paragraph.")
 check(all(term in compose for term in boundary_terms), "calibrated boundary map owns heading, prose, list exit, and item separators")
