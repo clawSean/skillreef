@@ -126,3 +126,4 @@ Details: [rendering guardrails](references/rendering-guardrails.md), [payloads](
 [evidence](references/rich-rendering-matrix.md), [admin](references/telegram-admin-control.md),
 [topics](references/telegram-forum-topics.md), [Mini Apps](references/telegram-mini-apps.md).
 `scripts/test.sh` validates. Keep rules undated; require canary proof.
+Optional fail-open hook: [PLUGIN.md](PLUGIN.md). The skill works without it.

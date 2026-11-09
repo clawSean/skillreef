@@ -1,0 +1,14 @@
+// Only repair a proven, exact rich-Markdown boundary. Ambiguous markup is inert.
+export function inspectTelegramText(text, kind) {
+  if (typeof text !== "string" || !text) return { text, repairs: 0, warning: null };
+  const warning = kind === "final" && /\n\n/.test(text) ? "plain-final-breaks" : null;
+  if (text.includes("`") || /<(?:pre|code|table|ul|ol|details)\b/i.test(text)) {
+    return { text, repairs: 0, warning };
+  }
+  let repairs = 0;
+  const repaired = text.replace(/<br><br>(#{1,6} [^\n<]+)/g, (_match, heading) => {
+    repairs += 1;
+    return `\n\n${heading}`;
+  });
+  return { text: repaired, repairs, warning };
+}

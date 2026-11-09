@@ -1,0 +1,9 @@
+{
+  "name": "telegram-ui-openclaw-plugin",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "scripts": { "test": "node --test plugin/*.test.js" },
+  "openclaw": { "extensions": ["./plugin/index.js"] },
+  "engines": { "node": ">=20" }
+}

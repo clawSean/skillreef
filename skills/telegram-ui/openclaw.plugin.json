@@ -1,0 +1,18 @@
+{
+  "id": "telegram-ui",
+  "name": "Telegram UI Guard",
+  "version": "0.1.0",
+  "description": "Optional fail-open outbound formatting guard for the telegram-ui skill.",
+  "activation": { "onStartup": true },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["off", "warn", "repair"],
+        "default": "warn"
+      }
+    }
+  }
+}
