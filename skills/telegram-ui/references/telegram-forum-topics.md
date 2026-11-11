@@ -91,5 +91,23 @@ route actually changed the topic. Dated repro/evidence:
 
 - Topic IDs are message-thread IDs; inbound context exposes the current one.
 - Sessions are topic-scoped, so each topic has its own conversation lane.
-- Topic deletion is not exposed here; leave it to a human unless the active tool
-  explicitly adds a reviewed delete action.
+- Telegram supports true close/reopen only for forum supergroups, not private
+  chats with topics. Private-topic deletion also deletes its messages; never
+  present that destructive operation as ordinary close/archive.
+- If the active `message` schema exposes `topic-close` or `topic-reopen`, use it.
+  Otherwise the bundled helper provides a token-safe local lane without a
+  Gateway config change:
+
+```bash
+node scripts/topic-lifecycle.mjs inspect --chat '<supergroup-id>' --account '<account>'
+node scripts/topic-lifecycle.mjs close --chat '<supergroup-id>' --thread '<topic-id>' --account '<account>'
+node scripts/topic-lifecycle.mjs reopen --chat '<supergroup-id>' --thread '<topic-id>' --account '<account>'
+```
+
+  Run it from this skill directory. It loads the selected account through
+  OpenClaw's runtime config and token resolver, validates the forum and Manage
+  Topics permission, redacts Telegram failures, and never prints the token.
+  `thread=1` uses Telegram's dedicated General-topic method. Capture the JSON
+  receipt. Do not retry an ambiguous mutation.
+- Topic deletion is not exposed here. Leave it to a human unless a future
+  reviewed native action adds an explicit destructive-operation contract.

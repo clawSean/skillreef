@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "FAIL: python3 is required" >&2
-  exit 1
-fi
-exec python3 - "$SKILL_DIR" <<'PY'
+if ! command -v python3 >/dev/null 2>&1; then echo "FAIL: python3 is required" >&2; exit 1; fi
+python3 - "$SKILL_DIR" <<'PY'
 from __future__ import annotations
 import json, re, subprocess, sys, tempfile
 from urllib.parse import unquote; from pathlib import Path
@@ -218,3 +215,5 @@ check(not re.search(r"\b20\d{2}[.-]\d{1,2}", text + "\n" + compat_text), "dated 
 check(not re.search(r"(?im)^#+\s*(roadmap|todo)|\bFIXME\b", combined), "no unresolved roadmap or TODO records")
 print(f"\nResults: {passed} passed, {failed} failed"); raise SystemExit(1 if failed else 0)
 PY
+
+node --test "$SKILL_DIR/scripts/topic-lifecycle.test.mjs"
