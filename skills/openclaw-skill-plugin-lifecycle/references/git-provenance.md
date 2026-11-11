@@ -2,7 +2,9 @@
 
 Every workspace/repository skill or plugin change needs a commit that explains
 what changed and why the actor was authorized to initiate it. Direct Workshop
-maintenance also needs Git. A Workshop proposal that stays within the native
+maintenance uses daily local Git snapshots under the owner-authorized policy in
+the lifecycle skill; those commits may contain several autonomous edits and do
+not prove the origin of each edit. A Workshop proposal that stays within the native
 proposal/revision/apply lifecycle uses Workshop's immutable revisions, event
 log, and rollback metadata instead of a redundant proposal commit.
 
@@ -57,5 +59,6 @@ in commit metadata.
 4. Verify the remote contains the commit before reporting publication.
 
 A teammate proposal-branch commit is auditability, not approval to merge or
-activate it. For Workshop autonomous work, an edit without its required
-provenance commit is incomplete and must not be treated as accepted.
+activate it. For Workshop autonomous work, check the most recent daily snapshot
+commit and the automation's run history when investigating an edit. A missing
+or failed snapshot needs repair; it does not retroactively reject the live edit.

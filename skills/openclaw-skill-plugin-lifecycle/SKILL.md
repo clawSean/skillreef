@@ -92,7 +92,7 @@ Gateway reload/restart.
 - **Existing artifact outside Workshop:** stage the suggestion and ask the
   workspace owner before live mutation.
 - **Existing Workshop skill:** autonomous maintenance is permitted under the
-  configured Workshop mode and the direct-auto Git gate below.
+  configured Workshop mode and the snapshot policy below.
 
 ## 3. Use the correct implementation guide
 
@@ -127,21 +127,20 @@ new background reviews to edit the Workshop tree directly and permits a newly
 created foreground repair proposal to be applied immediately. Changing the mode
 does not apply the existing pending backlog.
 
-Do not enable or rely on Workshop `auto` until all are true:
-
-1. Every nonempty live `workshop-skills/` tree that the configured autonomous
-   mode can edit is Git-backed.
-2. Every autonomous edit path demonstrably creates a provenance-bearing commit.
-3. Live skills and pending proposals have been checked for conflicts/duplicates.
-4. Recovery from Git history has been tested.
+For direct `auto` edits, keep each nonempty live `workshop-skills/` tree Git-backed,
+check live skills and pending proposals for conflicts, and retain a tested
+recovery path. The reviewer authorized daily local snapshots of the complete Workshop
+trees in place of a commit for every autonomous edit (2026-11-03). Run the
+snapshot job daily; verify its run history and Git commits. Direct edits made
+between snapshots can be lost on failure, so inspect the current tree before
+restoring an older commit.
 
 Stock direct maintenance has no proposal rollback snapshot, post-turn scanner,
-complete edit history, or automatic Git commit. The governance adapter can
-supply the Git gate only when its `autoCommitProvenance` option is explicitly
-enabled and proven against the live Workshop repository. Workshop proposal
-revisions, events, and apply rollback metadata are sufficient audit records for
-proposal-only work; they do not replace Git for direct `auto` maintenance.
-Until the direct-auto gates pass, keep autonomous mode at `propose` or `off`.
+complete edit history, or automatic Git commit. Automation run history records
+review summaries, not file revisions. Workshop proposal revisions, events, and
+apply rollback metadata cover proposal-only work, not direct `auto` edits.
+The governance adapter's optional `autoCommitProvenance` provides per-review
+commits but is not used with the daily-snapshot policy.
 Never change the mode as a side effect of authoring work.
 
 For proposal updates, read the complete live skill first. The proposal must be
@@ -180,8 +179,9 @@ restart; never report disk state as live runtime state.
 
 Every workspace/repository skill or plugin change requires a Git commit. A
 Workshop proposal that remains in the proposal lifecycle uses Workshop's own
-immutable revisions and event provenance; direct Workshop maintenance requires
-Git. Read [Git provenance](references/git-provenance.md) before committing.
+immutable revisions and event provenance; direct Workshop maintenance uses the
+Git snapshot policy above. Read [Git provenance](references/git-provenance.md)
+before committing.
 
 - Publish every surface declared for the skill in the
   [workspace registry](references/workspace-skill-registry.json), unless the

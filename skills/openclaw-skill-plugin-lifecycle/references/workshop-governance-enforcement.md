@@ -25,7 +25,8 @@ This is a model-governance adapter, not a filesystem ACL. Git history, Workshop
 proposal records, ordinary tool policy, and operator review remain the recovery
 and audit boundaries. With `autoCommitProvenance` enabled, the adapter blocks a
 dirty or concurrently owned Workshop tree and commits each successful targeted
-direct-auto review with `Change-Origin: workshop-autonomous`.
+direct-auto review. The reviewer's current operation instead disables that option and
+snapshots Workshop trees to local Git daily, as specified in the lifecycle skill.
 
 ## Registry layouts
 
@@ -81,7 +82,7 @@ operator's authority. Publishing or copying this skill does not grant it.
            config: {
              lifecycleSkillPath:
                "skills/openclaw-skill-plugin-lifecycle/SKILL.md",
-             autoCommitProvenance: true
+             autoCommitProvenance: false
            }
          }
        }
@@ -94,18 +95,18 @@ operator's authority. Publishing or copying this skill does not grant it.
 
 5. Run `openclaw config validate`, inspect the plugin with
    `openclaw plugins inspect workshop-governance-context --runtime --json`, and
-   confirm three typed hooks with no diagnostics.
+   confirm the current typed hooks with no diagnostics.
 6. Apply with `openclaw plugins reload workshop-governance-context`, then
    inspect again. Restart only if reload cannot establish the cron baseline and
    the operator explicitly authorizes a restart.
 7. Prove one bounded Workshop review contains
    `WORKSHOP_GOVERNANCE_CONTEXT_V2`, current lifecycle text, and the expected
    registry. A loaded-plugin receipt alone is not prompt-delivery proof.
-8. Before enabling `auto`, prove a successful targeted review creates a clean
-   provenance-bearing commit and prove recovery from that commit's Git history.
+8. Before relying on `auto`, verify the daily local Git snapshot job covers all
+   nonempty Workshop trees and that a snapshot can be inspected for recovery.
 
-Keep Workshop in `propose` or `off` until the lifecycle skill's direct-auto Git
-and recovery gates pass. The adapter does not make `auto` safe by itself.
+The adapter does not create direct-edit history when `autoCommitProvenance` is
+disabled. Keep the daily snapshot job healthy and inspect its commits.
 
 ## Maintain the bundled copy
 

@@ -88,6 +88,10 @@
           "mirror": "openclaw-skill-plugin-lifecycle",
           "source": "workspace"
         },
+        "openclaw-update": {
+          "mirror": "openclaw-update",
+          "source": "workshop"
+        },
         "pdf-to-markdown": {
           "mirror": "pdf-to-markdown",
           "source": "workspace"
@@ -140,6 +144,10 @@
         "imessage-ui": {
           "directory": "imessage-ui",
           "repository": "clawSean/imessage-ui"
+        },
+        "openclaw-update": {
+          "directory": "openclaw-update",
+          "repository": "clawSean/openclaw-update"
         },
         "shell-swap": {
           "directory": "shell-swap",

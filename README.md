@@ -20,6 +20,7 @@ shapes instead of pointer chains.
 - `moltmaster` - Controlled OpenClaw OAuth/auth-profile refresh operations with dry-run, backups, and provider guardrails.
 - `pdf-to-markdown` - Convert PDFs to Markdown with Docling.
 - `openclaw-skill-plugin-lifecycle` - OpenClaw skill/plugin lifecycle routing for creating, updating, publishing, and auditing existing skills, plugins, and procedures.
+- `openclaw-update` - A thin local-impact layer for native OpenClaw updates: live overwrite risks, relevant compatibility gates, and bounded post-update proofs.
 - `ralph-wiggum` - Bounded iteration loop for small projects and prototypes with verification after each slice.
 - `shell-swap` - Mass-switch OpenClaw model settings with codex/gpt/claude lane aliases.
 - `shop-agent` - Browser-driven Amazon/retailer shopping: search, compare, price-check, add to cart, and walk checkout — always stopping for human approval before purchase. Pairs with `web-use` for product/price data and browser context.

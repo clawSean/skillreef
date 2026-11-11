@@ -10,7 +10,7 @@ package.
 |---|---|---|---|---|
 | Workspace/repository skill | Apply, verify, commit, publish declared mirrors | Same, only for the named skill | Stage committed branch/PR or proposal | Stage and ask before live mutation |
 | Plugin outside Workshop | Apply, verify, commit, publish | No implied grant from a skill entry | Stage committed branch/PR or proposal | Stage and ask before live mutation |
-| Workshop-owned skill | Complete requested live outcome unless audit/proposal-only | Ordinary Workshop rules | May apply after expectation, conflict, and evidence review | May maintain under configured mode and direct-auto Git gate |
+| Workshop-owned skill | Complete requested live outcome unless audit/proposal-only | Ordinary Workshop rules | May apply after expectation, conflict, and evidence review | May maintain under configured mode and lifecycle snapshot policy |
 | Procedure | Apply and commit | Only when separately granted by its owner | Stage committed suggestion | Stage and ask before changing authority |
 
 The workspace owner's active instruction overrides an older standing route. No

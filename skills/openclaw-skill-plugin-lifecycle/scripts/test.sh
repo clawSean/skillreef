@@ -58,7 +58,7 @@ check "lifecycle owns direct workspace-owner edits" grep -q 'workspace owner con
 check "lifecycle supports exact registered editors" grep -q 'skillEditorExceptions' "$skill_file"
 check "lifecycle defaults new teammate skills to Workshop" grep -q 'create it in the requester.*Workshop collection' "$skill_file"
 check "registry keeps one default owner" grep -q '"workspaceSkillEditors"' "$skill_dir/references/workspace-skill-registry.json"
-check "lifecycle gates every affected Workshop tree" grep -q 'Every nonempty live `workshop-skills/` tree' "$skill_file"
+check "lifecycle covers every affected Workshop tree" grep -q 'each nonempty live `workshop-skills/` tree Git-backed' "$skill_file"
 check "lifecycle prefers verified hot reload" grep -q 'prefer a supported, bounded hot' "$skill_file"
 check "obsolete feedback authority removed" test ! -e "$workspace_dir/memory/feedback/auto-apply-skill-workshops.md"
 
