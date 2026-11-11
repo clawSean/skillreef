@@ -4,7 +4,7 @@ description: "Before or after OpenClaw updates, track local overwrite risks and 
 homepage: "https://github.com/clawSean/update-impact-layer"
 ---
 
-# OpenClaw Update
+# Update Impact Layer
 
 Use this as a thin local-operations layer around OpenClaw's native update system. The installed updater owns target selection, admission, backup integration, activation, restart coordination, reports, repair, recovery, and cleanup. Do not recreate those mechanisms here.
 
