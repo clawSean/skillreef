@@ -1,7 +1,7 @@
 ---
 name: "openclaw-update"
 description: "Before or after OpenClaw updates, track local overwrite risks and bounded integration checks around the native updater."
-homepage: "https://github.com/clawSean/openclaw-update"
+homepage: "https://github.com/clawSean/update-impact-layer"
 ---
 
 # OpenClaw Update

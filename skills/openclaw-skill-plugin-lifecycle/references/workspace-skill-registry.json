@@ -146,8 +146,8 @@
           "repository": "clawSean/imessage-ui"
         },
         "openclaw-update": {
-          "directory": "openclaw-update",
-          "repository": "clawSean/openclaw-update"
+          "directory": "update-impact-layer",
+          "repository": "clawSean/update-impact-layer"
         },
         "shell-swap": {
           "directory": "shell-swap",
