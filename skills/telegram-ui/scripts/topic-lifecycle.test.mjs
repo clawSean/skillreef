@@ -18,16 +18,25 @@ test("inspect does not require a thread", () => {
   });
 });
 
-test("rejects private chats because Telegram cannot close their topics", () => {
+test("parses private-chat topic deletion", () => {
+  assert.deepEqual(parseArgs(["delete", "--chat", "123456789", "--thread", "42"]), {
+    action: "delete",
+    chat: "123456789",
+    thread: "42",
+    account: "default",
+  });
+});
+
+test("rejects close for private-chat topics", () => {
   assert.throws(
     () => parseArgs(["close", "--chat", "123456789", "--thread", "42"]),
-    /Telegram supergroup ID/,
+    /forum supergroup ID/,
   );
 });
 
-test("rejects destructive and unknown actions", () => {
+test("rejects unknown actions", () => {
   assert.throws(
-    () => parseArgs(["delete", "--chat", "-1001234567890", "--thread", "42"]),
+    () => parseArgs(["archive", "--chat", "-1001234567890", "--thread", "42"]),
     /Unsupported action/,
   );
 });

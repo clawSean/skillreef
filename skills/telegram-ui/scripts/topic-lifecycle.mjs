@@ -9,14 +9,15 @@ const USAGE = `Usage:
   topic-lifecycle.mjs inspect --chat <supergroup-id> [--account <id>]
   topic-lifecycle.mjs close --chat <supergroup-id> --thread <topic-id> [--account <id>]
   topic-lifecycle.mjs reopen --chat <supergroup-id> --thread <topic-id> [--account <id>]
+  topic-lifecycle.mjs delete --chat <chat-id> --thread <topic-id> [--account <id>]
 
-This helper supports Telegram forum supergroups only. Telegram does not expose
-non-destructive close/reopen operations for private-chat topics.`;
+Close/reopen supports forum supergroups. Delete supports forum supergroups and
+private chats with topics; it removes the topic and its Telegram messages.`;
 
 export function parseArgs(argv) {
   const [action, ...rest] = argv;
   if (action === "--help" || action === "-h" || !action) return { help: true };
-  if (!new Set(["inspect", "close", "reopen"]).has(action)) {
+  if (!new Set(["inspect", "close", "reopen", "delete"]).has(action)) {
     throw new Error(`Unsupported action: ${action}`);
   }
   const values = { action, account: "default" };
@@ -28,8 +29,11 @@ export function parseArgs(argv) {
     }
     values[flag.slice(2)] = value;
   }
-  if (!/^-100\d+$/.test(values.chat ?? "")) {
-    throw new Error("--chat must be a Telegram supergroup ID beginning with -100");
+  if (!/^(?:-100\d+|\d+)$/.test(values.chat ?? "")) {
+    throw new Error("--chat must be a Telegram private-chat or supergroup ID");
+  }
+  if (new Set(["close", "reopen"]).has(action) && !/^-100\d+$/.test(values.chat)) {
+    throw new Error(`${action} requires a Telegram forum supergroup ID beginning with -100`);
   }
   if (action !== "inspect" && !/^\d+$/.test(values.thread ?? "")) {
     throw new Error("--thread must be a positive integer topic ID");
@@ -83,19 +87,32 @@ function createApi(token) {
   };
 }
 
-async function preflight(api, chatId) {
+async function preflight(api, chatId, action) {
   const [bot, chat] = await Promise.all([api("getMe"), api("getChat", { chat_id: chatId })]);
+  if (chat.type === "private") {
+    if (!new Set(["inspect", "delete"]).has(action)) {
+      throw new Error(`${action} is unavailable for Telegram private-chat topics`);
+    }
+    return { chatId: String(chat.id), chatType: "private" };
+  }
   if (chat.type !== "supergroup" || chat.is_forum !== true) {
-    throw new Error("Target must be a forum-enabled Telegram supergroup");
+    throw new Error("Target must be a private chat or forum-enabled Telegram supergroup");
   }
   const member = await api("getChatMember", { chat_id: chatId, user_id: bot.id });
-  if (member.status !== "creator" && member.can_manage_topics !== true) {
+  const creator = member.status === "creator";
+  if (action === "delete") {
+    if (!creator && (member.status !== "administrator" || member.can_delete_messages !== true)) {
+      throw new Error("Bot needs the Telegram Delete Messages administrator permission");
+    }
+  } else if (!creator && member.can_manage_topics !== true) {
     throw new Error("Bot needs the Telegram Manage Topics administrator permission");
   }
   return {
     chatId: String(chat.id),
+    chatType: "supergroup",
     botStatus: member.status,
-    canManageTopics: member.status === "creator" || member.can_manage_topics === true,
+    canManageTopics: creator || member.can_manage_topics === true,
+    canDeleteMessages: creator || member.can_delete_messages === true,
   };
 }
 
@@ -106,8 +123,26 @@ export async function run(options) {
   const resolution = resolveTelegramToken(config, { accountId: options.account });
   if (!resolution.token) throw new Error(`Telegram token unavailable for account ${options.account}`);
   const api = createApi(resolution.token);
-  const proof = await preflight(api, options.chat);
+  const proof = await preflight(api, options.chat, options.action);
   if (options.action === "inspect") return { ok: true, action: "inspect", ...proof };
+
+  if (options.action === "delete") {
+    if (options.thread === "1" && proof.chatType === "supergroup") {
+      throw new Error("Telegram's General forum topic cannot be deleted");
+    }
+    await api("deleteForumTopic", {
+      chat_id: options.chat,
+      message_thread_id: Number(options.thread),
+    });
+    return {
+      ok: true,
+      action: "delete",
+      chatId: options.chat,
+      chatType: proof.chatType,
+      threadId: options.thread,
+      telegramMessagesDeleted: true,
+    };
+  }
 
   const general = options.thread === "1";
   const method = general

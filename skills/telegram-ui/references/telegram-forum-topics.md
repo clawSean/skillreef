@@ -92,8 +92,9 @@ route actually changed the topic. Dated repro/evidence:
 - Topic IDs are message-thread IDs; inbound context exposes the current one.
 - Sessions are topic-scoped, so each topic has its own conversation lane.
 - Telegram supports true close/reopen only for forum supergroups, not private
-  chats with topics. Private-topic deletion also deletes its messages; never
-  present that destructive operation as ordinary close/archive.
+  chats with topics. Topic deletion works in both surfaces and removes the
+  topic plus its Telegram messages; it does not erase OpenClaw's separate
+  session, memory, or project records.
 - If the active `message` schema exposes `topic-close` or `topic-reopen`, use it.
   Otherwise the bundled helper provides a token-safe local lane without a
   Gateway config change:
@@ -102,6 +103,7 @@ route actually changed the topic. Dated repro/evidence:
 node scripts/topic-lifecycle.mjs inspect --chat '<supergroup-id>' --account '<account>'
 node scripts/topic-lifecycle.mjs close --chat '<supergroup-id>' --thread '<topic-id>' --account '<account>'
 node scripts/topic-lifecycle.mjs reopen --chat '<supergroup-id>' --thread '<topic-id>' --account '<account>'
+node scripts/topic-lifecycle.mjs delete --chat '<chat-id>' --thread '<topic-id>' --account '<account>'
 ```
 
   Run it from this skill directory. It loads the selected account through
@@ -109,5 +111,9 @@ node scripts/topic-lifecycle.mjs reopen --chat '<supergroup-id>' --thread '<topi
   Topics permission, redacts Telegram failures, and never prints the token.
   `thread=1` uses Telegram's dedicated General-topic method. Capture the JSON
   receipt. Do not retry an ambiguous mutation.
-- Topic deletion is not exposed here. Leave it to a human unless a future
-  reviewed native action adds an explicit destructive-operation contract.
+- Execute deletion when the user explicitly requests the exact topic or a
+  bounded, clearly identified set of topics. Do not invent age-based cleanup or
+  broaden the target list. The helper accepts private chats and forum
+  supergroups, verifies Telegram's Delete Messages permission for groups, and
+  refuses deletion of the General forum topic. Report the deleted topic IDs and
+  remember that deleted Telegram messages are not recoverable through Telegram.
