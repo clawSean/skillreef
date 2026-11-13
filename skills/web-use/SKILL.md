@@ -35,9 +35,10 @@ the task shape already proves it is better; do not make weaker lanes fail first.
 | Authoritative structured domain data | domain API/MCP/skill | active domain skill |
 | Public discovery/current facts | native search | `references/research-routing.md` |
 | Known public URL | native fetch | `references/research-routing.md` |
+| Semantic entity/source discovery or enrichment | Exa when task fit wins | `references/research-routing.md` |
 | Cited synthesis, comparison, difficult or broad research | specialist cited research | `perplexity-search` + `references/research-routing.md` |
 | JavaScript, rendering, interaction, or agent-managed persistent login | managed browser | `references/context-device.md`, then `browser-automation` |
-| Protected public page, crawl, or bulk structured extraction | hosted/public extraction | `references/extraction-backends.md` |
+| Protected public page, crawl, or repeated structured extraction | hosted/public extraction | `references/extraction-backends.md` |
 | Full local browser/app context genuinely required | local visible browser/app | `references/provider-matrix.md` + local registry |
 | Browser/DOM tools cannot reach a required native or OS surface | whole-desktop GUI | `references/context-device.md` + Peekaboo guidance |
 | User explicitly requests their tab, must watch/participate, requires exceptional sensitivity, or self-sufficient local lanes cannot provide the required context and the user agrees to share | shared-tab context | `references/shared-tab-extension.md` |

@@ -11,6 +11,19 @@
 Search snippets are leads, not final evidence. Browser automation is not a
 better fetcher when readable public text is already available.
 
+## Exa: semantic discovery and enrichment
+
+Use the existing Exa MCP when semantic search, finding related companies/people,
+or building a deduplicated source set fits better than keyword search. Its
+`web_search_exa` finds candidate sources and `web_fetch_exa` reads known URLs;
+use `agent_run` for a genuinely multi-step collection/enrichment task. Do not
+send a routine known-page read or simple fact lookup through Exa just because
+it is connected. Verify the live MCP catalog and account access before relying
+on it; one agent's connection says nothing about another agent's access.
+
+Exa produces leads and extracted text, not authoritative app-review history,
+rank tracking, or a substitute for checking consequential primary sources.
+
 ## Cited research
 
 Route early to the standalone `perplexity-search` skill when the work requires:

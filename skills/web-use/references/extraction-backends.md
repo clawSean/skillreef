@@ -19,6 +19,27 @@ for authenticated sessions.
 Do not deliberately walk every rung. Start at the lightest dependable lane that
 fits the task.
 
+## Bright Data: bounded structured public records
+
+Use Bright Data's MCP selectively for fresh, structured public records when a
+maintained site scraper materially improves on native fetch, first-party APIs,
+or a one-off browser read—for example, dated competitor app reviews or repeated
+marketplace product rows. Its SERP and `scrape_as_markdown` are fallback
+transports, not default discovery or cited-synthesis routes. Do not use it as
+the source of truth for an owned app's private metrics, ASO rank history, or
+social-account actions. X-specific routing remains with `x-twitter-kit`.
+
+Before a billed scraper run, inspect the exact scraper method and sample input;
+bound source URLs, dates, and input count. `limit_per_input` is not a hard spend
+cap: a prior Apple job requested 25 and delivered 211 records. Start with a tiny
+pilot, inspect actual returned records and account metering, then expand only
+when the task warrants it. MCP uses the same account-level credits as direct
+API calls; full tool exposure does not make every tool free or appropriate.
+
+Credentials and credits are account-specific. Verify the current agent's MCP
+connection live before treating this as an available lane; do not export
+authenticated browser state to Bright Data's hosted browser.
+
 ## Configured providers
 
 ### Browserless
