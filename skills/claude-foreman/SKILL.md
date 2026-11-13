@@ -84,17 +84,17 @@ On Linux hosts running as root, `claws-out` is blocked by Claude; use
 ## Model And Effort Defaults
 
 - Default model is `opus` across profiles. The dispatcher resolves `opus` to
-  `claude-opus-5-5`, `sonnet` to `claude-sonnet-5`, `haiku` to
-  `claude-haiku-4-5`, and `fable` to `claude-fable-5-1`; explicit version IDs
+  `claude-opus-5-5`, `sonnet` to `claude-sonnet-5-5`, `haiku` to
+  `claude-haiku-5-5`, and `fable` to `claude-fable-5-2`; explicit version IDs
   remain pinned. These mappings do not depend on the installed CLI's defaults.
 - For user-requested Foreman work, pass `--model opus --effort max` unless there
   is a specific reason not to.
 - Use `--model sonnet` only as an explicit lighter-cost escape hatch for routine,
   low-risk dispatches.
-- Fable (`fable` / `claude-fable-5-1`) is known to this harness but is not a
+- Fable (`fable` / `claude-fable-5-2`) is known to this harness but is not a
   default or standing recommendation. The unaliased `claude-fable-5` route is
   retained only for explicit compatibility testing. Consider suggesting Fable
-  5.1 to the reviewer only for token-efficient, important tasks such as architecture
+  5.2 to the reviewer only for token-efficient, important tasks such as architecture
   plans, high-stakes reviews, or compact strategic planning; get approval before
   dispatching it.
 - Do not use Haiku/fast mode for Foreman unless the user explicitly asks for a

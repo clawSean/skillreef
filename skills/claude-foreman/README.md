@@ -1,9 +1,9 @@
 # claude-foreman
 
-**Canonical source:** this standalone repo, `clawthe contributor/claude-foreman`.
+**Canonical source:** this standalone repo, `clawSean/claude-foreman`.
 
 The SkillReef collection may carry a mirrored distribution copy at
-`clawthe contributor/skillreef/skills/claude-foreman`, but changes should originate here
+`clawSean/skillreef/skills/claude-foreman`, but changes should originate here
 first and then be synced outward.
 
 OpenClaw skill for dispatching bounded planning, review, and implementation jobs to Claude CLI while keeping OpenClaw (a multi-channel agent gateway/orchestrator) in charge.
@@ -64,8 +64,8 @@ Profiles:
 - `claws-out` (🦞 true bypass mode; trusted non-root sandbox targets only)
 
 Default model is **Opus 5.5** across profiles. Family names resolve to exact IDs:
-`opus` → `claude-opus-5-5`, `sonnet` → `claude-sonnet-5`,
-`haiku` → `claude-haiku-4-5`, `fable` → `claude-fable-5-1`.
+`opus` → `claude-opus-5-5`, `sonnet` → `claude-sonnet-5-5`,
+`haiku` → `claude-haiku-5-5`, `fable` → `claude-fable-5-2`.
 Explicit version IDs stay pinned. Fable still requires an explicit dollar cap.
 
 Compatibility: `unsafe` is still accepted as a legacy alias for `claws-out`. `root-wide` and `claws-wide` are accepted as aliases for `wide-open`.

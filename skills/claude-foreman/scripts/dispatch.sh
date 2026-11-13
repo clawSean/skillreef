@@ -218,9 +218,9 @@ MODEL="${MODEL:-$DEFAULT_MODEL}"
 # a previous generation. Explicit version IDs are intentionally left unchanged.
 case "$MODEL" in
   opus) MODEL="claude-opus-5-5" ;;
-  sonnet) MODEL="claude-sonnet-5" ;;
-  haiku) MODEL="claude-haiku-4-5" ;;
-  fable) MODEL="claude-fable-5-1" ;;
+  sonnet) MODEL="claude-sonnet-5-5" ;;
+  haiku) MODEL="claude-haiku-5-5" ;;
+  fable) MODEL="claude-fable-5-2" ;;
 esac
 
 if [[ -n "$MAX_BUDGET_USD" ]] && ! python3 - "$MAX_BUDGET_USD" <<'PY'
@@ -237,7 +237,7 @@ then
 fi
 
 case "$MODEL" in
-  fable|claude-fable-5|claude-fable-5-1)
+  fable|claude-fable-5|claude-fable-5-1|claude-fable-5-2)
     if [[ -z "$MAX_BUDGET_USD" ]]; then
       echo "[foreman] Fable dispatches require --max-budget-usd; --max-turns is not a dependable spend cap." >&2
       exit 1

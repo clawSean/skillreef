@@ -212,6 +212,7 @@ run_expect_failure "dispatch.sh rejects nonexistent target dir" "$SKILL_DIR/scri
 run_expect_failure "dispatch.sh rejects unknown flags" "$SKILL_DIR/scripts/dispatch.sh" plan "$TMPDIR/target" "test" --bogus-flag
 run_expect_failure "dispatch.sh rejects invalid dollar cap" "$SKILL_DIR/scripts/dispatch.sh" plan "$TMPDIR/target" "test" --max-budget-usd nope
 run_expect_failure "Fable requires an explicit dollar cap" "$SKILL_DIR/scripts/dispatch.sh" plan "$TMPDIR/target" "test" --model fable
+run_expect_failure "Pinned Fable 5.2 requires a dollar cap" "$SKILL_DIR/scripts/dispatch.sh" plan "$TMPDIR/target" "test" --model claude-fable-5-2
 
 echo ""
 echo "[4] Root safety"
@@ -248,13 +249,13 @@ assert_contains "$(cat "$TMPDIR/claude-success.log")" "Bash(git:*),Bash(ls:*)" "
 : > "$TMPDIR/claude-success.log"
 budget_out=$(run_dispatch success "$TMPDIR/target" "budget prompt" --model fable --max-turns 3 --max-budget-usd 1.25)
 assert_contains "$budget_out" "Per-run spend cap: \$1.25" "reports the per-run dollar cap"
-assert_contains "$(cat "$TMPDIR/claude-success.log")" "claude-fable-5-1" "fable resolves to Fable 5.1"
+assert_contains "$(cat "$TMPDIR/claude-success.log")" "claude-fable-5-2" "fable resolves to Fable 5.2"
 assert_contains "$(cat "$TMPDIR/claude-success.log")" "--max-budget-usd" "passes the Claude CLI dollar-cap flag"
 assert_contains "$(cat "$TMPDIR/claude-success.log")" "1.25" "passes the requested dollar-cap value"
 
 echo ""
 echo "[5b] Optional extra add-dir roots"
-for model_case in sonnet:claude-sonnet-5 haiku:claude-haiku-4-5 claude-opus-5:claude-opus-5; do
+for model_case in sonnet:claude-sonnet-5-5 haiku:claude-haiku-5-5 claude-opus-5:claude-opus-5; do
   : > "$TMPDIR/claude-success.log"
   run_dispatch success "$TMPDIR/target" "model alias check" --model "${model_case%%:*}" --max-turns 1 >/dev/null
   assert_contains "$(cat "$TMPDIR/claude-success.log")" "${model_case#*:}" "model mapping ${model_case%%:*}"
