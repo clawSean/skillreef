@@ -84,6 +84,10 @@
           "mirror": "moltmaster",
           "source": "workspace"
         },
+        "model-manager": {
+          "mirror": "model-manager",
+          "source": "workshop"
+        },
         "openclaw-skill-plugin-lifecycle": {
           "mirror": "openclaw-skill-plugin-lifecycle",
           "source": "workspace"
@@ -144,6 +148,10 @@
         "imessage-ui": {
           "directory": "imessage-ui",
           "repository": "clawSean/imessage-ui"
+        },
+        "model-manager": {
+          "directory": "model-manager",
+          "repository": "clawSean/model-manager"
         },
         "openclaw-update": {
           "directory": "update-impact-layer",
