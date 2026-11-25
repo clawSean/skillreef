@@ -16,6 +16,10 @@
 - Components v2 and legacy embeds do not combine; the latter are ignored.
   Ordinary Markdown remains the simplest rich-text surface. URL previews are
   normally suppressed; a single send can opt in when supported by the schema.
+- A single-use selection expires its sibling buttons, including a modal
+  trigger. Use `reusable: true` when multiple interactions from the same card
+  are intentional, or send separate cards. A private test verified both a
+  string-select callback and a standalone modal submission reached the bot.
 - Attach `media`/`filename` for file blocks using `attachment://<filename>`;
   text alone does not upload the file.
 

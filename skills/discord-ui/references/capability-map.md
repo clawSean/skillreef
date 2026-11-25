@@ -24,7 +24,8 @@ change and account/channel permissions are separate.
   a button click produced a confirmed bot callback reply in the thread.
 - A second private test server granted the bot `ManageThreads` and
   `PinMessages`. Effective permissions readback showed both, and renaming a
-  bot-created thread succeeded. `ManageChannels` was not granted.
+  bot-created thread succeeded. String-select and modal submissions each
+  produced a bot reply in the thread. `ManageChannels` was not granted.
 - Pin, list-pins, and unpin succeeded in the originating conversation. The
   delegated `pin` and `react` actions rejected cross-thread targets because
   they require the exact current conversation/account. This is a tool-scope
