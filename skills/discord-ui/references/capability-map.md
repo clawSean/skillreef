@@ -21,7 +21,7 @@ change and account/channel permissions are separate.
 - In one private test server, thread creation/opening delivery, Markdown
   send/readback, a Components v2 button card, and a native poll all worked.
   The rendered card and poll were also inspected in a signed-in Discord client;
-  button callbacks were not tested.
+  a button click produced a confirmed bot callback reply in the thread.
 - A second private test server granted the bot `ManageThreads` and
   `PinMessages`. Effective permissions readback showed both, and renaming a
   bot-created thread succeeded. `ManageChannels` was not granted.
