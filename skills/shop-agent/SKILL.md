@@ -91,6 +91,9 @@ Adding to cart is allowed when requested; it is not purchase approval.
 6. Stop at the hard purchase gate.
 7. On approval, re-read and place.
 8. Report order number/total/delivery only when visible and verified.
+9. After a submitted order is verified, append its monitoring handoff to
+   `purchase-log.jsonl` using `references/purchase-monitoring.md`; do not create
+   a second purchase ledger.
 
 ## Login handling
 
@@ -111,7 +114,9 @@ profiles or broad retail credentials.
 
 - One public price lookup with no purchase intent: ordinary web search is enough.
 - General product research with no cart/account work: web research is enough.
-- Post-purchase carrier tracking: use the appropriate order/carrier workflow.
+- Interactive post-purchase carrier tracking: use the appropriate
+  order/carrier workflow. Routine delivery follow-through starts from the
+  purchase-log handoff above.
 
 ## Retailer references
 
@@ -119,6 +124,7 @@ profiles or broad retail credentials.
 - `references/ebay.md`
 - `references/safety.md`
 - `references/price-history.md`
+- `references/purchase-monitoring.md`
 
 All retailer references inherit this Mac-first browser contract. Treat any
 remaining host-specific claim as drift until current live proof confirms it.
